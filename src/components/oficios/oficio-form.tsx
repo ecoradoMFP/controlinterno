@@ -50,7 +50,10 @@ export function OficioForm({
         {actividades.length === 0 ? (
           <Input id="actividad_id_display" value="Sin actividades disponibles" disabled />
         ) : (
-          <Select name="actividad_id">
+          <Select
+            name="actividad_id"
+            items={Object.fromEntries(actividades.map((a) => [a.id, a.no_nombramiento]))}
+          >
             <SelectTrigger id="actividad_id" className="w-full">
               <SelectValue placeholder="Sin actividad relacionada" />
             </SelectTrigger>

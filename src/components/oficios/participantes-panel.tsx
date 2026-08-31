@@ -89,7 +89,11 @@ function Lista({
         <form action={action} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="oficio_id" value={oficioId} />
           <div className="flex min-w-56 flex-col gap-1.5">
-            <Select name="usuario_nit" required>
+            <Select
+              name="usuario_nit"
+              required
+              items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecciona un usuario" />
               </SelectTrigger>

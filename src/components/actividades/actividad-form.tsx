@@ -45,7 +45,11 @@ export function ActividadForm({
           </Field>
         ) : (
           <Field label="Departamento" htmlFor="departamento_id" error={fieldErrors?.departamento_id}>
-            <Select name="departamento_id" required>
+            <Select
+              name="departamento_id"
+              required
+              items={Object.fromEntries(departamentos.map((d) => [d.id, d.nombre]))}
+            >
               <SelectTrigger id="departamento_id" className="w-full">
                 <SelectValue placeholder="Selecciona un departamento" />
               </SelectTrigger>
@@ -76,7 +80,11 @@ export function ActividadForm({
             <input type="hidden" name="auditor_principal_nit" value={usuarios[0].nit} />
           </>
         ) : (
-          <Select name="auditor_principal_nit" required>
+          <Select
+            name="auditor_principal_nit"
+            required
+            items={Object.fromEntries(usuarios.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
+          >
             <SelectTrigger id="auditor_principal_nit" className="w-full">
               <SelectValue placeholder="Selecciona al auditor principal" />
             </SelectTrigger>
