@@ -51,6 +51,66 @@ export async function agregarDocumentoActividad(formData: FormData) {
   redirect(`/actividades/${actividadId}?tab=documentos`);
 }
 
+export async function agregarHito(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const codigoJerarquico = String(formData.get("codigo_jerarquico") ?? "").trim();
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const etapa = String(formData.get("etapa") ?? "");
+  const cargoResponsable = String(formData.get("cargo_responsable") ?? "");
+  const fechaInicioEsperada = String(formData.get("fecha_inicio_esperada") ?? "");
+  const fechaFinEsperada = String(formData.get("fecha_fin_esperada") ?? "");
+  const diasHabilesEsperados = Number(formData.get("dias_habiles_esperados"));
+  const documentoCatalogoId = String(formData.get("documento_catalogo_id") ?? "") || null;
+
+  const usuario = await getUsuarioActual();
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tienes permiso para agregar hitos.");
+  if (!codigoJerarquico || !nombre || !etapa || !cargoResponsable || !fechaInicioEsperada || !fechaFinEsperada) {
+    fail(actividadId, "cronograma", "Completa todos los campos requeridos del hito.");
+  }
+  if (fechaFinEsperada < fechaInicioEsperada) {
+    fail(actividadId, "cronograma", "La fecha de fin esperado no puede ser anterior al inicio esperado.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("hitos_cronograma").insert({
+    actividad_id: actividadId,
+    codigo_jerarquico: codigoJerarquico,
+    nombre,
+    etapa: etapa as never,
+    cargo_responsable: cargoResponsable as never,
+    fecha_inicio_esperada: fechaInicioEsperada,
+    fecha_fin_esperada: fechaFinEsperada,
+    dias_habiles_esperados: diasHabilesEsperados,
+    documento_catalogo_id: documentoCatalogoId,
+  });
+
+  if (error) fail(actividadId, "cronograma", "No se pudo agregar el hito (¿código ya usado en esta actividad?).");
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=cronograma`);
+}
+
+export async function concluirHito(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const hitoId = String(formData.get("hito_id"));
+  const fechaFinReal = String(formData.get("fecha_fin_real") ?? "");
+
+  const usuario = await getUsuarioActual();
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tienes permiso para concluir hitos.");
+  if (!fechaFinReal) fail(actividadId, "cronograma", "Indica la fecha real de conclusión.");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("hitos_cronograma")
+    .update({ fecha_fin_real: fechaFinReal, estado: "concluido" })
+    .eq("id", hitoId);
+
+  if (error) fail(actividadId, "cronograma", "No se pudo marcar el hito como concluido.");
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=cronograma`);
+}
+
 export async function registrarMovimiento(formData: FormData) {
   const actividadId = String(formData.get("actividad_id"));
   const documentoActividadId = String(formData.get("documento_actividad_id"));
