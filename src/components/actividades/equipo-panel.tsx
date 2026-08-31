@@ -44,7 +44,11 @@ export function EquipoPanel({
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Usuario</label>
-            <Select name="usuario_nit" required>
+            <Select
+              name="usuario_nit"
+              required
+              items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecciona un usuario" />
               </SelectTrigger>

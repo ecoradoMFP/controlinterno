@@ -71,7 +71,7 @@ export function DocumentosPanel({
                   <MiniSelect name="a_cargo" label="A cargo" options={CARGOS} required />
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-muted-foreground">Tipo de evento</label>
-                    <Select name="tipo_evento" required>
+                    <Select name="tipo_evento" required items={TIPO_EVENTO_LABELS}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona" /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(TIPO_EVENTO_LABELS).map(([value, label]) => (
@@ -82,7 +82,7 @@ export function DocumentosPanel({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-muted-foreground">Nueva fase (opcional)</label>
-                    <Select name="nueva_fase">
+                    <Select name="nueva_fase" items={FASE_DOCUMENTO_LABELS}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Sin cambio" /></SelectTrigger>
                       <SelectContent>
                         {FASES.map((f) => (
@@ -111,7 +111,11 @@ export function DocumentosPanel({
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex min-w-64 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Documento del catálogo</label>
-            <Select name="documento_catalogo_id" required>
+            <Select
+              name="documento_catalogo_id"
+              required
+              items={Object.fromEntries(catalogoDisponible.map((c) => [c.id, c.nombre]))}
+            >
               <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona un documento" /></SelectTrigger>
               <SelectContent>
                 {catalogoDisponible.map((c) => (
@@ -144,7 +148,12 @@ function MiniSelect({
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs text-muted-foreground">{label}</label>
-      <Select name={name} defaultValue={defaultValue} required={required}>
+      <Select
+        name={name}
+        defaultValue={defaultValue}
+        required={required}
+        items={Object.fromEntries(options.map((c) => [c, CARGO_LABELS[c]]))}
+      >
         <SelectTrigger className="w-full"><SelectValue placeholder="—" /></SelectTrigger>
         <SelectContent>
           {options.map((c) => (
