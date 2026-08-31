@@ -44,3 +44,10 @@ export const ETAPA_ACTIVIDAD_LABELS: Record<EtapaActividadEnum, string> = {
   comunicacion_resultados: "Comunicación de Resultados",
   expediente_cierre: "Expediente / Cierre",
 };
+
+export const FASE_DOCUMENTO_LABELS: Record<FaseDocumentoEnum, string> = {
+  elaboracion: "Elaboración",
+  revision: "Revisión",
+  correccion: "Corrección",
+  finalizado: "Finalizado",
+};

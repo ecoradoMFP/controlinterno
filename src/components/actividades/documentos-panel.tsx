@@ -15,6 +15,7 @@ import {
 import {
   CARGOS,
   CARGO_LABELS,
+  FASE_DOCUMENTO_LABELS,
   type CargoEnum,
   type DocumentoActividad,
   type DocumentoCatalogo,
@@ -22,12 +23,6 @@ import {
 } from "@/types/domain";
 
 const FASES: FaseDocumentoEnum[] = ["elaboracion", "revision", "correccion", "finalizado"];
-const FASE_LABELS: Record<FaseDocumentoEnum, string> = {
-  elaboracion: "Elaboración",
-  revision: "Revisión",
-  correccion: "Corrección",
-  finalizado: "Finalizado",
-};
 const TIPO_EVENTO_LABELS = {
   entrega: "Entrega",
   recepcion: "Recepción",
@@ -63,7 +58,7 @@ export function DocumentosPanel({
                   </p>
                 </div>
                 <Badge variant={d.fase_actual === "finalizado" ? "default" : "secondary"}>
-                  {FASE_LABELS[d.fase_actual]}
+                  {FASE_DOCUMENTO_LABELS[d.fase_actual]}
                 </Badge>
               </div>
 
@@ -91,7 +86,7 @@ export function DocumentosPanel({
                       <SelectTrigger className="w-full"><SelectValue placeholder="Sin cambio" /></SelectTrigger>
                       <SelectContent>
                         {FASES.map((f) => (
-                          <SelectItem key={f} value={f}>{FASE_LABELS[f]}</SelectItem>
+                          <SelectItem key={f} value={f}>{FASE_DOCUMENTO_LABELS[f]}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
