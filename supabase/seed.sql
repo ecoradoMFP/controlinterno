@@ -107,3 +107,12 @@ insert into calendario_feriados (fecha, descripcion) values
   ('2026-10-20', 'Día de la Revolución'),
   ('2026-11-01', 'Día de Todos los Santos'),
   ('2026-12-25', 'Navidad');
+
+-- ── 5. Umbrales del motor de semáforo (sección 4.11/5) ──
+-- Valores por defecto de la sección 5: verde ≥50% de plazo restante, amarillo 25-50%,
+-- naranja 0-25%, rojo <=0%. Configurables después por Dirección (control_total) vía UPDATE,
+-- nunca hardcodeados en la aplicación.
+insert into parametros_semaforo (ambito, umbral_verde_pct, umbral_amarillo_pct, umbral_naranja_pct) values
+  ('hito', 50, 25, 0),
+  ('oficio', 50, 25, 0),
+  ('actividad', 50, 25, 0);
