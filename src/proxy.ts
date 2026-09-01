@@ -15,7 +15,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - image files
+     * - api (Route Handlers manage su propia autorización, p. ej. CRON_SECRET en
+     *   /api/cron/semaforo — no tienen sesión de navegador que redirigir a /login)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

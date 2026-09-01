@@ -42,9 +42,15 @@ export default async function DashboardLayout({
     redirect(`/login?error=${encodeURIComponent("Tu cuenta está desactivada.")}`);
   }
 
+  const supabase = await createClient();
+  const { count: notificacionesNoLeidas } = await supabase
+    .from("notificaciones")
+    .select("id", { count: "exact", head: true })
+    .eq("leido", false);
+
   return (
     <div className="flex min-h-screen flex-1 flex-col">
-      <DashboardNav usuario={usuario} />
+      <DashboardNav usuario={usuario} notificacionesNoLeidas={notificacionesNoLeidas ?? 0} />
       <main className="mx-auto w-full max-w-6xl flex-1 p-6">{children}</main>
     </div>
   );
