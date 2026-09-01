@@ -397,6 +397,51 @@ export type Database = {
           },
         ]
       }
+      notificaciones: {
+        Row: {
+          actividad_id: string
+          color: string
+          created_at: string
+          id: string
+          leido: boolean
+          mensaje: string
+          usuario_nit: string
+        }
+        Insert: {
+          actividad_id: string
+          color: string
+          created_at?: string
+          id?: string
+          leido?: boolean
+          mensaje: string
+          usuario_nit: string
+        }
+        Update: {
+          actividad_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          leido?: boolean
+          mensaje?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificaciones_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificaciones_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
       oficios: {
         Row: {
           actividad_id: string | null

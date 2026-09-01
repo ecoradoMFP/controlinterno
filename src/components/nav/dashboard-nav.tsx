@@ -14,7 +14,13 @@ const NAV_ITEMS = [
   { href: "/reportes", label: "Reportes" },
 ] as const;
 
-export function DashboardNav({ usuario }: { usuario: Usuario }) {
+export function DashboardNav({
+  usuario,
+  notificacionesNoLeidas,
+}: {
+  usuario: Usuario;
+  notificacionesNoLeidas: number;
+}) {
   const pathname = usePathname();
 
   return (
@@ -35,6 +41,31 @@ export function DashboardNav({ usuario }: { usuario: Usuario }) {
                 {item.label}
               </Link>
             ))}
+            {usuario.permiso_sistema === "control_total" ? (
+              <Link
+                href="/configuracion"
+                className={cn(
+                  "text-sm text-muted-foreground hover:text-foreground",
+                  pathname.startsWith("/configuracion") && "font-medium text-foreground",
+                )}
+              >
+                Configuración
+              </Link>
+            ) : null}
+            <Link
+              href="/notificaciones"
+              className={cn(
+                "flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground",
+                pathname.startsWith("/notificaciones") && "font-medium text-foreground",
+              )}
+            >
+              Notificaciones
+              {notificacionesNoLeidas > 0 ? (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-white">
+                  {notificacionesNoLeidas > 99 ? "99+" : notificacionesNoLeidas}
+                </span>
+              ) : null}
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">

@@ -28,7 +28,7 @@ export const UMBRAL_POR_DEFECTO: UmbralSemaforo = {
  * plazo). Parseo anclado a UTC para que el día de la semana no dependa de la zona horaria
  * del proceso que ejecuta esto.
  */
-function diasHabilesEntre(inicioISO: string, finISO: string, feriados: ReadonlySet<string>): number {
+export function diasHabilesEntre(inicioISO: string, finISO: string, feriados: ReadonlySet<string>): number {
   const inicio = new Date(`${inicioISO}T00:00:00Z`);
   const fin = new Date(`${finISO}T00:00:00Z`);
   const signo = inicio <= fin ? 1 : -1;
@@ -70,6 +70,49 @@ export function calcularSemaforo(
 /** Para hitos/oficios ya concluidos: dato histórico de cumplimiento, no llevan semáforo activo. */
 export function cumplidoATiempo(fechaFinEsperada: string, fechaFinReal: string): boolean {
   return fechaFinReal <= fechaFinEsperada;
+}
+
+export interface HitoAbiertoParaSemaforo {
+  actividad_id: string | null;
+  fecha_inicio_esperada: string;
+  fecha_fin_esperada: string;
+}
+
+export interface OficioAbiertoParaSemaforo {
+  actividad_id: string | null;
+  fecha_emision: string;
+  fecha_vencimiento: string | null;
+}
+
+/**
+ * Sección 5: semáforo por actividad = peor caso entre todos sus hitos y oficios abiertos, nunca
+ * un promedio. Única fuente de esta regla — la usan tanto /reportes como el job de alertas
+ * (sección 9), para que ambos vean exactamente el mismo color y no diverjan con el tiempo.
+ */
+export function calcularColorPorActividad(
+  hitosAbiertos: readonly HitoAbiertoParaSemaforo[],
+  oficiosAbiertos: readonly OficioAbiertoParaSemaforo[],
+  hoy: string,
+  feriados: ReadonlySet<string>,
+  umbralHito: UmbralSemaforo,
+  umbralOficio: UmbralSemaforo,
+): Map<string, ColorSemaforo> {
+  const colorPorActividad = new Map<string, ColorSemaforo>();
+  function acumular(actividadId: string | null, color: ColorSemaforo) {
+    if (!actividadId) return;
+    const actual = colorPorActividad.get(actividadId);
+    colorPorActividad.set(actividadId, actual ? peorColor(actual, color) : color);
+  }
+
+  for (const h of hitosAbiertos) {
+    acumular(h.actividad_id, calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriados, umbralHito));
+  }
+  for (const o of oficiosAbiertos) {
+    if (!o.fecha_vencimiento) continue;
+    acumular(o.actividad_id, calcularSemaforo(o.fecha_emision, o.fecha_vencimiento, hoy, feriados, umbralOficio));
+  }
+
+  return colorPorActividad;
 }
 
 export const COLOR_SEMAFORO_LABELS: Record<ColorSemaforo, string> = {

@@ -18,6 +18,7 @@ export type Oficio = Tables["oficios"]["Row"];
 export type OficioInsert = Tables["oficios"]["Insert"];
 export type ParametroSemaforo = Tables["parametros_semaforo"]["Row"];
 export type CalendarioFeriado = Tables["calendario_feriados"]["Row"];
+export type Notificacion = Tables["notificaciones"]["Row"];
 
 export type CargoEnum = Database["public"]["Enums"]["cargo_enum"];
 export type PermisoSistemaEnum = Database["public"]["Enums"]["permiso_sistema_enum"];
@@ -43,6 +44,18 @@ export const ETAPA_ACTIVIDAD_LABELS: Record<EtapaActividadEnum, string> = {
   ejecucion: "Ejecución",
   comunicacion_resultados: "Comunicación de Resultados",
   expediente_cierre: "Expediente / Cierre",
+};
+
+export const AMBITO_SEMAFORO_LABELS: Record<AmbitoSemaforoEnum, string> = {
+  hito: "Hitos de cronograma",
+  oficio: "Oficios",
+  actividad: "Actividad (general)",
+};
+
+export const ETAPA_DOCUMENTO_LABELS: Record<EtapaDocumentoEnum, string> = {
+  planificacion: "Planificación",
+  ejecucion: "Ejecución",
+  comunicacion_resultados: "Comunicación de Resultados",
 };
 
 export const FASE_DOCUMENTO_LABELS: Record<FaseDocumentoEnum, string> = {
