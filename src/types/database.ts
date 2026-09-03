@@ -100,16 +100,22 @@ export type Database = {
       actividades_equipo: {
         Row: {
           actividad_id: string
+          fecha_declaracion_independencia: string | null
+          fecha_recibido: string | null
           rol_en_equipo: string | null
           usuario_nit: string
         }
         Insert: {
           actividad_id: string
+          fecha_declaracion_independencia?: string | null
+          fecha_recibido?: string | null
           rol_en_equipo?: string | null
           usuario_nit: string
         }
         Update: {
           actividad_id?: string
+          fecha_declaracion_independencia?: string | null
+          fecha_recibido?: string | null
           rol_en_equipo?: string | null
           usuario_nit?: string
         }
@@ -124,6 +130,48 @@ export type Database = {
           {
             foreignKeyName: "actividades_equipo_usuario_nit_fkey"
             columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
+      actividades_etapa_historial: {
+        Row: {
+          actividad_id: string
+          cerrado_por_nit: string
+          etapa_cerrada: Database["public"]["Enums"]["etapa_actividad_enum"]
+          etapa_siguiente: Database["public"]["Enums"]["etapa_actividad_enum"]
+          id: string
+          timestamp: string
+        }
+        Insert: {
+          actividad_id: string
+          cerrado_por_nit: string
+          etapa_cerrada: Database["public"]["Enums"]["etapa_actividad_enum"]
+          etapa_siguiente: Database["public"]["Enums"]["etapa_actividad_enum"]
+          id?: string
+          timestamp?: string
+        }
+        Update: {
+          actividad_id?: string
+          cerrado_por_nit?: string
+          etapa_cerrada?: Database["public"]["Enums"]["etapa_actividad_enum"]
+          etapa_siguiente?: Database["public"]["Enums"]["etapa_actividad_enum"]
+          id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actividades_etapa_historial_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actividades_etapa_historial_cerrado_por_nit_fkey"
+            columns: ["cerrado_por_nit"]
             isOneToOne: false
             referencedRelation: "usuarios"
             referencedColumns: ["nit"]

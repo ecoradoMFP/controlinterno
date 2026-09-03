@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
+import { SIGUIENTE_ETAPA, ETAPA_ACTIVIDAD_LABELS, type EtapaActividadEnum } from "@/types/domain";
 
 function fail(actividadId: string, tab: string, message: string): never {
   redirect(`/actividades/${actividadId}?tab=${tab}&error=${encodeURIComponent(message)}`);
@@ -39,6 +40,23 @@ export async function agregarDocumentoActividad(formData: FormData) {
   if (!documentoCatalogoId) fail(actividadId, "documentos", "Selecciona un documento del catálogo.");
 
   const supabase = await createClient();
+
+  // No se puede iniciar un documento de una etapa que la actividad todavía no alcanzó (ej.
+  // un documento de Ejecución mientras la actividad sigue en Planificación) — reforzado
+  // también en la base de datos (política RLS de documentos_actividad), esto solo da un
+  // mensaje más claro que el genérico de RLS.
+  const [{ data: actividad }, { data: documentoCatalogo }] = await Promise.all([
+    supabase.from("actividades").select("etapa_actual").eq("id", actividadId).maybeSingle(),
+    supabase.from("documentos_catalogo").select("etapa, nombre").eq("id", documentoCatalogoId).maybeSingle(),
+  ]);
+  if (actividad && documentoCatalogo && documentoCatalogo.etapa !== actividad.etapa_actual) {
+    fail(
+      actividadId,
+      "documentos",
+      `"${documentoCatalogo.nombre}" pertenece a la etapa "${ETAPA_ACTIVIDAD_LABELS[documentoCatalogo.etapa as EtapaActividadEnum]}" — cierra la etapa actual antes de iniciarlo.`,
+    );
+  }
+
   const { error } = await supabase.from("documentos_actividad").insert({
     actividad_id: actividadId,
     documento_catalogo_id: documentoCatalogoId,
@@ -154,4 +172,76 @@ export async function registrarMovimiento(formData: FormData) {
 
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/actividades/${actividadId}?tab=documentos`);
+}
+
+export async function cerrarEtapa(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+
+  const usuario = await getUsuarioActual();
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para cerrar la etapa.");
+
+  const supabase = await createClient();
+
+  const { data: actividad } = await supabase
+    .from("actividades")
+    .select("etapa_actual")
+    .eq("id", actividadId)
+    .maybeSingle();
+  if (!actividad) fail(actividadId, "documentos", "No se encontró la actividad.");
+
+  const etapaCerrada = actividad.etapa_actual;
+  const etapaSiguiente = SIGUIENTE_ETAPA[etapaCerrada];
+  if (!etapaSiguiente) fail(actividadId, "documentos", "El expediente ya está en Expediente / Cierre.");
+
+  // El UPDATE es la escritura que de verdad cuenta — el trigger `validar_avance_etapa` (sección
+  // 12.1/12.3, defensa en profundidad) es quien valida que no queden documentos ni hitos de la
+  // etapa actual sin terminar, y que el equipo haya confirmado recibido/declaración si aplica.
+  // El historial se inserta después, solo si el avance fue real: al revés dejaría constancia de
+  // un cierre que en realidad no ocurrió.
+  const { error: updateError } = await supabase
+    .from("actividades")
+    .update({ etapa_actual: etapaSiguiente })
+    .eq("id", actividadId);
+
+  if (updateError) fail(actividadId, "documentos", updateError.message);
+
+  const { error: historialError } = await supabase.from("actividades_etapa_historial").insert({
+    actividad_id: actividadId,
+    etapa_cerrada: etapaCerrada,
+    etapa_siguiente: etapaSiguiente,
+    cerrado_por_nit: usuario.nit,
+  });
+
+  if (historialError) {
+    fail(actividadId, "documentos", "La etapa se cerró, pero no se pudo registrar en el historial.");
+  }
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=documentos`);
+}
+
+export async function actualizarConfirmacionEquipo(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const usuarioNit = String(formData.get("usuario_nit") ?? "");
+  const campo = String(formData.get("campo") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
+
+  const usuario = await getUsuarioActual();
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "equipo", "No tienes permiso para confirmar al equipo.");
+  if ((campo !== "recibido" && campo !== "declaracion") || !fecha) {
+    fail(actividadId, "equipo", "Indica la fecha.");
+  }
+
+  const supabase = await createClient();
+  const cambios = campo === "recibido" ? { fecha_recibido: fecha } : { fecha_declaracion_independencia: fecha };
+  const { error } = await supabase
+    .from("actividades_equipo")
+    .update(cambios)
+    .eq("actividad_id", actividadId)
+    .eq("usuario_nit", usuarioNit);
+
+  if (error) fail(actividadId, "equipo", "No se pudo guardar la confirmación.");
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=equipo`);
 }

@@ -4,12 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EquipoPanel } from "@/components/actividades/equipo-panel";
 import { CronogramaPanel } from "@/components/actividades/cronograma-panel";
 import { DocumentosPanel } from "@/components/actividades/documentos-panel";
 import { BitacoraPanel } from "@/components/actividades/bitacora-panel";
-import { ETAPA_ACTIVIDAD_LABELS, type Movimiento } from "@/types/domain";
+import { cerrarEtapa } from "./actions";
+import { ETAPA_ACTIVIDAD_LABELS, SIGUIENTE_ETAPA, type Movimiento } from "@/types/domain";
 import { UMBRAL_POR_DEFECTO, type UmbralSemaforo } from "@/lib/semaforo";
 
 export default async function ActividadDetallePage({
@@ -47,6 +49,8 @@ export default async function ActividadDetallePage({
     { data: hitos },
     { data: parametrosHito },
     { data: feriadosRows },
+    { data: matrizRevision },
+    { data: etapaHistorial },
   ] = await Promise.all([
     supabase
       .from("actividades_equipo")
@@ -66,11 +70,37 @@ export default async function ActividadDetallePage({
       .order("codigo_jerarquico"),
     supabase.from("parametros_semaforo").select("*").eq("ambito", "hito").maybeSingle(),
     supabase.from("calendario_feriados").select("fecha"),
+    supabase
+      .from("documentos_catalogo_revision")
+      .select("documento_catalogo_id, cargo")
+      .eq("departamento_id", actividad.departamento_id)
+      .order("orden_revision"),
+    supabase
+      .from("actividades_etapa_historial")
+      .select("*, cerrado_por:usuarios(nombre)")
+      .eq("actividad_id", id)
+      .order("timestamp"),
   ]);
 
   const documentosSeguros = documentos ?? [];
   const idsUsados = new Set(documentosSeguros.map((d) => d.documento_catalogo_id));
-  const catalogoDisponible = (catalogoTodos ?? []).filter((c) => !idsUsados.has(c.id));
+  // No se puede iniciar un documento de una etapa que la actividad todavía no alcanzó (mismo
+  // orden fijo que refuerza la base de datos vía RLS) — el dropdown de "iniciar documento"
+  // solo ofrece los que sí corresponden a la etapa actual.
+  const catalogoDisponible = (catalogoTodos ?? []).filter(
+    (c) => !idsUsados.has(c.id) && c.etapa === actividad.etapa_actual,
+  );
+
+  // Sección 4.5: quién revisa cada documento varía por documento y departamento — la matriz
+  // real (`documentos_catalogo_revision`) solo está sembrada para 2 de los 18 documentos hasta
+  // ahora (ver nota en la migración de sección 4.5), así que esto es una sugerencia informativa
+  // cuando hay dato, nunca una validación bloqueante.
+  const ordenRevisionPorDocumento = new Map<string, string[]>();
+  for (const fila of matrizRevision ?? []) {
+    const lista = ordenRevisionPorDocumento.get(fila.documento_catalogo_id) ?? [];
+    lista.push(fila.cargo);
+    ordenRevisionPorDocumento.set(fila.documento_catalogo_id, lista);
+  }
 
   const nitsEnEquipo = new Set((equipo ?? []).map((m) => m.usuario_nit));
   const candidatosEquipo = (candidatos ?? []).filter((u) => !nitsEnEquipo.has(u.nit));
@@ -89,6 +119,22 @@ export default async function ActividadDetallePage({
   const umbralHito: UmbralSemaforo = parametrosHito ?? UMBRAL_POR_DEFECTO;
   const hoy = new Date().toISOString().slice(0, 10);
 
+  // Mismas condiciones que valida el trigger `validar_avance_etapa` en la base de datos — se
+  // recalculan aquí solo para mostrar un aviso antes de intentar cerrar, no como la validación
+  // real (esa vive en la base, sección 12.1/12.3).
+  const etapaSiguiente = SIGUIENTE_ETAPA[actividad.etapa_actual];
+  const docsPendientesEtapa = documentosSeguros.filter(
+    (d) => d.documentos_catalogo?.etapa === actividad.etapa_actual && d.fase_actual !== "finalizado",
+  ).length;
+  const hitosPendientesEtapa = (hitos ?? []).filter(
+    (h) => h.etapa === actividad.etapa_actual && h.estado !== "concluido",
+  ).length;
+  const equipoIncompleto =
+    actividad.etapa_actual === "planificacion"
+      ? (equipo ?? []).filter((m) => !m.fecha_recibido || !m.fecha_declaracion_independencia).length
+      : 0;
+  const pendientesEtapa = docsPendientesEtapa + hitosPendientesEtapa + equipoIncompleto;
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -106,6 +152,26 @@ export default async function ActividadDetallePage({
               >
                 Exportar hoja de ruta completa
               </Link>
+              {puedeEditar && etapaSiguiente ? (
+                <div className="flex flex-col items-end gap-1">
+                  <form action={cerrarEtapa}>
+                    <input type="hidden" name="actividad_id" value={id} />
+                    <Button type="submit" variant="outline" size="sm">
+                      Cerrar etapa → {ETAPA_ACTIVIDAD_LABELS[etapaSiguiente]}
+                    </Button>
+                  </form>
+                  {pendientesEtapa > 0 ? (
+                    <p className="max-w-56 text-right text-xs text-muted-foreground">
+                      Faltan {docsPendientesEtapa > 0 ? `${docsPendientesEtapa} documento(s)` : null}
+                      {docsPendientesEtapa > 0 && hitosPendientesEtapa > 0 ? ", " : null}
+                      {hitosPendientesEtapa > 0 ? `${hitosPendientesEtapa} hito(s)` : null}
+                      {(docsPendientesEtapa > 0 || hitosPendientesEtapa > 0) && equipoIncompleto > 0 ? " y " : null}
+                      {equipoIncompleto > 0 ? `${equipoIncompleto} confirmación(es) de equipo` : null} por terminar en
+                      esta etapa.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </CardHeader>
@@ -160,11 +226,30 @@ export default async function ActividadDetallePage({
             actividadId={id}
             documentos={documentosSeguros}
             catalogoDisponible={catalogoDisponible}
+            ordenRevisionPorDocumento={ordenRevisionPorDocumento}
             puedeEditar={puedeEditar}
           />
         </TabsContent>
         <TabsContent value="bitacora">
-          <BitacoraPanel movimientos={movimientos} />
+          <div className="flex flex-col gap-4">
+            {etapaHistorial && etapaHistorial.length > 0 ? (
+              <div className="rounded-lg border p-3 text-sm">
+                <p className="mb-2 font-medium">Cierres de etapa</p>
+                <ul className="flex flex-col gap-1">
+                  {etapaHistorial.map((h) => (
+                    <li key={h.id} className="text-muted-foreground">
+                      {ETAPA_ACTIVIDAD_LABELS[h.etapa_cerrada]} → {ETAPA_ACTIVIDAD_LABELS[h.etapa_siguiente]}
+                      {" · "}
+                      {new Date(h.timestamp).toLocaleString("es-GT", { dateStyle: "medium", timeStyle: "short" })}
+                      {" · cerrado por "}
+                      {h.cerrado_por?.nombre ?? h.cerrado_por_nit}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <BitacoraPanel movimientos={movimientos} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
