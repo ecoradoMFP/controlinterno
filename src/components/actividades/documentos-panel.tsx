@@ -30,11 +30,13 @@ export function DocumentosPanel({
   actividadId,
   documentos,
   catalogoDisponible,
+  ordenRevisionPorDocumento,
   puedeEditar,
 }: {
   actividadId: string;
   documentos: (DocumentoActividad & { documentos_catalogo: Pick<DocumentoCatalogo, "nombre" | "etapa"> | null })[];
   catalogoDisponible: DocumentoCatalogo[];
+  ordenRevisionPorDocumento: Map<string, string[]>;
   puedeEditar: boolean;
 }) {
   return (
@@ -51,6 +53,15 @@ export function DocumentosPanel({
                   <p className="text-xs text-muted-foreground">
                     Responsable actual: {CARGO_LABELS[d.cargo_actual_responsable]}
                   </p>
+                  {ordenRevisionPorDocumento.get(d.documento_catalogo_id) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Orden de revisión sugerido:{" "}
+                      {ordenRevisionPorDocumento
+                        .get(d.documento_catalogo_id)!
+                        .map((c) => CARGO_LABELS[c as CargoEnum])
+                        .join(" → ")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant={d.fase_actual === "finalizado" ? "default" : "secondary"}>

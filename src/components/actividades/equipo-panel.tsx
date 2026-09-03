@@ -1,4 +1,4 @@
-import { agregarMiembroEquipo } from "@/app/(dashboard)/actividades/[id]/actions";
+import { agregarMiembroEquipo, actualizarConfirmacionEquipo } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,12 +28,15 @@ export function EquipoPanel({
           <li className="p-4 text-sm text-muted-foreground">Sin miembros de equipo asignados aún.</li>
         ) : (
           equipo.map((m) => (
-            <li key={m.usuario_nit} className="flex items-center justify-between p-3 text-sm">
-              <span>
-                {m.usuarios?.nombre ?? m.usuario_nit}
-                {m.usuarios?.cargo ? ` · ${CARGO_LABELS[m.usuarios.cargo]}` : ""}
-              </span>
-              <span className="text-muted-foreground">{m.rol_en_equipo ?? "—"}</span>
+            <li key={m.usuario_nit} className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span>
+                  {m.usuarios?.nombre ?? m.usuario_nit}
+                  {m.usuarios?.cargo ? ` · ${CARGO_LABELS[m.usuarios.cargo]}` : ""}
+                </span>
+                <span className="ml-2 text-muted-foreground">{m.rol_en_equipo ?? "—"}</span>
+              </div>
+              <ConfirmacionEquipo actividadId={actividadId} miembro={m} puedeEditar={puedeEditar} />
             </li>
           ))
         )}
@@ -69,5 +72,79 @@ export function EquipoPanel({
         </form>
       ) : null}
     </div>
+  );
+}
+
+// Flujograma institucional real: antes de cualquier trabajo, el equipo firma de recibido el
+// nombramiento y su Declaración de Independencia — se exige para poder cerrar Planificación
+// (ver el trigger `validar_avance_etapa`).
+function ConfirmacionEquipo({
+  actividadId,
+  miembro,
+  puedeEditar,
+}: {
+  actividadId: string;
+  miembro: ActividadEquipo;
+  puedeEditar: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3 text-xs">
+      <ConfirmacionCampo
+        actividadId={actividadId}
+        usuarioNit={miembro.usuario_nit}
+        campo="recibido"
+        etiqueta="Recibido del nombramiento"
+        fecha={miembro.fecha_recibido}
+        puedeEditar={puedeEditar}
+      />
+      <ConfirmacionCampo
+        actividadId={actividadId}
+        usuarioNit={miembro.usuario_nit}
+        campo="declaracion"
+        etiqueta="Declaración de Independencia"
+        fecha={miembro.fecha_declaracion_independencia}
+        puedeEditar={puedeEditar}
+      />
+    </div>
+  );
+}
+
+function ConfirmacionCampo({
+  actividadId,
+  usuarioNit,
+  campo,
+  etiqueta,
+  fecha,
+  puedeEditar,
+}: {
+  actividadId: string;
+  usuarioNit: string;
+  campo: "recibido" | "declaracion";
+  etiqueta: string;
+  fecha: string | null;
+  puedeEditar: boolean;
+}) {
+  if (fecha) {
+    return (
+      <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
+        {etiqueta}: {fecha}
+      </span>
+    );
+  }
+
+  if (!puedeEditar) {
+    return <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">{etiqueta}: pendiente</span>;
+  }
+
+  return (
+    <form action={actualizarConfirmacionEquipo} className="flex items-center gap-1.5">
+      <input type="hidden" name="actividad_id" value={actividadId} />
+      <input type="hidden" name="usuario_nit" value={usuarioNit} />
+      <input type="hidden" name="campo" value={campo} />
+      <Input type="date" name="fecha" required className="h-7 w-32 text-xs" />
+      <Button type="submit" variant="outline" size="sm" className="h-7">
+        {etiqueta}
+      </Button>
+    </form>
   );
 }

@@ -19,6 +19,7 @@ export type OficioInsert = Tables["oficios"]["Insert"];
 export type ParametroSemaforo = Tables["parametros_semaforo"]["Row"];
 export type CalendarioFeriado = Tables["calendario_feriados"]["Row"];
 export type Notificacion = Tables["notificaciones"]["Row"];
+export type ActividadEtapaHistorial = Tables["actividades_etapa_historial"]["Row"];
 
 export type CargoEnum = Database["public"]["Enums"]["cargo_enum"];
 export type PermisoSistemaEnum = Database["public"]["Enums"]["permiso_sistema_enum"];
@@ -44,6 +45,15 @@ export const ETAPA_ACTIVIDAD_LABELS: Record<EtapaActividadEnum, string> = {
   ejecucion: "Ejecución",
   comunicacion_resultados: "Comunicación de Resultados",
   expediente_cierre: "Expediente / Cierre",
+};
+
+// El proceso avanza una sola etapa a la vez, en este orden fijo — mismo orden reforzado por
+// el trigger `validar_avance_etapa` en la base de datos (defensa en profundidad).
+export const SIGUIENTE_ETAPA: Record<EtapaActividadEnum, EtapaActividadEnum | null> = {
+  planificacion: "ejecucion",
+  ejecucion: "comunicacion_resultados",
+  comunicacion_resultados: "expediente_cierre",
+  expediente_cierre: null,
 };
 
 export const AMBITO_SEMAFORO_LABELS: Record<AmbitoSemaforoEnum, string> = {

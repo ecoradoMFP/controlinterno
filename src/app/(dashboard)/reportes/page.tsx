@@ -323,7 +323,7 @@ export default async function ReportesPage() {
         <p className="text-sm text-muted-foreground">
           Tiempo real (horas de reloj, no días calendario) que un documento permanece en manos de
           un mismo responsable antes de pasar al siguiente — así una corrección que va y vuelve el
-          mismo día no se pierde como "0 días". Solo tramos ya cerrados; no el documento que
+          mismo día no se pierde como &ldquo;0 días&rdquo;. Solo tramos ya cerrados; no el documento que
           alguien tiene abierto ahora mismo.
         </p>
       </div>
