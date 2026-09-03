@@ -87,6 +87,19 @@
   --sidebar-accent-foreground: #00435c;
   --sidebar-border: #d7dee6;
   --sidebar-ring: #0099cc;
+  /* Rampa secuencial para mapas de calor (carga de trabajo, sección 7): un solo tono, de
+   * "casi nada" (claro, cercano al fondo) a "mucho" (oscuro) — nunca identidad, solo magnitud. */
+  --heat-0: transparent;
+  --heat-1: #cde2fb;
+  --heat-2: #86b6ef;
+  --heat-3: #3987e5;
+  --heat-4: #1c5cab;
+  --heat-5: #0d366b;
+  --heat-text-1: #001f52;
+  --heat-text-2: #001f52;
+  --heat-text-3: #ffffff;
+  --heat-text-4: #ffffff;
+  --heat-text-5: #ffffff;
 }
 
 .dark {
@@ -121,6 +134,19 @@
   --sidebar-accent-foreground: #7fd4f2;
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: #2fb8ea;
+  /* Mismo mapa de calor, ancla invertida: en modo oscuro "casi nada" se hunde hacia el fondo
+   * oscuro y "mucho" resalta claro, en vez de al revés como en modo claro. */
+  --heat-0: transparent;
+  --heat-1: #14335c;
+  --heat-2: #1c5cab;
+  --heat-3: #256abf;
+  --heat-4: #3987e5;
+  --heat-5: #86b6ef;
+  --heat-text-1: #eef3f8;
+  --heat-text-2: #eef3f8;
+  --heat-text-3: #eef3f8;
+  --heat-text-4: #06192c;
+  --heat-text-5: #06192c;
 }
 
 @layer base {
@@ -144,4 +170,13 @@
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
   font-weight: 600;
+}
+
+/* Vistas imprimibles (hoja de ruta, sección 12.7): la barra de navegación y el pie navy son
+ * cromo de la app, no parte del documento que un auditor va a imprimir/guardar como PDF. */
+@media print {
+  header,
+  footer {
+    display: none !important;
+  }
 }

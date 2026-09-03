@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,7 +98,15 @@ export default async function ActividadDetallePage({
               <CardTitle className="codigo-expediente text-lg">{actividad.no_nombramiento}</CardTitle>
               <p className="text-sm text-muted-foreground">{actividad.dependencia_auditada}</p>
             </div>
-            <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>
+              <Link
+                href={`/actividades/${id}/hoja-de-ruta`}
+                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Exportar hoja de ruta completa
+              </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">

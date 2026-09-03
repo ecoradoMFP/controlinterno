@@ -12,10 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Link from "next/link";
 import {
   CARGOS,
   CARGO_LABELS,
   FASE_DOCUMENTO_LABELS,
+  TIPO_EVENTO_LABELS,
   type CargoEnum,
   type DocumentoActividad,
   type DocumentoCatalogo,
@@ -23,13 +25,6 @@ import {
 } from "@/types/domain";
 
 const FASES: FaseDocumentoEnum[] = ["elaboracion", "revision", "correccion", "finalizado"];
-const TIPO_EVENTO_LABELS = {
-  entrega: "Entrega",
-  recepcion: "Recepción",
-  aprobacion: "Aprobación",
-  devolucion_correccion: "Devolución para corrección",
-  registro_tardio: "Registro tardío",
-} as const;
 
 export function DocumentosPanel({
   actividadId,
@@ -57,9 +52,17 @@ export function DocumentosPanel({
                     Responsable actual: {CARGO_LABELS[d.cargo_actual_responsable]}
                   </p>
                 </div>
-                <Badge variant={d.fase_actual === "finalizado" ? "default" : "secondary"}>
-                  {FASE_DOCUMENTO_LABELS[d.fase_actual]}
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <Badge variant={d.fase_actual === "finalizado" ? "default" : "secondary"}>
+                    {FASE_DOCUMENTO_LABELS[d.fase_actual]}
+                  </Badge>
+                  <Link
+                    href={`/actividades/${actividadId}/hoja-de-ruta?documento=${d.id}`}
+                    className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    Exportar hoja de ruta
+                  </Link>
+                </div>
               </div>
 
               {puedeEditar ? (
