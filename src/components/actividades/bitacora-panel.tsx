@@ -1,13 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { CARGO_LABELS, type Movimiento } from "@/types/domain";
-
-const TIPO_EVENTO_LABELS: Record<Movimiento["tipo_evento"], string> = {
-  entrega: "Entrega",
-  recepcion: "Recepción",
-  aprobacion: "Aprobación",
-  devolucion_correccion: "Devolución para corrección",
-  registro_tardio: "Registro tardío",
-};
+import { CARGO_LABELS, TIPO_EVENTO_LABELS, type Movimiento } from "@/types/domain";
 
 type MovimientoConContexto = Movimiento & {
   documentos_actividad: { documentos_catalogo: { nombre: string } | null } | null;
@@ -37,7 +29,7 @@ export function BitacoraPanel({ movimientos }: { movimientos: MovimientoConConte
             {" · registrado por "}
             {m.registrado_por?.nombre ?? m.registrado_por_nit}
           </p>
-          {m.observacion ? <p className="mt-1 italic">"{m.observacion}"</p> : null}
+          {m.observacion ? <p className="mt-1 italic">&ldquo;{m.observacion}&rdquo;</p> : null}
           {m.es_correccion_direccion ? (
             <Badge variant="destructive" className="mt-2">
               Corrección de Dirección

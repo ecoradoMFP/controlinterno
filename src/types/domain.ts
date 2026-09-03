@@ -64,3 +64,11 @@ export const FASE_DOCUMENTO_LABELS: Record<FaseDocumentoEnum, string> = {
   correccion: "Corrección",
   finalizado: "Finalizado",
 };
+
+export const TIPO_EVENTO_LABELS: Record<TipoEventoMovimientoEnum, string> = {
+  entrega: "Entrega",
+  recepcion: "Recepción",
+  aprobacion: "Aprobación",
+  devolucion_correccion: "Devolución para corrección",
+  registro_tardio: "Registro tardío",
+};
