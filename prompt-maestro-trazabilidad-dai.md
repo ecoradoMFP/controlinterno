@@ -283,9 +283,9 @@ Esta es la vía de mayor riesgo de abuso del sistema: es la única que puede alt
 - Mensajes de error de la aplicación no deben filtrar NIT/correo de terceros a un usuario sin permiso para verlos.
 - Logs de aplicación/errores (fuera de la bitácora de negocio) no deben incluir NIT ni correo en texto plano si van a un servicio externo de logging.
 
-### 12.7 Almacenamiento de documentos — decisión pendiente con implicación de seguridad
+### 12.7 Almacenamiento de documentos — decisión: NO en esta fase inicial
 
-El modelo de datos de la sección 4 registra el **movimiento** de los documentos (quién lo tiene, en qué fase) pero no define si el archivo real (PDF/Word del entregable) se sube al sistema o vive fuera de él. Esto queda como decisión abierta (ver pendientes al final), pero si la respuesta es "sí se sube":
+**Decidido (2026-09-03):** en la fase inicial de adopción no se sube el archivo real (PDF/Word) al sistema — el modelo sigue registrando solo el **movimiento** del documento (quién lo tiene, en qué fase), no el binario. Objetivo explícito: mantener la infraestructura lo más liviana posible mientras el sistema se adopta, y evitar el costo/superficie de Supabase Storage + sus políticas RLS antes de que haga falta. Si más adelante se decide que sí se sube el archivo:
 - Requiere bucket de Supabase Storage con políticas RLS espejo de las de la sección 8 (quién puede subir/descargar según cargo y `permiso_sistema`).
 - Validación de tipo y tamaño de archivo en el servidor (no solo en el cliente).
 - El archivo nunca reemplaza el registro del `movimiento` — es un adjunto de una fila de bitácora existente, no una entidad editable aparte.
@@ -305,4 +305,4 @@ Dado que el sistema va a producir evidencia usada por control interno de una ent
 ### Pendientes a resolver antes o durante la construcción (no bloquean el arranque)
 - Mecanismo final de notificación activa (sección 9).
 - Umbrales definitivos del semáforo si los defaults de la sección 5 no calzan con la realidad operativa una vez en uso.
-- Si los documentos reales (PDF/Word) se almacenan dentro del sistema o quedan fuera de alcance del MVP (sección 12.7) — afecta si se necesita Supabase Storage desde ya.
+- ~~Si los documentos reales (PDF/Word) se almacenan dentro del sistema o quedan fuera de alcance del MVP (sección 12.7)~~ — **resuelto 2026-09-03: fuera de alcance en esta fase**, ver 12.7.
