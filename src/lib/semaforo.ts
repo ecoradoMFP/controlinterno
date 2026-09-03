@@ -122,9 +122,5 @@ export const COLOR_SEMAFORO_LABELS: Record<ColorSemaforo, string> = {
   rojo: "No se logra",
 };
 
-export const COLOR_SEMAFORO_CLASSES: Record<ColorSemaforo, string> = {
-  verde: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-  amarillo: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  naranja: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-  rojo: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-};
+// El estilo visual del semáforo (chip timbrado con punto de color) vive en
+// `@/components/semaforo-chip` — aquí solo la lógica/datos, sin acoplar a clases de Tailwind.

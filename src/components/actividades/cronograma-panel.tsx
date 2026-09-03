@@ -1,6 +1,6 @@
 import { agregarHito, concluirHito } from "@/app/(dashboard)/actividades/[id]/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SemaforoChip } from "@/components/semaforo-chip";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,13 +17,7 @@ import {
   type EtapaDocumentoEnum,
   type HitoCronograma,
 } from "@/types/domain";
-import {
-  calcularSemaforo,
-  cumplidoATiempo,
-  COLOR_SEMAFORO_CLASSES,
-  COLOR_SEMAFORO_LABELS,
-  type UmbralSemaforo,
-} from "@/lib/semaforo";
+import { calcularSemaforo, cumplidoATiempo, COLOR_SEMAFORO_LABELS, type UmbralSemaforo } from "@/lib/semaforo";
 
 const ETAPAS_HITO: EtapaDocumentoEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados"];
 
@@ -165,8 +159,8 @@ function EstadoHito({
 }) {
   if (hito.fecha_fin_real) {
     const aTiempo = cumplidoATiempo(hito.fecha_fin_esperada, hito.fecha_fin_real);
-    return <Badge variant={aTiempo ? "secondary" : "destructive"}>{aTiempo ? "Concluido a tiempo" : "Concluido tarde"}</Badge>;
+    return <SemaforoChip tono={aTiempo ? "verde" : "amarillo"} label={aTiempo ? "Concluido a tiempo" : "Concluido tarde"} />;
   }
   const color = calcularSemaforo(hito.fecha_inicio_esperada, hito.fecha_fin_esperada, hoy, feriados, umbral);
-  return <Badge className={COLOR_SEMAFORO_CLASSES[color]}>{COLOR_SEMAFORO_LABELS[color]}</Badge>;
+  return <SemaforoChip tono={color} label={COLOR_SEMAFORO_LABELS[color]} />;
 }

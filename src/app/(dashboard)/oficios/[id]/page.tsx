@@ -48,7 +48,7 @@ export default async function OficioDetallePage({
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>{oficio.no_oficio}</CardTitle>
+          <CardTitle className="codigo-expediente text-lg">{oficio.no_oficio}</CardTitle>
           <p className="text-sm text-muted-foreground">{oficio.asunto}</p>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">

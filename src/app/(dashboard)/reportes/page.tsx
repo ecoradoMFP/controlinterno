@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Badge } from "@/components/ui/badge";
+import { SemaforoBadge, SemaforoChip } from "@/components/semaforo-chip";
 import {
   Table,
   TableBody,
@@ -12,7 +12,6 @@ import {
 import {
   calcularColorPorActividad,
   UMBRAL_POR_DEFECTO,
-  COLOR_SEMAFORO_CLASSES,
   COLOR_SEMAFORO_LABELS,
   type ColorSemaforo,
   type UmbralSemaforo,
@@ -23,8 +22,10 @@ import {
   calcularSegmentosPermanencia,
   promediarPorClave,
 } from "@/lib/bi";
+import { construirMapaOrganizacional, responsablesPorCargo } from "@/lib/organizacion";
 import { RankingTable } from "@/components/reportes/ranking-table";
 import { CargaTrabajoTable, type FilaCargaTrabajo } from "@/components/reportes/carga-trabajo-table";
+import { CargaDepartamentoTable, type FilaCargaDepartamento } from "@/components/reportes/carga-departamento-table";
 import { CumplimientoCards } from "@/components/reportes/cumplimiento-cards";
 import { PlanVsRealChart } from "@/components/reportes/plan-vs-real-chart";
 import { CARGO_LABELS, type CargoEnum } from "@/types/domain";
@@ -47,12 +48,14 @@ export default async function ReportesPage() {
     { data: hitosConcluidos },
     { data: oficiosConcluidos },
     { data: equipos },
-    { data: usuariosAuditores },
+    { data: usuariosEquipo },
+    { data: departamentos },
+    { data: subdirecciones },
   ] = await Promise.all([
     supabase
       .from("actividades")
       .select(
-        "id, no_nombramiento, dependencia_auditada, auditor_principal_nit, etapa_actual, departamentos(nombre)",
+        "id, no_nombramiento, dependencia_auditada, auditor_principal_nit, etapa_actual, departamento_id, departamentos(nombre)",
       )
       .order("no_nombramiento"),
     supabase
@@ -88,9 +91,11 @@ export default async function ReportesPage() {
     supabase.from("actividades_equipo").select("actividad_id, usuario_nit"),
     supabase
       .from("usuarios")
-      .select("nit, nombre, departamento_id, departamentos(nombre)")
-      .eq("cargo", "auditor")
+      .select("nit, nombre, cargo, departamento_id, departamentos(nombre)")
+      .in("cargo", ["auditor", "subjefe", "jefe"])
       .eq("activo", true),
+    supabase.from("departamentos").select("id, nombre, subdireccion_id"),
+    supabase.from("subdirecciones").select("id, subdirector_nit"),
   ]);
 
   const feriados = new Set((feriadosRows ?? []).map((f) => f.fecha));
@@ -120,15 +125,24 @@ export default async function ReportesPage() {
       documentoNombre: d.documentos_catalogo?.nombre ?? null,
       movimientos: d.movimientos,
     })),
-    feriados,
   );
   const rankingPorCargo = promediarPorClave(segmentos, (s) => s.cargo);
   const rankingPorDepartamento = promediarPorClave(segmentos, (s) => s.departamentoNombre);
   const rankingPorDocumento = promediarPorClave(segmentos, (s) => s.documentoNombre);
 
-  // Carga de trabajo por auditor: actividades activas por equipo/auditor principal, más
-  // documentos pendientes en la etapa del Auditor y oficios propios sin respuesta.
+  // Carga de trabajo — por integrante (todo el equipo: auditor/subjefe/jefe, no solo auditores)
+  // y por departamento. Un documento pendiente se atribuye a quien realmente responde por ese
+  // cargo: al equipo de la actividad puntual si es un Auditor (cargo_actual_responsable es un
+  // rol, no una persona — con más de un auditor en el equipo no hay forma de saber cuál de ellos
+  // lo tiene sin un dato adicional), o a la jefatura/subdirección/dirección del departamento si
+  // es un cargo departamental (mismo mapa organizacional que usa el job de alertas).
+  const mapaOrg = construirMapaOrganizacional(
+    (usuariosEquipo ?? []).map((u) => ({ nit: u.nit, cargo: u.cargo, departamento_id: u.departamento_id })),
+    departamentos ?? [],
+    subdirecciones ?? [],
+  );
   const actividadPorId = new Map((actividades ?? []).map((a) => [a.id, a]));
+
   const actividadesActivasPorNit = new Map<string, Set<string>>();
   function agregarActividadActiva(nit: string | null, actividadId: string) {
     const actividad = actividadPorId.get(actividadId);
@@ -140,9 +154,6 @@ export default async function ReportesPage() {
   for (const a of actividades ?? []) agregarActividadActiva(a.auditor_principal_nit, a.id);
   for (const eq of equipos ?? []) agregarActividadActiva(eq.usuario_nit, eq.actividad_id);
 
-  // Un documento pendiente en la etapa del Auditor se atribuye a todo el equipo de esa
-  // actividad (cargo_actual_responsable es un rol, no una persona; con más de un auditor en el
-  // equipo no hay forma de saber cuál de ellos lo tiene sin un dato adicional).
   const equipoPorActividad = new Map<string, Set<string>>();
   for (const eq of equipos ?? []) {
     const set = equipoPorActividad.get(eq.actividad_id) ?? new Set<string>();
@@ -154,28 +165,74 @@ export default async function ReportesPage() {
     set.add(a.auditor_principal_nit);
     equipoPorActividad.set(a.id, set);
   }
+
   const documentosPendientesPorNit = new Map<string, number>();
+  const documentosPendientesPorDepartamento = new Map<string, number>();
   for (const d of documentosConMovimientos ?? []) {
-    if (d.fase_actual === "finalizado" || d.cargo_actual_responsable !== "auditor") continue;
-    for (const nit of equipoPorActividad.get(d.actividad_id) ?? []) {
+    if (d.fase_actual === "finalizado") continue;
+    const actividad = actividadPorId.get(d.actividad_id);
+    if (!actividad) continue;
+
+    documentosPendientesPorDepartamento.set(
+      actividad.departamento_id,
+      (documentosPendientesPorDepartamento.get(actividad.departamento_id) ?? 0) + 1,
+    );
+
+    const nits =
+      d.cargo_actual_responsable === "auditor"
+        ? [...(equipoPorActividad.get(d.actividad_id) ?? [])]
+        : responsablesPorCargo(mapaOrg, d.cargo_actual_responsable, actividad.departamento_id);
+    for (const nit of nits) {
       documentosPendientesPorNit.set(nit, (documentosPendientesPorNit.get(nit) ?? 0) + 1);
     }
   }
+
   const oficiosPendientesPorNit = new Map<string, number>();
+  const oficiosPendientesPorDepartamento = new Map<string, number>();
   for (const o of oficiosAbiertos ?? []) {
     oficiosPendientesPorNit.set(
       o.responsable_elaboracion_nit,
       (oficiosPendientesPorNit.get(o.responsable_elaboracion_nit) ?? 0) + 1,
     );
+    // o.actividad_id siempre existe aquí: la consulta de oficiosAbiertos ya filtra
+    // `not("actividad_id", "is", null)" — un oficio sin actividad no tiene departamento propio.
+    const actividad = actividadPorId.get(o.actividad_id!);
+    if (actividad) {
+      oficiosPendientesPorDepartamento.set(
+        actividad.departamento_id,
+        (oficiosPendientesPorDepartamento.get(actividad.departamento_id) ?? 0) + 1,
+      );
+    }
   }
-  const cargaTrabajo: FilaCargaTrabajo[] = (usuariosAuditores ?? []).map((u) => ({
+
+  const cargaTrabajo: FilaCargaTrabajo[] = (usuariosEquipo ?? []).map((u) => ({
     nit: u.nit,
     nombre: u.nombre,
+    cargo: u.cargo!,
     departamentoNombre: u.departamentos?.nombre ?? null,
     actividadesActivas: actividadesActivasPorNit.get(u.nit)?.size ?? 0,
     documentosPendientes: documentosPendientesPorNit.get(u.nit) ?? 0,
     oficiosPendientes: oficiosPendientesPorNit.get(u.nit) ?? 0,
   }));
+
+  const actividadesActivasPorDepartamento = new Map<string, number>();
+  for (const a of actividades ?? []) {
+    if (a.etapa_actual === "expediente_cierre") continue;
+    actividadesActivasPorDepartamento.set(
+      a.departamento_id,
+      (actividadesActivasPorDepartamento.get(a.departamento_id) ?? 0) + 1,
+    );
+  }
+  const cargaDepartamento: FilaCargaDepartamento[] = (departamentos ?? [])
+    .map((d) => ({
+      departamentoNombre: d.nombre,
+      actividadesActivas: actividadesActivasPorDepartamento.get(d.id) ?? 0,
+      documentosPendientes: documentosPendientesPorDepartamento.get(d.id) ?? 0,
+      oficiosPendientes: oficiosPendientesPorDepartamento.get(d.id) ?? 0,
+    }))
+    // RLS ya limita `departamentos` a lo que el usuario puede ver, pero un departamento sin
+    // ninguna actividad visible en este alcance no aporta nada a la tabla.
+    .filter((f) => f.actividadesActivas + f.documentosPendientes + f.oficiosPendientes > 0);
 
   // Cumplimiento histórico de plazos.
   const cumplimientoHitos = calcularCumplimiento(
@@ -234,7 +291,7 @@ export default async function ReportesPage() {
                 return (
                   <TableRow key={a.id}>
                     <TableCell>
-                      <Link href={`/actividades/${a.id}`} className="font-medium hover:underline">
+                      <Link href={`/actividades/${a.id}`} className="codigo-expediente hover:underline">
                         {a.no_nombramiento}
                       </Link>
                       <p className="text-xs text-muted-foreground">{a.dependencia_auditada}</p>
@@ -242,9 +299,9 @@ export default async function ReportesPage() {
                     <TableCell>{a.departamentos?.nombre ?? "—"}</TableCell>
                     <TableCell>
                       {color ? (
-                        <Badge className={COLOR_SEMAFORO_CLASSES[color]}>{COLOR_SEMAFORO_LABELS[color]}</Badge>
+                        <SemaforoBadge color={color} />
                       ) : (
-                        <Badge variant="outline">Sin datos</Badge>
+                        <SemaforoChip tono="neutral" label="Sin datos" />
                       )}
                     </TableCell>
                   </TableRow>
@@ -264,9 +321,10 @@ export default async function ReportesPage() {
       <div>
         <h2 className="text-lg font-semibold">Cuellos de botella</h2>
         <p className="text-sm text-muted-foreground">
-          Días promedio que un documento permanece en manos de un mismo responsable antes de
-          pasar al siguiente (solo tramos ya cerrados, no el documento que alguien tiene abierto
-          ahora mismo).
+          Tiempo real (horas de reloj, no días calendario) que un documento permanece en manos de
+          un mismo responsable antes de pasar al siguiente — así una corrección que va y vuelve el
+          mismo día no se pierde como "0 días". Solo tramos ya cerrados; no el documento que
+          alguien tiene abierto ahora mismo.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -292,6 +350,8 @@ export default async function ReportesPage() {
           etiquetaClave={(c) => c}
         />
       </div>
+
+      <CargaDepartamentoTable filas={cargaDepartamento} />
 
       <CargaTrabajoTable filas={cargaTrabajo} />
 

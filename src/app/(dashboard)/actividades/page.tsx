@@ -53,7 +53,7 @@ export default async function ActividadesPage() {
               actividades.map((a) => (
                 <TableRow key={a.id} className="cursor-pointer">
                   <TableCell>
-                    <Link href={`/actividades/${a.id}`} className="font-medium hover:underline">
+                    <Link href={`/actividades/${a.id}`} className="codigo-expediente hover:underline">
                       {a.no_nombramiento}
                     </Link>
                   </TableCell>

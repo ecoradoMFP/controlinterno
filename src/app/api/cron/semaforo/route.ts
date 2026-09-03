@@ -6,6 +6,7 @@ import {
   COLOR_SEMAFORO_LABELS,
   type UmbralSemaforo,
 } from "@/lib/semaforo";
+import { construirMapaOrganizacional, responsablesPorCargo } from "@/lib/organizacion";
 
 /**
  * Job diario de alertas de semáforo (sección 9). No calcula nada que /reportes no calcule ya
@@ -81,21 +82,7 @@ export async function GET(request: NextRequest) {
     (notificacionesPrevias ?? []).map((n) => `${n.actividad_id}|${n.color}|${n.usuario_nit}`),
   );
 
-  const subdirectorPorDepartamento = new Map<string, string>();
-  for (const d of departamentos ?? []) {
-    const sub = (subdirecciones ?? []).find((s) => s.id === d.subdireccion_id);
-    if (sub?.subdirector_nit) subdirectorPorDepartamento.set(d.id, sub.subdirector_nit);
-  }
-  const jefaturaPorDepartamento = new Map<string, string[]>();
-  const directores: string[] = [];
-  for (const u of usuarios ?? []) {
-    if (u.cargo === "director") directores.push(u.nit);
-    if ((u.cargo === "jefe" || u.cargo === "subjefe") && u.departamento_id) {
-      const lista = jefaturaPorDepartamento.get(u.departamento_id) ?? [];
-      lista.push(u.nit);
-      jefaturaPorDepartamento.set(u.departamento_id, lista);
-    }
-  }
+  const mapaOrg = construirMapaOrganizacional(usuarios ?? [], departamentos ?? [], subdirecciones ?? []);
   const equipoPorActividad = new Map<string, string[]>();
   for (const eq of equipos ?? []) {
     const lista = equipoPorActividad.get(eq.actividad_id) ?? [];
@@ -112,11 +99,11 @@ export async function GET(request: NextRequest) {
     const destinatarios = new Set<string>([
       actividad.auditor_principal_nit,
       ...(equipoPorActividad.get(actividad.id) ?? []),
-      ...(jefaturaPorDepartamento.get(actividad.departamento_id) ?? []),
-      ...directores,
+      ...responsablesPorCargo(mapaOrg, "jefe", actividad.departamento_id),
+      ...responsablesPorCargo(mapaOrg, "subjefe", actividad.departamento_id),
+      ...responsablesPorCargo(mapaOrg, "subdirector", actividad.departamento_id),
+      ...responsablesPorCargo(mapaOrg, "director", actividad.departamento_id),
     ]);
-    const subdirector = subdirectorPorDepartamento.get(actividad.departamento_id);
-    if (subdirector) destinatarios.add(subdirector);
 
     const mensaje = `${actividad.no_nombramiento} pasó a "${COLOR_SEMAFORO_LABELS[color]}" en el semáforo.`;
     for (const nit of destinatarios) {
