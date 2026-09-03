@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# credenciales de prueba locales (solo Docker, nunca al repo)
+credenciales-prueba.local.txt
+
 # vercel
 .vercel
 

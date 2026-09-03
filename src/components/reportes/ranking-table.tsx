@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { RankingCuelloBotella } from "@/lib/bi";
+import { formatearHoras, type RankingCuelloBotella } from "@/lib/bi";
 
 export function RankingTable({
   titulo,
@@ -31,7 +31,7 @@ export function RankingTable({
         <TableHeader>
           <TableRow>
             <TableHead>{columnaClave}</TableHead>
-            <TableHead>Días prom.</TableHead>
+            <TableHead>Tiempo prom.</TableHead>
             <TableHead>Tramos</TableHead>
           </TableRow>
         </TableHeader>
@@ -40,7 +40,7 @@ export function RankingTable({
             filas.map((f) => (
               <TableRow key={f.clave}>
                 <TableCell className="whitespace-normal font-medium">{etiquetaClave(f.clave)}</TableCell>
-                <TableCell>{f.diasPromedio.toFixed(1)}</TableCell>
+                <TableCell>{formatearHoras(f.horasPromedio)}</TableCell>
                 <TableCell className="text-muted-foreground">{f.n}</TableCell>
               </TableRow>
             ))

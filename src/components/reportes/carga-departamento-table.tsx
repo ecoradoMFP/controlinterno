@@ -6,33 +6,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CARGO_LABELS, type CargoEnum } from "@/types/domain";
 
-export interface FilaCargaTrabajo {
-  nit: string;
-  nombre: string;
-  cargo: CargoEnum;
-  departamentoNombre: string | null;
+export interface FilaCargaDepartamento {
+  departamentoNombre: string;
   actividadesActivas: number;
   documentosPendientes: number;
   oficiosPendientes: number;
 }
 
-export function CargaTrabajoTable({ filas }: { filas: FilaCargaTrabajo[] }) {
+export function CargaDepartamentoTable({ filas }: { filas: FilaCargaDepartamento[] }) {
   return (
     <div className="rounded-lg border">
       <div className="border-b p-4">
-        <h2 className="font-medium">Carga de trabajo por integrante</h2>
+        <h2 className="font-medium">Carga de trabajo por departamento</h2>
         <p className="text-xs text-muted-foreground">
-          Desglose de todo el equipo (auditor, subjefe, jefe): actividades activas asignadas,
-          documentos pendientes en la etapa de su cargo, y oficios propios sin respuesta todavía.
+          Suma de los tres cargos dentro de cada departamento — vista rápida de dónde hay más
+          volumen antes de bajar al detalle por integrante.
         </p>
       </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Integrante</TableHead>
-            <TableHead>Cargo</TableHead>
             <TableHead>Departamento</TableHead>
             <TableHead>Actividades activas</TableHead>
             <TableHead>Documentos pendientes</TableHead>
@@ -42,10 +36,8 @@ export function CargaTrabajoTable({ filas }: { filas: FilaCargaTrabajo[] }) {
         <TableBody>
           {filas.length > 0 ? (
             filas.map((f) => (
-              <TableRow key={f.nit}>
-                <TableCell className="font-medium">{f.nombre}</TableCell>
-                <TableCell>{CARGO_LABELS[f.cargo]}</TableCell>
-                <TableCell>{f.departamentoNombre ?? "—"}</TableCell>
+              <TableRow key={f.departamentoNombre}>
+                <TableCell className="font-medium">{f.departamentoNombre}</TableCell>
                 <TableCell>{f.actividadesActivas}</TableCell>
                 <TableCell>{f.documentosPendientes}</TableCell>
                 <TableCell>{f.oficiosPendientes}</TableCell>
@@ -53,8 +45,8 @@ export function CargaTrabajoTable({ filas }: { filas: FilaCargaTrabajo[] }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                No hay integrantes dentro de tu alcance todavía.
+              <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                No hay datos dentro de tu alcance todavía.
               </TableCell>
             </TableRow>
           )}

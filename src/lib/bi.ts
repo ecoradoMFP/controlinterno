@@ -4,9 +4,7 @@
 import { diasHabilesEntre, cumplidoATiempo } from "@/lib/semaforo";
 import type { CargoEnum, EtapaDocumentoEnum } from "@/types/domain";
 
-function isoDate(ts: string): string {
-  return ts.slice(0, 10);
-}
+const MS_POR_HORA = 1000 * 60 * 60;
 
 export interface DocumentoParaPermanencia {
   created_at: string;
@@ -17,43 +15,48 @@ export interface DocumentoParaPermanencia {
 
 export interface SegmentoPermanencia {
   cargo: CargoEnum;
-  dias: number;
+  horas: number;
   departamentoNombre: string | null;
   documentoNombre: string | null;
 }
 
 /**
- * Sección 7: "tiempo promedio de permanencia por cargo (días en posesión)" — el dato central
- * del cuello de botella. Solo se cuentan tramos cerrados (delimitados por dos eventos, o por
- * la creación del documento y su primer movimiento): un tramo abierto (documento todavía en
- * manos de alguien, sin evento siguiente) es censura por la derecha y sesgaría el promedio
- * histórico si se mezclara con tramos ya concluidos.
+ * Sección 7: "tiempo promedio de permanencia por cargo" — el dato central del cuello de
+ * botella. Se mide en horas reales de reloj (timestamp a timestamp), no en días calendario: un
+ * documento puede ir y volver entre dos cargos varias veces en la misma jornada (p. ej. una
+ * corrección rápida), y truncar a fecha colapsaría todos esos tramos a "1 día" cada uno,
+ * ocultando exactamente el patrón que este reporte necesita mostrar. No excluye noches/fines de
+ * semana/feriados (a diferencia del semáforo de hitos/oficios, que sí lo hace porque ahí se mide
+ * contra un plazo en días hábiles) — si más adelante se quiere "horas hábiles" en vez de horas de
+ * reloj, es un cambio localizado aquí.
+ *
+ * Solo se cuentan tramos cerrados (delimitados por dos eventos, o por la creación del documento
+ * y su primer movimiento): un tramo abierto (documento todavía en manos de alguien, sin evento
+ * siguiente) es censura por la derecha y sesgaría el promedio histórico si se mezclara con
+ * tramos ya concluidos.
  */
-export function calcularSegmentosPermanencia(
-  documentos: DocumentoParaPermanencia[],
-  feriados: ReadonlySet<string>,
-): SegmentoPermanencia[] {
+export function calcularSegmentosPermanencia(documentos: DocumentoParaPermanencia[]): SegmentoPermanencia[] {
   const segmentos: SegmentoPermanencia[] = [];
 
   for (const doc of documentos) {
     const eventos = [...doc.movimientos].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-    let cursorISO = isoDate(doc.created_at);
+    let cursorMs = new Date(doc.created_at).getTime();
     // El primer movimiento registra de dónde salió el documento (de_cargo); si falta (p. ej.
     // el primer evento es una recepción sin entrega previa registrada), no podemos saber quién
     // lo tuvo entre la creación y ese evento, así que ese primer tramo simplemente no se cuenta.
     let cargoActual: CargoEnum | null = eventos[0]?.de_cargo ?? null;
 
     for (const evento of eventos) {
-      const eventoISO = isoDate(evento.timestamp);
+      const eventoMs = new Date(evento.timestamp).getTime();
       if (cargoActual) {
         segmentos.push({
           cargo: cargoActual,
-          dias: diasHabilesEntre(cursorISO, eventoISO, feriados),
+          horas: (eventoMs - cursorMs) / MS_POR_HORA,
           departamentoNombre: doc.departamentoNombre,
           documentoNombre: doc.documentoNombre,
         });
       }
-      cursorISO = eventoISO;
+      cursorMs = eventoMs;
       cargoActual = evento.a_cargo;
     }
   }
@@ -63,7 +66,7 @@ export function calcularSegmentosPermanencia(
 
 export interface RankingCuelloBotella {
   clave: string;
-  diasPromedio: number;
+  horasPromedio: number;
   n: number;
 }
 
@@ -76,13 +79,20 @@ export function promediarPorClave(
     const k = clave(s);
     if (k === null) continue;
     const actual = acumulado.get(k) ?? { suma: 0, n: 0 };
-    actual.suma += s.dias;
+    actual.suma += s.horas;
     actual.n += 1;
     acumulado.set(k, actual);
   }
   return [...acumulado.entries()]
-    .map(([clave, { suma, n }]) => ({ clave, diasPromedio: suma / n, n }))
-    .sort((a, b) => b.diasPromedio - a.diasPromedio);
+    .map(([clave, { suma, n }]) => ({ clave, horasPromedio: suma / n, n }))
+    .sort((a, b) => b.horasPromedio - a.horasPromedio);
+}
+
+/** "6.5 h" bajo un día, "3.2 días" arriba — para que un tramo de 40 min no se lea como "0.0 días"
+ * ni uno de 12 días se lea como "288.0 h". */
+export function formatearHoras(horas: number): string {
+  if (Math.abs(horas) < 24) return `${horas.toFixed(1)} h`;
+  return `${(horas / 24).toFixed(1)} días`;
 }
 
 export interface Cumplimiento {

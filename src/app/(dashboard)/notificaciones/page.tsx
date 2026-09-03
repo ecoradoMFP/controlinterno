@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { COLOR_SEMAFORO_CLASSES, COLOR_SEMAFORO_LABELS, type ColorSemaforo } from "@/lib/semaforo";
+import { SemaforoBadge } from "@/components/semaforo-chip";
+import type { ColorSemaforo } from "@/lib/semaforo";
 import { marcarNotificacionLeida, marcarTodasLeidas } from "./actions";
 
 export default async function NotificacionesPage() {
@@ -44,9 +44,7 @@ export default async function NotificacionesPage() {
               className={`flex items-center justify-between gap-4 rounded-lg border p-4 ${n.leido ? "opacity-60" : ""}`}
             >
               <div className="flex items-center gap-3">
-                <Badge className={COLOR_SEMAFORO_CLASSES[n.color as ColorSemaforo]}>
-                  {COLOR_SEMAFORO_LABELS[n.color as ColorSemaforo]}
-                </Badge>
+                <SemaforoBadge color={n.color as ColorSemaforo} />
                 <div>
                   <Link href={`/actividades/${n.actividad_id}`} className="text-sm font-medium hover:underline">
                     {n.mensaje}

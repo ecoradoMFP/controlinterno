@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { SemaforoChip, type TonoSemaforo } from "@/components/semaforo-chip";
 import {
   Table,
   TableBody,
@@ -11,14 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  calcularSemaforo,
-  cumplidoATiempo,
-  UMBRAL_POR_DEFECTO,
-  COLOR_SEMAFORO_CLASSES,
-  COLOR_SEMAFORO_LABELS,
-  type UmbralSemaforo,
-} from "@/lib/semaforo";
+import { calcularSemaforo, cumplidoATiempo, UMBRAL_POR_DEFECTO, COLOR_SEMAFORO_LABELS, type UmbralSemaforo } from "@/lib/semaforo";
 import type { Oficio } from "@/types/domain";
 
 /**
@@ -31,16 +24,16 @@ function estadoOficio(
   hoy: string,
   feriados: ReadonlySet<string>,
   umbral: UmbralSemaforo,
-) {
+): { tono: TonoSemaforo; label: string } {
   if (o.fecha_respuesta) {
     const aTiempo = !o.fecha_vencimiento || cumplidoATiempo(o.fecha_vencimiento, o.fecha_respuesta);
     return aTiempo
-      ? { label: "Respondido a tiempo", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" }
-      : { label: "Respondido tarde", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" };
+      ? { tono: "verde", label: "Respondido a tiempo" }
+      : { tono: "amarillo", label: "Respondido tarde" };
   }
-  if (!o.fecha_vencimiento) return { label: "Sin plazo", className: "" };
+  if (!o.fecha_vencimiento) return { tono: "neutral", label: "Sin plazo" };
   const color = calcularSemaforo(o.fecha_emision, o.fecha_vencimiento, hoy, feriados, umbral);
-  return { label: COLOR_SEMAFORO_LABELS[color], className: COLOR_SEMAFORO_CLASSES[color] };
+  return { tono: color, label: COLOR_SEMAFORO_LABELS[color] };
 }
 
 export default async function OficiosPage() {
@@ -92,7 +85,7 @@ export default async function OficiosPage() {
                 return (
                   <TableRow key={o.id} className="cursor-pointer">
                     <TableCell>
-                      <Link href={`/oficios/${o.id}`} className="font-medium hover:underline">
+                      <Link href={`/oficios/${o.id}`} className="codigo-expediente hover:underline">
                         {o.no_oficio}
                       </Link>
                     </TableCell>
@@ -101,7 +94,7 @@ export default async function OficiosPage() {
                     <TableCell className="max-w-xs truncate">{o.asunto}</TableCell>
                     <TableCell>{o.fecha_vencimiento ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge className={estado.className}>{estado.label}</Badge>
+                      <SemaforoChip tono={estado.tono} label={estado.label} />
                     </TableCell>
                   </TableRow>
                 );

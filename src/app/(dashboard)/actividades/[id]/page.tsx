@@ -94,7 +94,7 @@ export default async function ActividadDetallePage({
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle>{actividad.no_nombramiento}</CardTitle>
+              <CardTitle className="codigo-expediente text-lg">{actividad.no_nombramiento}</CardTitle>
               <p className="text-sm text-muted-foreground">{actividad.dependencia_auditada}</p>
             </div>
             <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>

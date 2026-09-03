@@ -52,6 +52,11 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-1 flex-col">
       <DashboardNav usuario={usuario} notificacionesNoLeidas={notificacionesNoLeidas ?? 0} />
       <main className="mx-auto w-full max-w-6xl flex-1 p-6">{children}</main>
+      <footer className="bg-primary text-primary-foreground">
+        <div className="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-white/70">
+          Dirección de Auditoría Interna · Ministerio de Finanzas Públicas
+        </div>
+      </footer>
     </div>
   );
 }
