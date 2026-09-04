@@ -43,12 +43,17 @@ export function OficioForm({
       </div>
 
       <Field label="Actividad relacionada (opcional)" htmlFor="actividad_id">
-        {/* No requerido, así que si hay una sola actividad y el Select de Base UI no logra
-            confirmar la selección en un solo click (ver actividad-form.tsx), el peor caso es
-            que el oficio se cree sin relacionar — no bloquea el submit como con un campo
-            required. Con 2+ actividades esto no ocurre. */}
         {actividades.length === 0 ? (
           <Input id="actividad_id_display" value="Sin actividades disponibles" disabled />
+        ) : actividades.length === 1 ? (
+          // Con una sola actividad candidata, el Select de Base UI puede abrir y cerrar el
+          // popup en el mismo gesto sin confirmar la selección — visto en vivo: el oficio se
+          // guardaba con actividad_id=null aunque la actividad se veía "seleccionada" en
+          // pantalla. Con una sola opción no hay nada que elegir, así que se fija directo.
+          <>
+            <Input id="actividad_id_display" value={actividades[0].no_nombramiento} disabled />
+            <input type="hidden" name="actividad_id" value={actividades[0].id} />
+          </>
         ) : (
           <Select
             name="actividad_id"

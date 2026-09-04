@@ -1,5 +1,6 @@
 import { agregarRevisor, agregarFirmante } from "@/app/(dashboard)/oficios/[id]/actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -89,22 +90,32 @@ function Lista({
         <form action={action} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="oficio_id" value={oficioId} />
           <div className="flex min-w-56 flex-col gap-1.5">
-            <Select
-              name="usuario_nit"
-              required
-              items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {candidatos.map((u) => (
-                  <SelectItem key={u.nit} value={u.nit}>
-                    {u.nombre} — {u.puesto ?? u.cargo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {candidatos.length === 1 ? (
+              // Con un solo candidato, el Select de Base UI puede abrir y cerrar el popup en
+              // el mismo gesto sin confirmar la selección, bloqueando el submit silenciosamente
+              // (mismo bug que actividad-form.tsx). Con una sola opción no hay nada que elegir.
+              <>
+                <Input value={`${candidatos[0].nombre} — ${candidatos[0].puesto ?? candidatos[0].cargo}`} disabled />
+                <input type="hidden" name="usuario_nit" value={candidatos[0].nit} />
+              </>
+            ) : (
+              <Select
+                name="usuario_nit"
+                required
+                items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona un usuario" />
+                </SelectTrigger>
+                <SelectContent>
+                  {candidatos.map((u) => (
+                    <SelectItem key={u.nit} value={u.nit}>
+                      {u.nombre} — {u.puesto ?? u.cargo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <Button type="submit">Agregar</Button>
         </form>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
+import { getUsuarioActual, puedeCerrarEtapaActividad, puedeEscribir } from "@/lib/auth";
 import { SIGUIENTE_ETAPA, ETAPA_ACTIVIDAD_LABELS, type EtapaActividadEnum } from "@/types/domain";
 
 function fail(actividadId: string, tab: string, message: string): never {
@@ -181,6 +181,14 @@ export async function cerrarEtapa(formData: FormData) {
   if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para cerrar la etapa.");
 
   const supabase = await createClient();
+
+  // Defensa en profundidad (sección 12.3): `puedeEscribir` solo mira `permiso_sistema`, no el
+  // alcance de cargo que exige la política RLS de `actividades` (jefe/subjefe/subdirector/
+  // director, nunca Auditor) — sin este chequeo, un Auditor veía el botón habilitado y, al
+  // hacer clic, el único error que le llegaba era el mensaje crudo de Postgres/RLS.
+  if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
+    fail(actividadId, "documentos", "Tu cargo no tiene permiso para cerrar la etapa de esta actividad.");
+  }
 
   const { data: actividad } = await supabase
     .from("actividades")

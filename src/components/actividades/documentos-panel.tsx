@@ -4,6 +4,7 @@ import {
 } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -125,18 +126,30 @@ export function DocumentosPanel({
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex min-w-64 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Documento del catálogo</label>
-            <Select
-              name="documento_catalogo_id"
-              required
-              items={Object.fromEntries(catalogoDisponible.map((c) => [c.id, c.nombre]))}
-            >
-              <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona un documento" /></SelectTrigger>
-              <SelectContent>
-                {catalogoDisponible.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {catalogoDisponible.length === 1 ? (
+              // Con una sola opción, el Select de Base UI puede abrir y cerrar el popup en
+              // el mismo gesto (click o Enter) sin confirmar la selección, dejando el input
+              // oculto vacío y bloqueando el submit silenciosamente — mismo bug que el
+              // selector de auditor principal en actividad-form.tsx. Con una sola opción no
+              // hay nada que elegir, así que se fija igual que ese caso.
+              <>
+                <Input value={catalogoDisponible[0].nombre} disabled />
+                <input type="hidden" name="documento_catalogo_id" value={catalogoDisponible[0].id} />
+              </>
+            ) : (
+              <Select
+                name="documento_catalogo_id"
+                required
+                items={Object.fromEntries(catalogoDisponible.map((c) => [c.id, c.nombre]))}
+              >
+                <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona un documento" /></SelectTrigger>
+                <SelectContent>
+                  {catalogoDisponible.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <MiniSelect name="cargo_actual_responsable" label="Responsable inicial" options={CARGOS} defaultValue="auditor" />
           <Button type="submit" variant="outline">Iniciar documento</Button>

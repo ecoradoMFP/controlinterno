@@ -47,22 +47,32 @@ export function EquipoPanel({
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Usuario</label>
-            <Select
-              name="usuario_nit"
-              required
-              items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {candidatos.map((u) => (
-                  <SelectItem key={u.nit} value={u.nit}>
-                    {u.nombre} — {u.puesto ?? u.cargo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {candidatos.length === 1 ? (
+              // Con un solo candidato, el Select de Base UI puede abrir y cerrar el popup en
+              // el mismo gesto sin confirmar la selección, bloqueando el submit silenciosamente
+              // (mismo bug que actividad-form.tsx). Con una sola opción no hay nada que elegir.
+              <>
+                <Input value={`${candidatos[0].nombre} — ${candidatos[0].puesto ?? candidatos[0].cargo}`} disabled />
+                <input type="hidden" name="usuario_nit" value={candidatos[0].nit} />
+              </>
+            ) : (
+              <Select
+                name="usuario_nit"
+                required
+                items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona un usuario" />
+                </SelectTrigger>
+                <SelectContent>
+                  {candidatos.map((u) => (
+                    <SelectItem key={u.nit} value={u.nit}>
+                      {u.nombre} — {u.puesto ?? u.cargo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="flex min-w-40 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Rol en el equipo (opcional)</label>
