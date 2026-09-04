@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
+import { getUsuarioActual, puedeCerrarEtapaActividad, puedeEscribir } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -115,6 +115,10 @@ export default async function ActividadDetallePage({
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   const puedeEditar = puedeEscribir(usuario);
+  // No es lo mismo que `puedeEditar`: cerrar etapa exige además el alcance de cargo de la
+  // política RLS `actividades_update` (jefe/subjefe/subdirector/director, nunca Auditor) — ver
+  // `puedeCerrarEtapaActividad`.
+  const puedeCerrarEtapa = await puedeCerrarEtapaActividad(usuario, id, supabase);
   const feriadosSet = new Set((feriadosRows ?? []).map((f) => f.fecha));
   const umbralHito: UmbralSemaforo = parametrosHito ?? UMBRAL_POR_DEFECTO;
   const hoy = new Date().toISOString().slice(0, 10);
@@ -152,7 +156,7 @@ export default async function ActividadDetallePage({
               >
                 Exportar hoja de ruta completa
               </Link>
-              {puedeEditar && etapaSiguiente ? (
+              {puedeCerrarEtapa && etapaSiguiente ? (
                 <div className="flex flex-col items-end gap-1">
                   <form action={cerrarEtapa}>
                     <input type="hidden" name="actividad_id" value={id} />

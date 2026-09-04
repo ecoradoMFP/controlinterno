@@ -94,6 +94,14 @@ promedio, y una actividad sin hitos ni oficios capturados todavía simplemente n
 Cuando una actividad dentro de tu alcance entra o cambia a naranja o rojo, el sistema genera una
 alerta automática una vez al día — la verás en **Notificaciones**.
 
+## La página de Notificaciones
+
+El enlace **Notificaciones** en el menú muestra un número naranja cuando tienes alertas sin leer.
+Adentro verás la lista de tus propias alertas de semáforo (nunca las de otra persona, aunque
+compartan actividad): el color al que pasó la actividad, su nombramiento y la fecha. Cada una
+tiene un botón **"Marcar leída"**; arriba de la lista hay **"Marcar todas como leídas"** para
+limpiarlas de una vez. Una alerta ya leída sigue apareciendo en la lista (no desaparece), solo dejas de contarla como pendiente en el número naranja del menú.
+
 ## La bitácora (quién tuvo cada documento, y cuándo)
 
 Cada vez que alguien registra un movimiento sobre un documento (una entrega, una recepción, una
