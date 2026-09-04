@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { OficioForm } from "@/components/oficios/oficio-form";
+import { BackLink } from "@/components/nav/back-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function NuevoOficioPage({
@@ -27,6 +28,8 @@ export default async function NuevoOficioPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <BackLink href="/oficios" label="Volver a Oficios" />
+
       <Card>
         <CardHeader>
           <CardTitle>Nuevo oficio</CardTitle>

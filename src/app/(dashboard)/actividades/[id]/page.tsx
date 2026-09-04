@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeCerrarEtapaActividad, puedeEscribir } from "@/lib/auth";
+import { BackLink } from "@/components/nav/back-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,8 @@ export default async function ActividadDetallePage({
 
   return (
     <div className="flex flex-col gap-6">
+      <BackLink href="/actividades" label="Volver a Actividades" />
+
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
