@@ -8,17 +8,26 @@ import type { Oficio } from "@/types/domain";
 export function SeguimientoPanel({
   oficio,
   puedeEditar,
+  puedeCorregir,
 }: {
   oficio: Oficio;
   puedeEditar: boolean;
+  puedeCorregir: boolean;
 }) {
+  // Sección 12.1/12.5: una fecha ya registrada solo la puede corregir control_total (mismo
+  // límite que impone el trigger `oficios_proteger_hechos_consumados` en la base de datos) —
+  // por eso cada paso, una vez con hecho, exige `puedeCorregir` en vez de solo `puedeEditar`.
+  const puedeEnvio = oficio.fecha_envio ? puedeCorregir : puedeEditar;
+  const puedeRecepcion = oficio.fecha_recepcion ? puedeCorregir : puedeEditar;
+  const puedeRespuesta = oficio.fecha_respuesta ? puedeCorregir : puedeEditar;
+
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <Paso
         titulo="Envío"
         hecho={oficio.fecha_envio ? `Enviado el ${oficio.fecha_envio}${oficio.medio_envio ? ` — ${oficio.medio_envio}` : ""}` : null}
       >
-        {puedeEditar ? (
+        {puedeEnvio ? (
           <form action={registrarEnvio} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="oficio_id" value={oficio.id} />
             <Campo label="Fecha de envío" htmlFor="fecha_envio">
@@ -38,7 +47,7 @@ export function SeguimientoPanel({
         titulo="Recepción"
         hecho={oficio.fecha_recepcion ? `Recibido el ${oficio.fecha_recepcion}` : null}
       >
-        {puedeEditar ? (
+        {puedeRecepcion ? (
           <form action={registrarRecepcion} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="oficio_id" value={oficio.id} />
             <Campo label="Fecha de recepción" htmlFor="fecha_recepcion">
@@ -59,7 +68,7 @@ export function SeguimientoPanel({
             : null
         }
       >
-        {puedeEditar ? (
+        {puedeRespuesta ? (
           <form action={registrarRespuesta} className="flex flex-col gap-3">
             <input type="hidden" name="oficio_id" value={oficio.id} />
             <div className="flex flex-wrap items-end gap-3">
