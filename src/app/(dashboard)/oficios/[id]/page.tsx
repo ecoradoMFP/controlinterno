@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeguimientoPanel } from "@/components/oficios/seguimiento-panel";
 import { ParticipantesPanel } from "@/components/oficios/participantes-panel";
+import { BackLink } from "@/components/nav/back-link";
 
 export default async function OficioDetallePage({
   params,
@@ -47,6 +48,8 @@ export default async function OficioDetallePage({
 
   return (
     <div className="flex flex-col gap-6">
+      <BackLink href="/oficios" label="Volver a Oficios" />
+
       <Card>
         <CardHeader>
           <CardTitle className="codigo-expediente text-lg">{oficio.no_oficio}</CardTitle>

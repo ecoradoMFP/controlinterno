@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/nav/back-link";
 import { PrintButton } from "@/components/actividades/print-button";
 import { FlujogramaDocumento } from "@/components/actividades/flujograma-documento";
 import {
@@ -59,9 +58,7 @@ export default async function HojaDeRutaPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between print:hidden">
-        <Button variant="outline" render={<Link href={`/actividades/${id}`} />}>
-          Volver a la actividad
-        </Button>
+        <BackLink href={`/actividades/${id}`} label="Volver a la actividad" />
         <PrintButton />
       </div>
 
