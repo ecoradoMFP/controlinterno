@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
+import { getUsuarioActual, puedeCorregirHechoConsumado, puedeEscribir } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeguimientoPanel } from "@/components/oficios/seguimiento-panel";
@@ -43,6 +43,7 @@ export default async function OficioDetallePage({
   const candidatosFirmantes = (usuarios ?? []).filter((u) => !nitsFirmantes.has(u.nit));
 
   const puedeEditar = puedeEscribir(usuario);
+  const puedeCorregir = puedeCorregirHechoConsumado(usuario);
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,7 +75,7 @@ export default async function OficioDetallePage({
           <TabsTrigger value="participantes">Revisores y firmantes</TabsTrigger>
         </TabsList>
         <TabsContent value="seguimiento">
-          <SeguimientoPanel oficio={oficio} puedeEditar={puedeEditar} />
+          <SeguimientoPanel oficio={oficio} puedeEditar={puedeEditar} puedeCorregir={puedeCorregir} />
         </TabsContent>
         <TabsContent value="participantes">
           <ParticipantesPanel

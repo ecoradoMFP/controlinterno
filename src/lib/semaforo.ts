@@ -116,10 +116,10 @@ export function calcularColorPorActividad(
 }
 
 export const COLOR_SEMAFORO_LABELS: Record<ColorSemaforo, string> = {
-  verde: "Vamos bien",
-  amarillo: "Va apretado",
-  naranja: "En riesgo",
-  rojo: "No se logra",
+  verde: "En tiempo",
+  amarillo: "En riesgo leve",
+  naranja: "En riesgo moderado",
+  rojo: "Riesgo grave",
 };
 
 // El estilo visual del semáforo (chip timbrado con punto de color) vive en

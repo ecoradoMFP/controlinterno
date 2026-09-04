@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
+import { getUsuarioActual, puedeCorregirHechoConsumado, puedeEscribir } from "@/lib/auth";
 
 function fail(oficioId: string, tab: string, message: string): never {
   redirect(`/oficios/${oficioId}?tab=${tab}&error=${encodeURIComponent(message)}`);
@@ -24,6 +24,15 @@ export async function registrarEnvio(formData: FormData) {
   if (!fechaEnvio) fail(oficioId, "seguimiento", "Indica la fecha de envío.");
 
   const supabase = await createClient();
+
+  // Defensa en profundidad (sección 12.3), misma regla que el trigger
+  // oficios_proteger_hechos_consumados: una fecha_envio ya registrada solo la corrige
+  // control_total.
+  const { data: actual } = await supabase.from("oficios").select("fecha_envio").eq("id", oficioId).maybeSingle();
+  if (actual?.fecha_envio && !puedeCorregirHechoConsumado(usuario)) {
+    fail(oficioId, "seguimiento", "El envío ya fue registrado; solo un usuario con control total puede corregirlo.");
+  }
+
   const { error } = await supabase
     .from("oficios")
     .update({ fecha_envio: fechaEnvio, medio_envio: medioEnvio })
@@ -43,6 +52,12 @@ export async function registrarRecepcion(formData: FormData) {
   if (!fechaRecepcion) fail(oficioId, "seguimiento", "Indica la fecha de recepción.");
 
   const supabase = await createClient();
+
+  const { data: actual } = await supabase.from("oficios").select("fecha_recepcion").eq("id", oficioId).maybeSingle();
+  if (actual?.fecha_recepcion && !puedeCorregirHechoConsumado(usuario)) {
+    fail(oficioId, "seguimiento", "La recepción ya fue registrada; solo un usuario con control total puede corregirla.");
+  }
+
   const { error } = await supabase
     .from("oficios")
     .update({ fecha_recepcion: fechaRecepcion })
@@ -64,6 +79,12 @@ export async function registrarRespuesta(formData: FormData) {
   if (!fechaRespuesta) fail(oficioId, "seguimiento", "Indica la fecha de respuesta.");
 
   const supabase = await createClient();
+
+  const { data: actual } = await supabase.from("oficios").select("fecha_respuesta").eq("id", oficioId).maybeSingle();
+  if (actual?.fecha_respuesta && !puedeCorregirHechoConsumado(usuario)) {
+    fail(oficioId, "seguimiento", "La respuesta ya fue registrada; solo un usuario con control total puede corregirla.");
+  }
+
   const { error } = await supabase
     .from("oficios")
     .update({ no_respuesta: noRespuesta, fecha_respuesta: fechaRespuesta, observaciones })

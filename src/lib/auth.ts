@@ -36,6 +36,17 @@ export function puedeEscribir(usuario: Pick<Usuario, "permiso_sistema"> | null):
 }
 
 /**
+ * Replica en la app la regla del trigger `oficios_proteger_hechos_consumados` (sección
+ * 12.1/12.5): una vez capturada fecha_envio/fecha_recepcion/fecha_respuesta, solo
+ * `permiso_sistema='control_total'` puede corregirla. Sin este chequeo, `SeguimientoPanel`
+ * mostraba el botón "Corregir" a cualquiera con permiso de escritura (captura_propia/
+ * captura_delegada) y el intento fallaba silenciosamente contra el trigger.
+ */
+export function puedeCorregirHechoConsumado(usuario: Pick<Usuario, "permiso_sistema"> | null): boolean {
+  return usuario?.permiso_sistema === "control_total";
+}
+
+/**
  * Replica en la app el alcance de cargo de la política RLS `actividades_update` (jefe/subjefe
  * del mismo departamento, subdirector de la subdirección que lo agrupa, o director) — no solo
  * `permiso_sistema` como hace `puedeEscribir`. Sin esto, `puedeEditar` (basado solo en
