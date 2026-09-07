@@ -28,6 +28,7 @@ import { CargaTrabajoTable, type FilaCargaTrabajo } from "@/components/reportes/
 import { CargaDepartamentoTable, type FilaCargaDepartamento } from "@/components/reportes/carga-departamento-table";
 import { CumplimientoCards } from "@/components/reportes/cumplimiento-cards";
 import { PlanVsRealChart } from "@/components/reportes/plan-vs-real-chart";
+import { SemaforoDonut } from "@/components/reportes/semaforo-donut";
 import { CARGO_LABELS, type CargoEnum } from "@/types/domain";
 
 const COLORES: ColorSemaforo[] = ["verde", "amarillo", "naranja", "rojo"];
@@ -254,119 +255,142 @@ export default async function ReportesPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-xl font-semibold">Reportes</h1>
         <p className="text-sm text-muted-foreground">
-          Semáforo por actividad: peor caso entre sus hitos y oficios abiertos (sección 5). Las
-          actividades sin hitos u oficios capturados todavía no tienen semáforo activo.
+          Panorama general primero; el detalle por actividad y por integrante queda más abajo.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {COLORES.map((color) => (
-          <div key={color} className="rounded-lg border p-4">
-            <p className="text-xs text-muted-foreground">{COLOR_SEMAFORO_LABELS[color]}</p>
-            <p className="text-2xl font-semibold">{conteo[color]}</p>
+      {/* ── Resumen: indicadores y gráficas, para una lectura rápida del estado general. ── */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Resumen</h2>
+
+        <div className="rounded-lg border">
+          <div className="border-b p-4">
+            <h3 className="font-medium">Semáforo de actividades</h3>
             <p className="text-xs text-muted-foreground">
-              {totalConDato > 0 ? `${Math.round((conteo[color] / totalConDato) * 100)}%` : "—"}
+              Peor caso entre los hitos y oficios abiertos de cada actividad (sección 5). Las
+              actividades sin hitos u oficios capturados todavía no tienen semáforo activo.
             </p>
           </div>
-        ))}
-      </div>
+          <div className="flex flex-col items-center gap-6 p-4 sm:flex-row">
+            <SemaforoDonut conteo={conteo} />
+            <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
+              {COLORES.map((color) => (
+                <div key={color} className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">{COLOR_SEMAFORO_LABELS[color]}</p>
+                  <p className="text-2xl font-semibold">{conteo[color]}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {totalConDato > 0 ? `${Math.round((conteo[color] / totalConDato) * 100)}%` : "—"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Actividad</TableHead>
-              <TableHead>Departamento</TableHead>
-              <TableHead>Semáforo</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {actividades && actividades.length > 0 ? (
-              actividades.map((a) => {
-                const color = colorPorActividad.get(a.id);
-                return (
-                  <TableRow key={a.id}>
-                    <TableCell>
-                      <Link href={`/actividades/${a.id}`} className="codigo-expediente hover:underline">
-                        {a.no_nombramiento}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">{a.dependencia_auditada}</p>
-                    </TableCell>
-                    <TableCell>{a.departamentos?.nombre ?? "—"}</TableCell>
-                    <TableCell>
-                      {color ? (
-                        <SemaforoBadge color={color} />
-                      ) : (
-                        <SemaforoChip tono="neutral" label="Sin datos" />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
+        <CumplimientoCards hitos={cumplimientoHitos} oficios={cumplimientoOficios} />
+
+        <div className="rounded-lg border">
+          <div className="border-b p-4">
+            <h3 className="font-medium">Comparación plan vs. real por etapa</h3>
+            <p className="text-xs text-muted-foreground">
+              Días hábiles proyectados en el cronograma vs. días hábiles reales, promediados por
+              etapa, entre los hitos ya concluidos dentro de tu alcance.
+            </p>
+          </div>
+          <PlanVsRealChart datos={planVsReal} />
+        </div>
+      </section>
+
+      {/* ── Desglose: detalle por actividad, cuello de botella e integrante. ── */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Desglose por actividad
+        </h2>
+
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  No hay actividades dentro de tu alcance todavía.
-                </TableCell>
+                <TableHead>Actividad</TableHead>
+                <TableHead>Departamento</TableHead>
+                <TableHead>Semáforo</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {actividades && actividades.length > 0 ? (
+                actividades.map((a) => {
+                  const color = colorPorActividad.get(a.id);
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell>
+                        <Link href={`/actividades/${a.id}`} className="codigo-expediente hover:underline">
+                          {a.no_nombramiento}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">{a.dependencia_auditada}</p>
+                      </TableCell>
+                      <TableCell>{a.departamentos?.nombre ?? "—"}</TableCell>
+                      <TableCell>
+                        {color ? (
+                          <SemaforoBadge color={color} />
+                        ) : (
+                          <SemaforoChip tono="neutral" label="Sin datos" />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                    No hay actividades dentro de tu alcance todavía.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      <div>
-        <h2 className="text-lg font-semibold">Cuellos de botella</h2>
-        <p className="text-sm text-muted-foreground">
-          Tiempo real (horas de reloj, no días calendario) que un documento permanece en manos de
-          un mismo responsable antes de pasar al siguiente — así una corrección que va y vuelve el
-          mismo día no se pierde como &ldquo;0 días&rdquo;. Solo tramos ya cerrados; no el documento que
-          alguien tiene abierto ahora mismo.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <RankingTable
-          titulo="Por cargo"
-          descripcion="Independiente de departamento o tipo de documento."
-          filas={rankingPorCargo}
-          columnaClave="Cargo"
-          etiquetaClave={(c) => CARGO_LABELS[c as CargoEnum] ?? c}
-        />
-        <RankingTable
-          titulo="Por departamento"
-          descripcion="Suma los tres cargos dentro de cada departamento."
-          filas={rankingPorDepartamento}
-          columnaClave="Departamento"
-          etiquetaClave={(c) => c}
-        />
-        <RankingTable
-          titulo="Por tipo de documento"
-          descripcion="Del catálogo de 18 documentos (sección 4.5.1)."
-          filas={rankingPorDocumento}
-          columnaClave="Documento"
-          etiquetaClave={(c) => c}
-        />
-      </div>
+        <CargaDepartamentoTable filas={cargaDepartamento} />
 
-      <CargaDepartamentoTable filas={cargaDepartamento} />
+        <CargaTrabajoTable filas={cargaTrabajo} />
 
-      <CargaTrabajoTable filas={cargaTrabajo} />
-
-      <CumplimientoCards hitos={cumplimientoHitos} oficios={cumplimientoOficios} />
-
-      <div className="rounded-lg border">
-        <div className="border-b p-4">
-          <h2 className="font-medium">Comparación plan vs. real por etapa</h2>
-          <p className="text-xs text-muted-foreground">
-            Días hábiles proyectados en el cronograma vs. días hábiles reales, promediados por
-            etapa, entre los hitos ya concluidos dentro de tu alcance.
+        <div>
+          <h3 className="text-base font-medium">Cuellos de botella</h3>
+          <p className="text-sm text-muted-foreground">
+            Tiempo real (horas de reloj, no días calendario) que un documento permanece en manos de
+            un mismo responsable antes de pasar al siguiente — así una corrección que va y vuelve el
+            mismo día no se pierde como &ldquo;0 días&rdquo;. Solo tramos ya cerrados; no el documento que
+            alguien tiene abierto ahora mismo.
           </p>
         </div>
-        <PlanVsRealChart datos={planVsReal} />
-      </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <RankingTable
+            titulo="Por cargo"
+            descripcion="Independiente de departamento o tipo de documento."
+            filas={rankingPorCargo}
+            columnaClave="Cargo"
+            etiquetaClave={(c) => CARGO_LABELS[c as CargoEnum] ?? c}
+          />
+          <RankingTable
+            titulo="Por departamento"
+            descripcion="Suma los tres cargos dentro de cada departamento."
+            filas={rankingPorDepartamento}
+            columnaClave="Departamento"
+            etiquetaClave={(c) => c}
+          />
+          <RankingTable
+            titulo="Por tipo de documento"
+            descripcion="Del catálogo de 18 documentos (sección 4.5.1)."
+            filas={rankingPorDocumento}
+            columnaClave="Documento"
+            etiquetaClave={(c) => c}
+          />
+        </div>
+      </section>
     </div>
   );
 }

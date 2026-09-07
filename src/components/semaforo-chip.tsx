@@ -21,6 +21,16 @@ const TONO_DOT_CLASSES: Record<TonoSemaforo, string> = {
   neutral: "bg-muted-foreground/50",
 };
 
+/** Mismos 4 tonos que `TONO_DOT_CLASSES`, expuestos como variable CSS (definidas en
+ * globals.css, con su propio valor claro/oscuro) para gráficas SVG que no pueden usar clases
+ * de Tailwind directamente (p. ej. el `fill` de un `<Pie>` de recharts). */
+export const COLOR_SEMAFORO_CSS_VAR: Record<ColorSemaforo, string> = {
+  verde: "var(--status-verde)",
+  amarillo: "var(--status-amarillo)",
+  naranja: "var(--status-naranja)",
+  rojo: "var(--status-rojo)",
+};
+
 /**
  * Chip del semáforo — rectangular y timbrado (no la píldora redonda genérica de Badge), con un
  * punto de color adelante del texto. Es la firma visual del sistema: el semáforo es el concepto
