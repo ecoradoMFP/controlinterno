@@ -100,6 +100,14 @@
   --heat-text-3: #ffffff;
   --heat-text-4: #ffffff;
   --heat-text-5: #ffffff;
+  /* Paleta de estado del semáforo (sección 5): escala fija de 4 pasos, significado reservado
+   * — nunca se reutiliza como paleta categórica genérica. Mismos tonos que ya usan los puntos
+   * de color de SemaforoChip (emerald/amber/orange/red), expuestos aquí como variables para
+   * que las gráficas (SVG) los puedan referenciar directamente. */
+  --status-verde: #059669;
+  --status-amarillo: #f59e0b;
+  --status-naranja: #ea580c;
+  --status-rojo: #dc2626;
 }
 
 .dark {
@@ -147,6 +155,10 @@
   --heat-text-3: #eef3f8;
   --heat-text-4: #06192c;
   --heat-text-5: #06192c;
+  --status-verde: #34d399;
+  --status-amarillo: #fbbf24;
+  --status-naranja: #fb923c;
+  --status-rojo: #f87171;
 }
 
 @layer base {
@@ -158,6 +170,14 @@
   }
   html {
     @apply font-sans;
+    /* Buena parte del personal que usa el sistema no es técnico y trabaja en monitores/
+     * resoluciones variadas de oficina — el tamaño base de Tailwind (16px) se veía chico en
+     * la práctica (reportado desde una PC institucional, necesitaba zoom manual al 150% para
+     * leerse bien). En vez de eso, todo el sistema de diseño (que usa rem) escala desde acá:
+     * un solo número sube texto, espaciados y radios de forma proporcional en toda la app.
+     * Porcentaje, no px, para seguir respetando el tamaño de fuente que el usuario ya
+     * configuró en su propio navegador. */
+    font-size: 118.75%;
   }
   h1, h2, h3 {
     @apply font-heading;
