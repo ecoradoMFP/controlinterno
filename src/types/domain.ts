@@ -20,6 +20,8 @@ export type ParametroSemaforo = Tables["parametros_semaforo"]["Row"];
 export type CalendarioFeriado = Tables["calendario_feriados"]["Row"];
 export type Notificacion = Tables["notificaciones"]["Row"];
 export type ActividadEtapaHistorial = Tables["actividades_etapa_historial"]["Row"];
+export type Capacitacion = Tables["capacitaciones"]["Row"];
+export type CapacitacionInsert = Tables["capacitaciones"]["Insert"];
 
 export type CargoEnum = Database["public"]["Enums"]["cargo_enum"];
 export type PermisoSistemaEnum = Database["public"]["Enums"]["permiso_sistema_enum"];

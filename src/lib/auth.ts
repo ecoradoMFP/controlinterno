@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Usuario } from "@/types/domain";
+import type { CargoEnum, Usuario } from "@/types/domain";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -86,4 +86,74 @@ export async function puedeCerrarEtapaActividad(
   }
 
   return false;
+}
+
+// Lista blanca explícita (no "cargo !== 'auditor'"): el sistema puede tener personal no
+// jerárquico sin cargo (sección 4.3, ej. un asistente de archivo, `cargo === null`). Un
+// exclude-list como `!== "auditor"` deja pasar cualquier valor futuro que no sea literalmente
+// "auditor" — con una lista de qué SÍ está permitido, un cargo nuevo o null nunca califica por
+// accidente. Espeja `authz.tiene_cargo_gestion_capacitaciones` en SQL.
+const CARGOS_GESTION_CAPACITACIONES: readonly CargoEnum[] = ["jefe", "subjefe", "subdirector", "director"];
+
+/**
+ * Módulo de capacitaciones: cargar horas de capacitación es función de jefatura, no
+ * autogestión. Espeja la función SQL `authz.puede_gestionar_capacitaciones`.
+ */
+export function puedeGestionarCapacitaciones(usuario: Pick<Usuario, "permiso_sistema" | "cargo"> | null): boolean {
+  return puedeEscribir(usuario) && !!usuario?.cargo && CARGOS_GESTION_CAPACITACIONES.includes(usuario.cargo);
+}
+
+/**
+ * Departamentos sobre los que el usuario actual puede registrar capacitaciones ajenas: el
+ * suyo (jefe/subjefe), los de su subdirección (subdirector), o todos (director/control_total).
+ * Director/Subdirección mismos no tienen `departamento_id` — ver `puedeGestionarCapacitacionDe`
+ * para el caso de "propia capacitación", que esta función no cubre. Espeja
+ * `authz.departamentos_visibles` + `authz.puede_gestionar_capacitaciones`.
+ */
+export async function departamentosGestionables(
+  usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
+  supabase: SupabaseServerClient,
+): Promise<string[]> {
+  if (!puedeGestionarCapacitaciones(usuario)) return [];
+
+  if (usuario!.cargo === "director") {
+    const { data } = await supabase.from("departamentos").select("id");
+    return (data ?? []).map((d) => d.id);
+  }
+
+  if (usuario!.cargo === "jefe" || usuario!.cargo === "subjefe") {
+    return usuario!.departamento_id ? [usuario!.departamento_id] : [];
+  }
+
+  if (usuario!.cargo === "subdirector") {
+    const { data: subdireccion } = await supabase
+      .from("subdirecciones")
+      .select("id")
+      .eq("subdirector_nit", usuario!.nit)
+      .maybeSingle();
+    if (!subdireccion) return [];
+
+    const { data } = await supabase.from("departamentos").select("id").eq("subdireccion_id", subdireccion.id);
+    return (data ?? []).map((d) => d.id);
+  }
+
+  return [];
+}
+
+/**
+ * Puede el usuario actual registrar/corregir capacitaciones de `persona`: espeja exactamente
+ * la policy RLS `capacitaciones_insert/update/delete` — su propia capacitación (si no es
+ * Auditor, cubre a Director/Subdirección que no tienen `departamento_id`), o alguien dentro de
+ * `departamentosGestionables`.
+ */
+export async function puedeGestionarCapacitacionDe(
+  usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
+  persona: Pick<Usuario, "nit" | "departamento_id">,
+  supabase: SupabaseServerClient,
+): Promise<boolean> {
+  if (puedeGestionarCapacitaciones(usuario) && usuario!.nit === persona.nit) return true;
+  if (persona.departamento_id == null) return usuario?.cargo === "director" && puedeEscribir(usuario);
+
+  const gestionables = await departamentosGestionables(usuario, supabase);
+  return gestionables.includes(persona.departamento_id);
 }
