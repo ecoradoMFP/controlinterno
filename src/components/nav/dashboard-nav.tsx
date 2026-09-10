@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/oficios", label: "Oficios" },
   { href: "/reportes", label: "Reportes" },
   { href: "/capacitaciones", label: "Capacitaciones" },
+  { href: "/recomendaciones", label: "Recomendaciones" },
 ] as const;
 
 // Mismo tono que usa minfin.gob.gt para resaltar el ítem de navegación activo sobre el navy del

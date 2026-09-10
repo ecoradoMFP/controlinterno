@@ -23,6 +23,17 @@ export type ActividadEtapaHistorial = Tables["actividades_etapa_historial"]["Row
 export type Capacitacion = Tables["capacitaciones"]["Row"];
 export type CapacitacionInsert = Tables["capacitaciones"]["Insert"];
 
+export type InformeAuditoria = Tables["informes_auditoria"]["Row"];
+export type InformeAuditoriaInsert = Tables["informes_auditoria"]["Insert"];
+export type InformeAuditoriaEquipo = Tables["informes_auditoria_equipo"]["Row"];
+export type Deficiencia = Tables["deficiencias"]["Row"];
+export type DeficienciaInsert = Tables["deficiencias"]["Insert"];
+export type Recomendacion = Tables["recomendaciones"]["Row"];
+export type RecomendacionInsert = Tables["recomendaciones"]["Insert"];
+export type SeguimientoRecomendacion = Tables["seguimientos_recomendacion"]["Row"];
+export type SeguimientoRecomendacionInsert = Tables["seguimientos_recomendacion"]["Insert"];
+export type EstadoRecomendacionEnum = Database["public"]["Enums"]["estado_recomendacion_enum"];
+
 export type CargoEnum = Database["public"]["Enums"]["cargo_enum"];
 export type PermisoSistemaEnum = Database["public"]["Enums"]["permiso_sistema_enum"];
 export type EtapaActividadEnum = Database["public"]["Enums"]["etapa_actividad_enum"];
@@ -83,4 +94,18 @@ export const TIPO_EVENTO_LABELS: Record<TipoEventoMovimientoEnum, string> = {
   aprobacion: "Aprobación",
   devolucion_correccion: "Devolución para corrección",
   registro_tardio: "Registro tardío",
+};
+
+export const ESTADO_RECOMENDACION_LABELS: Record<EstadoRecomendacionEnum, string> = {
+  pendiente: "Pendiente",
+  en_proceso: "En proceso",
+  atendida: "Atendida",
+};
+
+// Reusa la misma familia visual del semáforo (SemaforoChip): atendida=verde, en_proceso=
+// amarillo, pendiente=rojo — no es un semáforo de plazos, pero comunica la misma urgencia.
+export const ESTADO_RECOMENDACION_TONO: Record<EstadoRecomendacionEnum, "verde" | "amarillo" | "rojo"> = {
+  atendida: "verde",
+  en_proceso: "amarillo",
+  pendiente: "rojo",
 };

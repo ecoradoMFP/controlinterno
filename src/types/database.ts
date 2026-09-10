@@ -247,6 +247,51 @@ export type Database = {
           },
         ]
       }
+      deficiencias: {
+        Row: {
+          creado_por_nit: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          informe_id: string
+          numero: number
+          titulo: string
+        }
+        Insert: {
+          creado_por_nit: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          informe_id: string
+          numero: number
+          titulo: string
+        }
+        Update: {
+          creado_por_nit?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          informe_id?: string
+          numero?: number
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deficiencias_creado_por_nit_fkey"
+            columns: ["creado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "deficiencias_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: false
+            referencedRelation: "informes_auditoria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departamentos: {
         Row: {
           created_at: string
@@ -445,6 +490,119 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "documentos_catalogo"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      informes_auditoria: {
+        Row: {
+          anio_ejecucion: number | null
+          cai: string | null
+          coordinador_nit: string | null
+          creado_por_nit: string
+          created_at: string
+          departamento_id: string
+          dependencia_auditada: string
+          fecha: string
+          fecha_informe_final: string | null
+          id: string
+          no_nombramiento: string
+          periodo_auditado_fin: string
+          periodo_auditado_inicio: string
+          riesgo: string | null
+          supervisor_nit: string | null
+        }
+        Insert: {
+          anio_ejecucion?: number | null
+          cai?: string | null
+          coordinador_nit?: string | null
+          creado_por_nit: string
+          created_at?: string
+          departamento_id: string
+          dependencia_auditada: string
+          fecha: string
+          fecha_informe_final?: string | null
+          id?: string
+          no_nombramiento: string
+          periodo_auditado_fin: string
+          periodo_auditado_inicio: string
+          riesgo?: string | null
+          supervisor_nit?: string | null
+        }
+        Update: {
+          anio_ejecucion?: number | null
+          cai?: string | null
+          coordinador_nit?: string | null
+          creado_por_nit?: string
+          created_at?: string
+          departamento_id?: string
+          dependencia_auditada?: string
+          fecha?: string
+          fecha_informe_final?: string | null
+          id?: string
+          no_nombramiento?: string
+          periodo_auditado_fin?: string
+          periodo_auditado_inicio?: string
+          riesgo?: string | null
+          supervisor_nit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informes_auditoria_coordinador_nit_fkey"
+            columns: ["coordinador_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "informes_auditoria_creado_por_nit_fkey"
+            columns: ["creado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "informes_auditoria_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "departamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informes_auditoria_supervisor_nit_fkey"
+            columns: ["supervisor_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
+      informes_auditoria_equipo: {
+        Row: {
+          informe_id: string
+          usuario_nit: string
+        }
+        Insert: {
+          informe_id: string
+          usuario_nit: string
+        }
+        Update: {
+          informe_id?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informes_auditoria_equipo_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: false
+            referencedRelation: "informes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informes_auditoria_equipo_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
           },
         ]
       }
@@ -703,6 +861,105 @@ export type Database = {
         }
         Relationships: []
       }
+      recomendaciones: {
+        Row: {
+          creado_por_nit: string
+          created_at: string
+          deficiencia_id: string
+          estado_actual: Database["public"]["Enums"]["estado_recomendacion_enum"]
+          fecha_implementacion: string | null
+          id: string
+          numero: number
+          texto: string
+        }
+        Insert: {
+          creado_por_nit: string
+          created_at?: string
+          deficiencia_id: string
+          estado_actual?: Database["public"]["Enums"]["estado_recomendacion_enum"]
+          fecha_implementacion?: string | null
+          id?: string
+          numero: number
+          texto: string
+        }
+        Update: {
+          creado_por_nit?: string
+          created_at?: string
+          deficiencia_id?: string
+          estado_actual?: Database["public"]["Enums"]["estado_recomendacion_enum"]
+          fecha_implementacion?: string | null
+          id?: string
+          numero?: number
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recomendaciones_creado_por_nit_fkey"
+            columns: ["creado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "recomendaciones_deficiencia_id_fkey"
+            columns: ["deficiencia_id"]
+            isOneToOne: false
+            referencedRelation: "deficiencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seguimientos_recomendacion: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_recomendacion_enum"]
+          fecha: string
+          id: string
+          no_informe_seguimiento: string
+          numero_seguimiento: number
+          recomendacion_id: string
+          registrado_por_nit: string
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          estado: Database["public"]["Enums"]["estado_recomendacion_enum"]
+          fecha: string
+          id?: string
+          no_informe_seguimiento: string
+          numero_seguimiento: number
+          recomendacion_id: string
+          registrado_por_nit: string
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_recomendacion_enum"]
+          fecha?: string
+          id?: string
+          no_informe_seguimiento?: string
+          numero_seguimiento?: number
+          recomendacion_id?: string
+          registrado_por_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seguimientos_recomendacion_recomendacion_id_fkey"
+            columns: ["recomendacion_id"]
+            isOneToOne: false
+            referencedRelation: "recomendaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seguimientos_recomendacion_registrado_por_nit_fkey"
+            columns: ["registrado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
       subdirecciones: {
         Row: {
           created_at: string
@@ -790,6 +1047,7 @@ export type Database = {
       ambito_semaforo_enum: "hito" | "oficio" | "actividad"
       cargo_enum: "auditor" | "subjefe" | "jefe" | "subdirector" | "director"
       estado_hito_enum: "pendiente" | "en_curso" | "concluido"
+      estado_recomendacion_enum: "pendiente" | "en_proceso" | "atendida"
       etapa_actividad_enum:
         | "planificacion"
         | "ejecucion"
@@ -948,6 +1206,7 @@ export const Constants = {
       ambito_semaforo_enum: ["hito", "oficio", "actividad"],
       cargo_enum: ["auditor", "subjefe", "jefe", "subdirector", "director"],
       estado_hito_enum: ["pendiente", "en_curso", "concluido"],
+      estado_recomendacion_enum: ["pendiente", "en_proceso", "atendida"],
       etapa_actividad_enum: [
         "planificacion",
         "ejecucion",
