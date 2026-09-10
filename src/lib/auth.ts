@@ -157,3 +157,58 @@ export async function puedeGestionarCapacitacionDe(
   const gestionables = await departamentosGestionables(usuario, supabase);
   return gestionables.includes(persona.departamento_id);
 }
+
+/**
+ * Módulo de seguimiento a recomendaciones: espeja `authz.puede_operar_informe` (RLS) — el
+ * equipo asignado al informe (supervisor/coordinador/auditores en `informes_auditoria_equipo`)
+ * puede capturar deficiencias/recomendaciones/seguimientos, además de jefe/subjefe del
+ * departamento del informe, subdirector de esa subdirección, o director. Usado solo para
+ * mostrar/ocultar botones — la autorización real la sigue haciendo RLS.
+ */
+export async function puedeOperarInforme(
+  usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
+  informeId: string,
+  supabase: SupabaseServerClient,
+): Promise<boolean> {
+  if (!puedeEscribir(usuario) || !usuario?.cargo) return false;
+  if (usuario.cargo === "director") return true;
+
+  const { data: informe } = await supabase
+    .from("informes_auditoria")
+    .select("departamento_id, departamentos(subdireccion_id)")
+    .eq("id", informeId)
+    .maybeSingle();
+  if (!informe) return false;
+
+  if (usuario.cargo === "jefe" || usuario.cargo === "subjefe") {
+    if (usuario.departamento_id === informe.departamento_id) return true;
+  }
+
+  if (usuario.cargo === "subdirector") {
+    const subdireccionId = informe.departamentos?.subdireccion_id;
+    if (subdireccionId) {
+      const { data: subdireccion } = await supabase
+        .from("subdirecciones")
+        .select("id")
+        .eq("id", subdireccionId)
+        .eq("subdirector_nit", usuario.nit)
+        .maybeSingle();
+      if (subdireccion) return true;
+    }
+  }
+
+  const { data: equipo } = await supabase
+    .from("informes_auditoria_equipo")
+    .select("usuario_nit")
+    .eq("informe_id", informeId)
+    .eq("usuario_nit", usuario.nit)
+    .maybeSingle();
+  if (equipo) return true;
+
+  const { data: roles } = await supabase
+    .from("informes_auditoria")
+    .select("supervisor_nit, coordinador_nit")
+    .eq("id", informeId)
+    .maybeSingle();
+  return roles?.supervisor_nit === usuario.nit || roles?.coordinador_nit === usuario.nit;
+}
