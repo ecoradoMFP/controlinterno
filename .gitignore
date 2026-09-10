@@ -37,6 +37,10 @@ yarn-error.log*
 # credenciales de prueba locales (solo Docker, nunca al repo)
 credenciales-prueba.local.txt
 
+# datos reales de personal (PII) — nunca al repo público, solo se usan localmente para
+# alimentar scripts/importar-personal.mjs
+*.xlsx
+
 # vercel
 .vercel
 
