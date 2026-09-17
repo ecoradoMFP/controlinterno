@@ -108,7 +108,14 @@ datos ya lo soporta pero no hay control en pantalla todavía.
 
 6. Espacio para otros hallazgos de la reunión
 
-
--
+- **Cronograma → Documentos, ¿autocarga?** Un hito del cronograma puede enlazarse opcionalmente a
+  un documento del catálogo (`documento_catalogo_id`), pero hoy ese enlace es solo informativo:
+  "iniciar" el documento en la pestaña Documentos sigue siendo un paso manual aparte. ¿Debería
+  agregarse automáticamente a Documentos al guardar el hito? Ojo: la regla de negocio actual solo
+  permite iniciar un documento si su etapa coincide con la etapa actual de la actividad (no se
+  puede iniciar un documento de Ejecución mientras la actividad sigue en Planificación) — si el
+  cronograma se carga completo desde el inicio (hitos de todas las etapas), autocargar rompería
+  esa regla para los hitos de etapas futuras. Definir: ¿autocargar solo cuando el hito es de la
+  etapa actual, o dejarlo manual como está?
 -
 -
