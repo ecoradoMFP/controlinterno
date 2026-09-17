@@ -70,6 +70,14 @@ export async function crearActividad(formData: FormData) {
     fail("No se pudo crear la actividad. Verifica los datos e intenta de nuevo.");
   }
 
+  // El auditor principal ya es miembro del equipo por definición: se agrega de una vez para
+  // que no haya que darlo de alta a mano, y sus confirmaciones (nombramiento/independencia)
+  // queden disponibles en el panel de equipo desde el inicio.
+  await supabase.from("actividades_equipo").insert({
+    actividad_id: id,
+    usuario_nit: rest.auditor_principal_nit,
+  });
+
   revalidatePath("/actividades");
   redirect(`/actividades/${id}`);
 }
