@@ -44,7 +44,7 @@ export function DashboardNav({
               className="h-8 w-auto"
             />
             <span className="hidden border-l border-white/25 pl-3 text-xs font-semibold tracking-wider text-white/80 uppercase sm:block">
-              DAI · Trazabilidad
+              SCIDAI
             </span>
           </Link>
           <nav className="flex items-center gap-5">
