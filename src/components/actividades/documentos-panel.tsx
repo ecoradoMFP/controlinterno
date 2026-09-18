@@ -14,11 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { MovimientoFormFields } from "@/components/actividades/movimiento-form-fields";
 import {
   CARGOS,
   CARGO_LABELS,
   FASE_DOCUMENTO_LABELS,
-  TIPO_EVENTO_LABELS,
   type CargoEnum,
   type DocumentoActividad,
   type DocumentoCatalogo,
@@ -82,19 +82,7 @@ export function DocumentosPanel({
                   <input type="hidden" name="actividad_id" value={actividadId} />
                   <input type="hidden" name="documento_actividad_id" value={d.id} />
 
-                  <MiniSelect name="de_cargo" label="De cargo" options={CARGOS} defaultValue={d.cargo_actual_responsable} />
-                  <MiniSelect name="a_cargo" label="A cargo" options={CARGOS} required />
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs text-muted-foreground">Tipo de evento</label>
-                    <Select name="tipo_evento" required items={TIPO_EVENTO_LABELS}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(TIPO_EVENTO_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <MovimientoFormFields cargoActual={d.cargo_actual_responsable} />
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-muted-foreground">Nueva fase (opcional)</label>
                     <Select name="nueva_fase" items={FASE_DOCUMENTO_LABELS}>
