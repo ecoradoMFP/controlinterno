@@ -66,7 +66,7 @@ export default async function OficiosPage() {
 
       {error ? <p className="text-sm text-destructive">No se pudieron cargar los oficios.</p> : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

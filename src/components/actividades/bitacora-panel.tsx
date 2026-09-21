@@ -14,7 +14,7 @@ export function BitacoraPanel({ movimientos }: { movimientos: MovimientoConConte
   return (
     <ol className="flex flex-col gap-3">
       {movimientos.map((m) => (
-        <li key={m.id} className="rounded-lg border p-3 text-sm">
+        <li key={m.id} className="rounded-xl border p-3 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-medium">
               {m.documentos_actividad?.documentos_catalogo?.nombre ?? "Documento"}

@@ -1,6 +1,6 @@
 import { getUsuarioActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardNav } from "@/components/nav/dashboard-nav";
+import { AppShell } from "@/components/nav/app-shell";
 import { logout } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
@@ -49,14 +49,8 @@ export default async function DashboardLayout({
     .eq("leido", false);
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col">
-      <DashboardNav usuario={usuario} notificacionesNoLeidas={notificacionesNoLeidas ?? 0} />
-      <main className="mx-auto w-full max-w-6xl flex-1 p-6">{children}</main>
-      <footer className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-white/70">
-          Dirección de Auditoría Interna · Ministerio de Finanzas Públicas
-        </div>
-      </footer>
-    </div>
+    <AppShell usuario={usuario} notificacionesNoLeidas={notificacionesNoLeidas ?? 0}>
+      {children}
+    </AppShell>
   );
 }

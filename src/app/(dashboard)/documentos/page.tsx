@@ -62,7 +62,7 @@ export default async function DocumentosPage({
 
       {error ? <p className="text-sm text-destructive">No se pudieron cargar los documentos.</p> : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

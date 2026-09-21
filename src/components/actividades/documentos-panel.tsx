@@ -47,7 +47,7 @@ export function DocumentosPanel({
       ) : (
         <div className="flex flex-col gap-4">
           {documentos.map((d) => (
-            <div key={d.id} className="rounded-lg border p-4">
+            <div key={d.id} className="rounded-xl border p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="font-medium">{d.documentos_catalogo?.nombre ?? "Documento"}</p>

@@ -34,7 +34,7 @@ export default async function LoginPage({
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle className="text-lg">Dirección de Auditoría Interna</CardTitle>
-            <CardDescription>Sistema de Trazabilidad Documental</CardDescription>
+            <CardDescription>Sistema de Control Interno (SCIDAI)</CardDescription>
           </CardHeader>
           <CardContent>
             <form action={login} className="flex flex-col gap-4">
@@ -46,7 +46,7 @@ export default async function LoginPage({
                   type="email"
                   required
                   autoComplete="username"
-                  placeholder="nombre.apellido@minfin.gob.gt"
+                  placeholder="ejemplo@minfin.gob.gt"
                 />
               </div>
               <div className="flex flex-col gap-2">

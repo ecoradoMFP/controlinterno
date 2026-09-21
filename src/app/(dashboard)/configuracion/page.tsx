@@ -50,7 +50,7 @@ export default async function ConfiguracionPage({
         </p>
       ) : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <div className="border-b p-4">
           <h2 className="font-medium">Umbrales por ámbito</h2>
           <p className="text-xs text-muted-foreground">
@@ -106,7 +106,7 @@ export default async function ConfiguracionPage({
         </div>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <div className="border-b p-4">
           <h2 className="font-medium">Calendario de feriados</h2>
           <p className="text-xs text-muted-foreground">

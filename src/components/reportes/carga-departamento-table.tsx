@@ -47,7 +47,7 @@ export function CargaDepartamentoTable({ filas }: { filas: FilaCargaDepartamento
   const maxOficios = Math.max(0, ...filas.map((f) => f.oficiosPendientes));
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border shadow-sm">
       <div className="border-b p-4">
         <h2 className="font-medium">Mapa de calor: carga de trabajo por departamento</h2>
         <p className="text-xs text-muted-foreground">

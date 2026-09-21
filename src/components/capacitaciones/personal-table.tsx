@@ -19,7 +19,7 @@ export interface FilaPersonalCapacitacion {
 
 export function PersonalCapacitacionTable({ filas }: { filas: FilaPersonalCapacitacion[] }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

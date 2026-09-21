@@ -22,7 +22,7 @@ export function RankingTable({
   columnaClave: string;
 }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border shadow-sm">
       <div className="border-b p-4">
         <h2 className="font-medium">{titulo}</h2>
         <p className="text-xs text-muted-foreground">{descripcion}</p>

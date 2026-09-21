@@ -91,7 +91,7 @@ export default async function CapacitacionesPage({
         horasPromedio={horasPromedio}
       />
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <div className="border-b p-4">
           <h2 className="font-medium">Horas promedio por departamento</h2>
         </div>

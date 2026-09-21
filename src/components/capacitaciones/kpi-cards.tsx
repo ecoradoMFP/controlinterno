@@ -1,12 +1,5 @@
-function Card({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
-  return (
-    <div className="rounded-lg border p-4">
-      <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className="text-2xl font-semibold">{valor}</p>
-      {detalle ? <p className="mt-1.5 text-xs text-muted-foreground">{detalle}</p> : null}
-    </div>
-  );
-}
+import { AlertTriangle, Clock, Target } from "lucide-react";
+import { StatCard } from "@/components/ui/stat-card";
 
 export function CapacitacionKpiCards({
   totalPersonas,
@@ -23,16 +16,24 @@ export function CapacitacionKpiCards({
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <Card
-        titulo="Cumplimiento de la meta (50h)"
-        valor={`${pctCumplidas.toFixed(0)}%`}
-        detalle={`${personasCumplidas} de ${totalPersonas} personas`}
+      <StatCard
+        icon={Target}
+        label="Cumplimiento de la meta (50h)"
+        value={`${pctCumplidas.toFixed(0)}%`}
+        detail={`${personasCumplidas} de ${totalPersonas} personas`}
       />
-      <Card titulo="Horas promedio por persona" valor={horasPromedio.toFixed(1)} detalle="del año seleccionado" />
-      <Card
-        titulo="Sin ninguna capacitación registrada"
-        valor={String(personasSinRegistro)}
-        detalle={totalPersonas > 0 ? `${((personasSinRegistro / totalPersonas) * 100).toFixed(0)}% del personal` : undefined}
+      <StatCard
+        icon={Clock}
+        label="Horas promedio por persona"
+        value={horasPromedio.toFixed(1)}
+        detail="del año seleccionado"
+      />
+      <StatCard
+        icon={AlertTriangle}
+        tone="destructive"
+        label="Sin ninguna capacitación registrada"
+        value={String(personasSinRegistro)}
+        detail={totalPersonas > 0 ? `${((personasSinRegistro / totalPersonas) * 100).toFixed(0)}% del personal` : undefined}
       />
     </div>
   );
