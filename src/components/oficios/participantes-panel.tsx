@@ -71,7 +71,7 @@ function Lista({
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-medium">{titulo}</h3>
-      <ul className="divide-y rounded-lg border">
+      <ul className="divide-y rounded-xl border shadow-sm">
         {participantes.length === 0 ? (
           <li className="p-4 text-sm text-muted-foreground">{vacio}</li>
         ) : (

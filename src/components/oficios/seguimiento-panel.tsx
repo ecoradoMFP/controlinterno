@@ -94,7 +94,7 @@ export function SeguimientoPanel({
 
 function Paso({ titulo, hecho, children }: { titulo: string; hecho: string | null; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-4">
+    <div className="flex flex-col gap-2 rounded-xl border shadow-sm p-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{titulo}</h3>
         <span className="text-xs text-muted-foreground">{hecho ?? "Pendiente"}</span>

@@ -267,7 +267,7 @@ export default async function ReportesPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Resumen</h2>
 
-        <div className="rounded-lg border">
+        <div className="rounded-xl border shadow-sm">
           <div className="border-b p-4">
             <h3 className="font-medium">Semáforo de actividades</h3>
             <p className="text-xs text-muted-foreground">
@@ -279,7 +279,7 @@ export default async function ReportesPage() {
             <SemaforoDonut conteo={conteo} />
             <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
               {COLORES.map((color) => (
-                <div key={color} className="rounded-lg border p-4">
+                <div key={color} className="rounded-xl border p-4">
                   <p className="text-xs text-muted-foreground">{COLOR_SEMAFORO_LABELS[color]}</p>
                   <p className="text-2xl font-semibold">{conteo[color]}</p>
                   <p className="text-xs text-muted-foreground">
@@ -293,7 +293,7 @@ export default async function ReportesPage() {
 
         <CumplimientoCards hitos={cumplimientoHitos} oficios={cumplimientoOficios} />
 
-        <div className="rounded-lg border">
+        <div className="rounded-xl border shadow-sm">
           <div className="border-b p-4">
             <h3 className="font-medium">Comparación plan vs. real por etapa</h3>
             <p className="text-xs text-muted-foreground">
@@ -311,7 +311,7 @@ export default async function ReportesPage() {
           Desglose por actividad
         </h2>
 
-        <div className="rounded-lg border">
+        <div className="rounded-xl border shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>

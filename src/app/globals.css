@@ -78,7 +78,10 @@
   --chart-3: #1baf7a;
   --chart-4: #eda100;
   --chart-5: #4a3aa7;
-  --radius: 0.65rem;
+  /* Esquinas grandes y consistentes (línea Tasko): --radius sube de 0.65rem a 0.75rem y todo el
+   * resto de la escala (rounded-lg/xl/2xl/…) se deriva de acá, así que un solo número redondea
+   * tarjetas, botones e inputs de forma pareja en toda la app. */
+  --radius: 0.75rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #10203a;
   --sidebar-primary: #001f52;

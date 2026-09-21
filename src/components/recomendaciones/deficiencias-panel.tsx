@@ -64,7 +64,7 @@ export function DeficienciasPanel({
             if (soloPendientes && recomendacionesVisibles.length === 0) return null;
 
             return (
-              <div key={d.id} className="rounded-lg border p-4">
+              <div key={d.id} className="rounded-xl border p-4">
                 <p className="font-medium">
                   {d.numero}. {d.titulo}
                 </p>

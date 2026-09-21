@@ -45,7 +45,7 @@ export function CronogramaPanel({
       ) : (
         <div className="flex flex-col gap-3">
           {hitos.map((h) => (
-            <div key={h.id} className="rounded-lg border p-4">
+            <div key={h.id} className="rounded-xl border p-4">
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
                   <p className="font-medium">

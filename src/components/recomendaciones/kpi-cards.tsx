@@ -1,12 +1,5 @@
-function Card({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
-  return (
-    <div className="rounded-lg border p-4">
-      <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className="text-2xl font-semibold">{valor}</p>
-      {detalle ? <p className="mt-1.5 text-xs text-muted-foreground">{detalle}</p> : null}
-    </div>
-  );
-}
+import { CheckCircle2, Clock, FileText, ListChecks } from "lucide-react";
+import { StatCard } from "@/components/ui/stat-card";
 
 export function RecomendacionesKpiCards({
   totalInformes,
@@ -25,13 +18,17 @@ export function RecomendacionesKpiCards({
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-      <Card titulo="Informes de auditoría" valor={String(totalInformes)} />
-      <Card titulo="Recomendaciones pendientes" valor={String(pendientes)} />
-      <Card titulo="En proceso" valor={String(enProceso)} />
-      <Card
-        titulo="Atendidas"
-        valor={String(atendidas)}
-        detalle={totalRecomendaciones > 0 ? `${pctAtendidas.toFixed(0)}% del total` : undefined}
+      <StatCard icon={FileText} label="Informes de auditoría" value={String(totalInformes)} />
+      {/* Mismos tonos que ESTADO_RECOMENDACION_TONO — el ícono de cada tarjeta hace eco del
+       * SemaforoChip correspondiente más abajo en la misma página. */}
+      <StatCard icon={ListChecks} tone="rojo" label="Recomendaciones pendientes" value={String(pendientes)} />
+      <StatCard icon={Clock} tone="amarillo" label="En proceso" value={String(enProceso)} />
+      <StatCard
+        icon={CheckCircle2}
+        tone="verde"
+        label="Atendidas"
+        value={String(atendidas)}
+        detail={totalRecomendaciones > 0 ? `${pctAtendidas.toFixed(0)}% del total` : undefined}
       />
     </div>
   );

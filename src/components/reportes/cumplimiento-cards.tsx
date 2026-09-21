@@ -1,24 +1,25 @@
 import type { Cumplimiento } from "@/lib/bi";
+import { StatCard } from "@/components/ui/stat-card";
 
 function Card({ titulo, cumplimiento }: { titulo: string; cumplimiento: Cumplimiento }) {
   const total = cumplimiento.aTiempo + cumplimiento.tarde;
   const pctATiempo = total > 0 ? (cumplimiento.aTiempo / total) * 100 : 0;
 
   return (
-    <div className="rounded-lg border p-4">
-      <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className="text-2xl font-semibold">
-        {cumplimiento.pct !== null ? `${cumplimiento.pct.toFixed(0)}%` : "—"}
-      </p>
+    <StatCard
+      label={titulo}
+      value={cumplimiento.pct !== null ? `${cumplimiento.pct.toFixed(0)}%` : "—"}
+      detail={`${cumplimiento.aTiempo} a tiempo · ${cumplimiento.tarde} tarde`}
+    >
       {total > 0 ? (
         <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--status-rojo)]/25">
-          <div className="h-full bg-[var(--status-verde)]" style={{ width: `${pctATiempo}%` }} />
+          <div
+            className="h-full rounded-full bg-[var(--status-verde)] transition-[width] duration-500"
+            style={{ width: `${pctATiempo}%` }}
+          />
         </div>
       ) : null}
-      <p className="mt-1.5 text-xs text-muted-foreground">
-        {cumplimiento.aTiempo} a tiempo · {cumplimiento.tarde} tarde
-      </p>
-    </div>
+    </StatCard>
   );
 }
 
@@ -30,7 +31,7 @@ export function CumplimientoCards({
   oficios: Cumplimiento;
 }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border shadow-sm">
       <div className="border-b p-4">
         <h2 className="font-medium">Cumplimiento histórico de plazos</h2>
         <p className="text-xs text-muted-foreground">

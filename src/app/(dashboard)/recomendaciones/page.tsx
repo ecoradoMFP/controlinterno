@@ -65,7 +65,7 @@ export default async function RecomendacionesPage({
         atendidas={totales.atendida}
       />
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <div className="flex items-center justify-between border-b p-4">
           <h2 className="font-medium">Informes de auditoría</h2>
           <Link

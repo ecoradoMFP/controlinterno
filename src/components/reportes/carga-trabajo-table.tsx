@@ -20,7 +20,7 @@ export interface FilaCargaTrabajo {
 
 export function CargaTrabajoTable({ filas }: { filas: FilaCargaTrabajo[] }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border shadow-sm">
       <div className="border-b p-4">
         <h2 className="font-medium">Carga de trabajo por integrante</h2>
         <p className="text-xs text-muted-foreground">

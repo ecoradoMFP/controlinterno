@@ -36,7 +36,7 @@ export default async function ActividadesPage() {
         <p className="text-sm text-destructive">No se pudieron cargar las actividades.</p>
       ) : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

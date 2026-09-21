@@ -41,7 +41,7 @@ export default async function NotificacionesPage() {
           notificaciones.map((n) => (
             <div
               key={n.id}
-              className={`flex items-center justify-between gap-4 rounded-lg border p-4 ${n.leido ? "opacity-60" : ""}`}
+              className={`flex items-center justify-between gap-4 rounded-xl border shadow-sm p-4 ${n.leido ? "opacity-60" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <SemaforoBadge color={n.color as ColorSemaforo} />

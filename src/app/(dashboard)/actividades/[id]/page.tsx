@@ -240,7 +240,7 @@ export default async function ActividadDetallePage({
         <TabsContent value="bitacora">
           <div className="flex flex-col gap-4">
             {etapaHistorial && etapaHistorial.length > 0 ? (
-              <div className="rounded-lg border p-3 text-sm">
+              <div className="rounded-xl border p-3 text-sm">
                 <p className="mb-2 font-medium">Cierres de etapa</p>
                 <ul className="flex flex-col gap-1">
                   {etapaHistorial.map((h) => (

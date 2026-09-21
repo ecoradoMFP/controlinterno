@@ -31,7 +31,7 @@ export function CapacitacionForm({
   fieldErrors?: Record<string, string>;
 }) {
   return (
-    <form action={registrarCapacitacion} className="flex flex-col gap-4 rounded-lg border p-4">
+    <form action={registrarCapacitacion} className="flex flex-col gap-4 rounded-xl border shadow-sm p-4">
       <h2 className="font-medium">Registrar capacitación</h2>
       <input type="hidden" name="personal_id" value={personalId} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">

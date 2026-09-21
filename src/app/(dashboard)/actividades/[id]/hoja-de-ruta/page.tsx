@@ -98,7 +98,7 @@ export default async function HojaDeRutaPage({
               .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
             return (
-              <div key={d.id} className="break-inside-avoid rounded-lg border p-4">
+              <div key={d.id} className="break-inside-avoid rounded-xl border shadow-sm p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="font-medium">{d.documentos_catalogo?.nombre ?? "Documento"}</p>
                   <Badge variant={d.fase_actual === "finalizado" ? "default" : "secondary"}>

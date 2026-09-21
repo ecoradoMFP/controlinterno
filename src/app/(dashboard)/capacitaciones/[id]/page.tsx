@@ -77,7 +77,7 @@ export default async function CapacitacionDetallePage({
 
       {puedeRegistrar ? <CapacitacionForm personalId={persona.nit} fieldErrors={fieldErrors} /> : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-xl border shadow-sm">
         <div className="border-b p-4">
           <h2 className="font-medium">Historial de capacitaciones</h2>
         </div>
