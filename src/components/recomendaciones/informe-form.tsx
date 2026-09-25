@@ -1,4 +1,4 @@
-import { crearInforme } from "@/app/(dashboard)/recomendaciones/actions";
+import { crearInforme } from "@/app/(dashboard)/recomendaciones/informes/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +37,22 @@ export function InformeForm({
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
-          <Input id="no_nombramiento" name="no_nombramiento" placeholder="NAI-001-2026" required />
+          <Input id="no_nombramiento" name="no_nombramiento" placeholder="NAI-001-2026" />
         </Field>
-        <Field label="CAI (opcional)" htmlFor="cai" error={fieldErrors?.cai}>
-          <Input id="cai" name="cai" />
+        <Field label="CAI" htmlFor="cai" error={fieldErrors?.cai}>
+          <Input id="cai" name="cai" placeholder="CAI 00006" />
+        </Field>
+      </div>
+      <p className="-mt-3 text-xs text-muted-foreground">
+        Captura al menos uno de los dos: nombramiento o CAI.
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Dependencia auditada" htmlFor="dependencia_auditada" error={fieldErrors?.dependencia_auditada}>
+          <Input id="dependencia_auditada" name="dependencia_auditada" required />
+        </Field>
+        <Field label="Tipo de auditoría (opcional)" htmlFor="tipo_auditoria">
+          <Input id="tipo_auditoria" name="tipo_auditoria" placeholder="Cumplimiento y financiera, operativa..." />
         </Field>
       </div>
 
@@ -66,29 +78,32 @@ export function InformeForm({
         </Field>
       )}
 
-      <Field label="Dependencia auditada" htmlFor="dependencia_auditada" error={fieldErrors?.dependencia_auditada}>
-        <Input id="dependencia_auditada" name="dependencia_auditada" required />
-      </Field>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Field
-          label="Período auditado — inicio"
-          htmlFor="periodo_auditado_inicio"
-          error={fieldErrors?.periodo_auditado_inicio}
-        >
-          <Input id="periodo_auditado_inicio" name="periodo_auditado_inicio" type="date" required />
+      <div className="grid grid-cols-3 gap-4">
+        <Field label="Fecha de nombramiento" htmlFor="fecha_nombramiento" error={fieldErrors?.fecha_nombramiento}>
+          <Input id="fecha_nombramiento" name="fecha_nombramiento" type="date" />
         </Field>
-        <Field label="Período auditado — fin" htmlFor="periodo_auditado_fin" error={fieldErrors?.periodo_auditado_fin}>
-          <Input id="periodo_auditado_fin" name="periodo_auditado_fin" type="date" required />
+        <Field label="Fecha del informe final (opcional)" htmlFor="fecha_informe_final">
+          <Input id="fecha_informe_final" name="fecha_informe_final" type="date" />
+        </Field>
+        <Field label="Fecha de notificación (opcional)" htmlFor="fecha_notificacion">
+          <Input id="fecha_notificacion" name="fecha_notificacion" type="date" />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Fecha de la auditoría" htmlFor="fecha" error={fieldErrors?.fecha}>
-          <Input id="fecha" name="fecha" type="date" required />
+        <Field
+          label="Período auditado — inicio (opcional)"
+          htmlFor="periodo_auditado_inicio"
+          error={fieldErrors?.periodo_auditado_inicio}
+        >
+          <Input id="periodo_auditado_inicio" name="periodo_auditado_inicio" type="date" />
         </Field>
-        <Field label="Fecha para informe final (opcional)" htmlFor="fecha_informe_final">
-          <Input id="fecha_informe_final" name="fecha_informe_final" type="date" />
+        <Field
+          label="Período auditado — fin (opcional)"
+          htmlFor="periodo_auditado_fin"
+          error={fieldErrors?.periodo_auditado_fin}
+        >
+          <Input id="periodo_auditado_fin" name="periodo_auditado_fin" type="date" />
         </Field>
       </div>
 

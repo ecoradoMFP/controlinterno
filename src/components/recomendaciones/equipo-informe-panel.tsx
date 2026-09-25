@@ -1,4 +1,4 @@
-import { agregarMiembroEquipoInforme, eliminarMiembroEquipoInforme } from "@/app/(dashboard)/recomendaciones/[id]/actions";
+import { agregarMiembroEquipoInforme, eliminarMiembroEquipoInforme } from "@/app/(dashboard)/recomendaciones/informes/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

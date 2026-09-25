@@ -207,7 +207,7 @@ export type Database = {
           usuario_nit: string
         }
         Insert: {
-          anio?: number | null
+          anio?: never
           certificado_url?: string | null
           created_at?: string
           fecha: string
@@ -219,7 +219,7 @@ export type Database = {
           usuario_nit: string
         }
         Update: {
-          anio?: number | null
+          anio?: never
           certificado_url?: string | null
           created_at?: string
           fecha?: string
@@ -433,6 +433,120 @@ export type Database = {
           },
         ]
       }
+      documentos_seguimiento: {
+        Row: {
+          creado_por_nit: string
+          created_at: string
+          departamento_id: string
+          fecha_carga_sag_udai: string | null
+          fecha_documento: string | null
+          fecha_nombramiento: string | null
+          id: string
+          no_documento: string | null
+          no_nombramiento: string | null
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
+        }
+        Insert: {
+          creado_por_nit: string
+          created_at?: string
+          departamento_id: string
+          fecha_carga_sag_udai?: string | null
+          fecha_documento?: string | null
+          fecha_nombramiento?: string | null
+          id?: string
+          no_documento?: string | null
+          no_nombramiento?: string | null
+          tipo_documento?: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
+        }
+        Update: {
+          creado_por_nit?: string
+          created_at?: string
+          departamento_id?: string
+          fecha_carga_sag_udai?: string | null
+          fecha_documento?: string | null
+          fecha_nombramiento?: string | null
+          id?: string
+          no_documento?: string | null
+          no_nombramiento?: string | null
+          tipo_documento?: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_seguimiento_creado_por_nit_fkey"
+            columns: ["creado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "documentos_seguimiento_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "departamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos_seguimiento_auditores: {
+        Row: {
+          documento_id: string
+          usuario_nit: string
+        }
+        Insert: {
+          documento_id: string
+          usuario_nit: string
+        }
+        Update: {
+          documento_id?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_seguimiento_auditores_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_seguimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_seguimiento_auditores_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
+      documentos_seguimiento_informes: {
+        Row: {
+          documento_id: string
+          informe_id: string
+        }
+        Insert: {
+          documento_id: string
+          informe_id: string
+        }
+        Update: {
+          documento_id?: string
+          informe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_seguimiento_informes_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_seguimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_seguimiento_informes_informe_id_fkey"
+            columns: ["informe_id"]
+            isOneToOne: false
+            referencedRelation: "informes_auditoria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hitos_cronograma: {
         Row: {
           actividad_id: string
@@ -502,48 +616,54 @@ export type Database = {
           created_at: string
           departamento_id: string
           dependencia_auditada: string
-          fecha: string
           fecha_informe_final: string | null
+          fecha_nombramiento: string | null
+          fecha_notificacion: string | null
           id: string
-          no_nombramiento: string
-          periodo_auditado_fin: string
-          periodo_auditado_inicio: string
+          no_nombramiento: string | null
+          periodo_auditado_fin: string | null
+          periodo_auditado_inicio: string | null
           riesgo: string | null
           supervisor_nit: string | null
+          tipo_auditoria: string | null
         }
         Insert: {
-          anio_ejecucion?: number | null
+          anio_ejecucion?: never
           cai?: string | null
           coordinador_nit?: string | null
           creado_por_nit: string
           created_at?: string
           departamento_id: string
           dependencia_auditada: string
-          fecha: string
           fecha_informe_final?: string | null
+          fecha_nombramiento?: string | null
+          fecha_notificacion?: string | null
           id?: string
-          no_nombramiento: string
-          periodo_auditado_fin: string
-          periodo_auditado_inicio: string
+          no_nombramiento?: string | null
+          periodo_auditado_fin?: string | null
+          periodo_auditado_inicio?: string | null
           riesgo?: string | null
           supervisor_nit?: string | null
+          tipo_auditoria?: string | null
         }
         Update: {
-          anio_ejecucion?: number | null
+          anio_ejecucion?: never
           cai?: string | null
           coordinador_nit?: string | null
           creado_por_nit?: string
           created_at?: string
           departamento_id?: string
           dependencia_auditada?: string
-          fecha?: string
           fecha_informe_final?: string | null
+          fecha_nombramiento?: string | null
+          fecha_notificacion?: string | null
           id?: string
-          no_nombramiento?: string
-          periodo_auditado_fin?: string
-          periodo_auditado_inicio?: string
+          no_nombramiento?: string | null
+          periodo_auditado_fin?: string | null
+          periodo_auditado_inicio?: string | null
           riesgo?: string | null
           supervisor_nit?: string | null
+          tipo_auditoria?: string | null
         }
         Relationships: [
           {
@@ -870,6 +990,7 @@ export type Database = {
           fecha_implementacion: string | null
           id: string
           numero: number
+          responsables: string | null
           texto: string
         }
         Insert: {
@@ -880,6 +1001,7 @@ export type Database = {
           fecha_implementacion?: string | null
           id?: string
           numero: number
+          responsables?: string | null
           texto: string
         }
         Update: {
@@ -890,6 +1012,7 @@ export type Database = {
           fecha_implementacion?: string | null
           id?: string
           numero?: number
+          responsables?: string | null
           texto?: string
         }
         Relationships: [
@@ -911,39 +1034,46 @@ export type Database = {
       }
       seguimientos_recomendacion: {
         Row: {
-          comentario: string | null
+          acciones_responsables: string | null
+          comentario_auditoria: string | null
           created_at: string
+          documento_id: string | null
           estado: Database["public"]["Enums"]["estado_recomendacion_enum"]
-          fecha: string
           id: string
-          no_informe_seguimiento: string
           numero_seguimiento: number
           recomendacion_id: string
           registrado_por_nit: string
         }
         Insert: {
-          comentario?: string | null
+          acciones_responsables?: string | null
+          comentario_auditoria?: string | null
           created_at?: string
+          documento_id?: string | null
           estado: Database["public"]["Enums"]["estado_recomendacion_enum"]
-          fecha: string
           id?: string
-          no_informe_seguimiento: string
           numero_seguimiento: number
           recomendacion_id: string
           registrado_por_nit: string
         }
         Update: {
-          comentario?: string | null
+          acciones_responsables?: string | null
+          comentario_auditoria?: string | null
           created_at?: string
+          documento_id?: string | null
           estado?: Database["public"]["Enums"]["estado_recomendacion_enum"]
-          fecha?: string
           id?: string
-          no_informe_seguimiento?: string
           numero_seguimiento?: number
           recomendacion_id?: string
           registrado_por_nit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "seguimientos_recomendacion_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_seguimiento"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "seguimientos_recomendacion_recomendacion_id_fkey"
             columns: ["recomendacion_id"]
@@ -1047,26 +1177,20 @@ export type Database = {
       ambito_semaforo_enum: "hito" | "oficio" | "actividad"
       cargo_enum: "auditor" | "subjefe" | "jefe" | "subdirector" | "director"
       estado_hito_enum: "pendiente" | "en_curso" | "concluido"
-      estado_recomendacion_enum: "pendiente" | "en_proceso" | "atendida"
+      estado_recomendacion_enum:
+        "pendiente" | "en_proceso" | "no_cumplida" | "cumplida"
       etapa_actividad_enum:
         | "planificacion"
         | "ejecucion"
         | "comunicacion_resultados"
         | "expediente_cierre"
       etapa_documento_enum:
-        | "planificacion"
-        | "ejecucion"
-        | "comunicacion_resultados"
+        "planificacion" | "ejecucion" | "comunicacion_resultados"
       fase_documento_enum:
-        | "elaboracion"
-        | "revision"
-        | "correccion"
-        | "finalizado"
+        "elaboracion" | "revision" | "correccion" | "finalizado"
       permiso_sistema_enum:
-        | "captura_propia"
-        | "captura_delegada"
-        | "consulta"
-        | "control_total"
+        "captura_propia" | "captura_delegada" | "consulta" | "control_total"
+      tipo_documento_seguimiento_enum: "informe" | "oficio"
       tipo_evento_movimiento_enum:
         | "entrega"
         | "recepcion"
@@ -1115,8 +1239,7 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -1140,8 +1263,7 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -1165,8 +1287,7 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -1206,7 +1327,12 @@ export const Constants = {
       ambito_semaforo_enum: ["hito", "oficio", "actividad"],
       cargo_enum: ["auditor", "subjefe", "jefe", "subdirector", "director"],
       estado_hito_enum: ["pendiente", "en_curso", "concluido"],
-      estado_recomendacion_enum: ["pendiente", "en_proceso", "atendida"],
+      estado_recomendacion_enum: [
+        "pendiente",
+        "en_proceso",
+        "no_cumplida",
+        "cumplida",
+      ],
       etapa_actividad_enum: [
         "planificacion",
         "ejecucion",
@@ -1230,6 +1356,7 @@ export const Constants = {
         "consulta",
         "control_total",
       ],
+      tipo_documento_seguimiento_enum: ["informe", "oficio"],
       tipo_evento_movimiento_enum: [
         "entrega",
         "recepcion",
@@ -1240,4 +1367,3 @@ export const Constants = {
     },
   },
 } as const
-
