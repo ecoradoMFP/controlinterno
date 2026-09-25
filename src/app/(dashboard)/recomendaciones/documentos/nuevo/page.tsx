@@ -99,19 +99,10 @@ export default async function NuevoNombramientoSeguimientoPage({
               </Campo>
             </div>
 
-            <fieldset className="flex flex-col gap-3 rounded-lg border border-dashed p-4">
-              <legend className="px-1 text-xs text-muted-foreground">
-                Solo si ya se emitió (obligatorio para un oficio, que no lleva nombramiento)
-              </legend>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Campo label="No. de informe u oficio" htmlFor="no_documento" error={fieldErrors.no_documento}>
-                  <Input id="no_documento" name="no_documento" placeholder="DAI-DAF-SR-CAI-04-2026" />
-                </Campo>
-                <Campo label="Fecha del informe u oficio" htmlFor="fecha_documento" error={fieldErrors.fecha_documento}>
-                  <Input id="fecha_documento" name="fecha_documento" type="date" />
-                </Campo>
-              </div>
-            </fieldset>
+            <p className="-mt-3 text-xs text-muted-foreground">
+              Un oficio no lleva nombramiento: deja esos campos en blanco. El número del informe u oficio se registra
+              cuando se emita, después de evaluar las recomendaciones.
+            </p>
 
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1 text-sm font-medium">Auditor(es) nombrado(s)</legend>

@@ -65,8 +65,8 @@ export default async function RecomendacionDetallePage({
   ]);
   const puedeNombrar = !cumplida && gestionables.includes(informe.departamento_id);
 
-  // Nombramientos de seguimiento que cubren este informe y todavía no evaluaron esta
-  // recomendación: son el "siguiente paso" del ciclo mientras siga abierta.
+  // Nombramientos de seguimiento que cubren este informe, todavía sin emitir (la cédula se cierra
+  // al emitirse) y que no evaluaron esta recomendación: el "siguiente paso" del ciclo.
   const usados = new Set(seguimientos.map((s) => s.documento_id));
   const { data: cobertura } = cumplida
     ? { data: [] }
@@ -76,7 +76,7 @@ export default async function RecomendacionDetallePage({
         .eq("informe_id", informe.id);
   const enCurso = (cobertura ?? [])
     .flatMap((c) => (c.documentos_seguimiento ? [c.documentos_seguimiento] : []))
-    .filter((d) => !usados.has(d.id))
+    .filter((d) => !d.no_documento && !usados.has(d.id))
     .sort((a, b) => (a.fecha_nombramiento ?? "").localeCompare(b.fecha_nombramiento ?? ""));
 
   const identificacion = [etiquetaCai(informe.cai), informe.no_nombramiento].filter(Boolean).join(" · ");
@@ -92,7 +92,6 @@ export default async function RecomendacionDetallePage({
               tono={ESTADO_RECOMENDACION_TONO[recomendacion.estado_actual]}
               label={ESTADO_RECOMENDACION_LABELS[recomendacion.estado_actual]}
             />
-            {vencida ? <SemaforoChip tono="naranja" label="Vencida" /> : null}
           </div>
           <CardTitle className="text-lg">
             Def. {deficiencia.numero} · {deficiencia.titulo}
@@ -112,7 +111,13 @@ export default async function RecomendacionDetallePage({
             {recomendacion.responsables ? (
               <Bloque titulo="Responsables de implementarla" texto={recomendacion.responsables} />
             ) : null}
-            <Bloque titulo="Fecha de implementación" texto={recomendacion.fecha_implementacion ?? "—"} />
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Fecha de implementación</p>
+              <p className={cn(vencida && "font-medium text-destructive")}>
+                {recomendacion.fecha_implementacion ?? "—"}
+                {vencida ? " · vencida" : ""}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -199,7 +204,10 @@ export default async function RecomendacionDetallePage({
                   </option>
                   {enCurso.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {[d.no_nombramiento ? `Nombramiento ${d.no_nombramiento}` : null, d.no_documento].filter(Boolean).join(" · ")}
+                      {d.no_nombramiento
+                        ? `Nombramiento ${d.no_nombramiento}`
+                        : `${TIPO_DOCUMENTO_SEGUIMIENTO_LABELS[d.tipo_documento]} en elaboración`}
+                      {d.fecha_nombramiento ? ` del ${d.fecha_nombramiento}` : ""}
                     </option>
                   ))}
                 </select>
