@@ -26,6 +26,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -236,10 +237,13 @@ export function AppShell({
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="font-normal">
-                  <p className="text-sm font-medium text-foreground">{usuario.nombre}</p>
-                  {usuario.cargo ? <p className="text-xs text-muted-foreground">{CARGO_LABELS[usuario.cargo]}</p> : null}
-                </DropdownMenuLabel>
+                {/* Base UI exige que el GroupLabel viva dentro de un Menu.Group. */}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="font-normal">
+                    <p className="text-sm font-medium text-foreground">{usuario.nombre}</p>
+                    {usuario.cargo ? <p className="text-xs text-muted-foreground">{CARGO_LABELS[usuario.cargo]}</p> : null}
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 {/* El botón usa el atributo `form` (en vez de anidar un <form> dentro del
                  * Item) porque MenuItem le pone role="menuitem" al nodo raíz, y un <form> con
