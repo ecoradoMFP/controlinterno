@@ -52,8 +52,9 @@ export default async function DocumentoSeguimientoPage({
     .eq("documento_id", id);
   const evaluacionPorRecomendacion = new Map((evaluaciones ?? []).map((e) => [e.recomendacion_id, e]));
 
-  // Cédula: todas las recomendaciones de los CAI cubiertos que siguen abiertas o que este
-  // documento evaluó.
+  // Cédula: lo que este documento evaluó y, mientras no se emita (la emisión la cierra), las
+  // recomendaciones abiertas de los CAI cubiertos que faltan por evaluar.
+  const emitido = !!documento.no_documento;
   const filas = documento.documentos_seguimiento_informes
     .flatMap((c) => (c.informes_auditoria ? [c.informes_auditoria] : []))
     .sort((a, b) => (a.cai ?? a.no_nombramiento ?? "").localeCompare(b.cai ?? b.no_nombramiento ?? ""))
@@ -66,7 +67,7 @@ export default async function DocumentoSeguimientoPage({
             .map((r) => ({ informe, deficiencia: d, recomendacion: r, evaluacion: evaluacionPorRecomendacion.get(r.id) })),
         ),
     )
-    .filter((f) => f.evaluacion || f.recomendacion.estado_actual !== "cumplida");
+    .filter((f) => f.evaluacion || (!emitido && f.recomendacion.estado_actual !== "cumplida"));
 
   const porEvaluar = filas.filter((f) => !f.evaluacion).length;
   const totales = Object.fromEntries(
@@ -92,7 +93,10 @@ export default async function DocumentoSeguimientoPage({
             Seguimiento a recomendaciones · {TIPO_DOCUMENTO_SEGUIMIENTO_LABELS[documento.tipo_documento]}
           </p>
           <CardTitle className="codigo-expediente text-lg">
-            {documento.no_documento ?? `Nombramiento ${documento.no_nombramiento}`}
+            {documento.no_documento ??
+              (documento.no_nombramiento
+                ? `Nombramiento ${documento.no_nombramiento}`
+                : `${TIPO_DOCUMENTO_SEGUIMIENTO_LABELS[documento.tipo_documento]} en elaboración`)}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             {[
@@ -100,7 +104,7 @@ export default async function DocumentoSeguimientoPage({
                 ? documento.fecha_documento
                   ? `Emitido el ${documento.fecha_documento}`
                   : null
-                : "Informe en elaboración",
+                : `${TIPO_DOCUMENTO_SEGUIMIENTO_LABELS[documento.tipo_documento]} en elaboración`,
               documento.no_nombramiento && documento.no_documento
                 ? `Nombramiento ${documento.no_nombramiento}${documento.fecha_nombramiento ? ` del ${documento.fecha_nombramiento}` : ""}`
                 : documento.fecha_nombramiento
@@ -155,6 +159,10 @@ export default async function DocumentoSeguimientoPage({
               <Button type="submit" variant="outline" size="sm">
                 Registrar emisión
               </Button>
+              <p className="basis-full text-xs text-muted-foreground">
+                Al registrar la emisión se cierra la cédula: ya no se podrán agregar evaluaciones.
+                {porEvaluar > 0 ? ` Todavía faltan ${porEvaluar} recomendación(es) por evaluar.` : ""}
+              </p>
             </form>
           ) : null}
 

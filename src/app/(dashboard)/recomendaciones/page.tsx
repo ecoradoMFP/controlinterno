@@ -202,9 +202,10 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
                   href={`/recomendaciones/${f.id}`}
                   className="grid gap-2 p-4 hover:bg-muted/40 md:grid-cols-[9rem_1fr_14rem] md:gap-4"
                 >
-                  <div className="flex flex-wrap gap-1.5 md:flex-col">
+                  {/* Único chip: el estado actual. "Vencida" es un plazo, no un estado — va como
+                   * texto junto a la fecha de implementación. */}
+                  <div>
                     <SemaforoChip tono={ESTADO_RECOMENDACION_TONO[f.estado_actual]} label={ESTADO_RECOMENDACION_LABELS[f.estado_actual]} />
-                    {f.vencida ? <SemaforoChip tono="naranja" label="Vencida" /> : null}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">
@@ -224,7 +225,8 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
                         <span>
                           Últ. seguimiento:{" "}
                           <span className="codigo-expediente text-foreground">
-                            {f.ultimoDocumento.no_documento ?? `Nombramiento ${f.ultimoDocumento.no_nombramiento}`}
+                            {f.ultimoDocumento.no_documento ??
+                              (f.ultimoDocumento.no_nombramiento ? `Nombramiento ${f.ultimoDocumento.no_nombramiento}` : "en elaboración")}
                           </span>
                         </span>
                         {f.ultimoDocumento.fecha_documento ?? f.ultimoDocumento.fecha_nombramiento ? (
@@ -235,8 +237,8 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
                       <span>Sin seguimiento todavía</span>
                     )}
                     {f.fecha_implementacion && estaAbierta(f.estado_actual) ? (
-                      <span className={cn(f.vencida && "font-medium text-foreground")}>
-                        Implementar antes de: {f.fecha_implementacion}
+                      <span className={cn(f.vencida && "font-medium text-destructive")}>
+                        {f.vencida ? "Vencida · debía implementarse el" : "Implementar antes de:"} {f.fecha_implementacion}
                       </span>
                     ) : null}
                   </div>

@@ -52,8 +52,8 @@ export const recomendacionFormSchema = z.object({
 });
 
 // Nombramiento de seguimiento: lo emite la jefatura, nombra a uno o varios auditores y cubre uno
-// o varios CAI/informes. El número del informe resultante se registra después, al emitirse; un
-// oficio (la excepción) no lleva nombramiento, así que su número se captura desde el inicio.
+// o varios CAI/informes. El número del informe u oficio resultante se registra al emitirse, y
+// con eso se cierra su cédula. Un oficio (la excepción) no lleva nombramiento.
 export const nombramientoFormSchema = z
   .object({
     departamento_id: z.string().trim().min(1, "Requerido"),
@@ -70,7 +70,6 @@ export const nombramientoFormSchema = z
     path: ["no_nombramiento"],
   })
   .refine((v) => v.tipo_documento === "oficio" || v.fecha_nombramiento, { error: "Requerida", path: ["fecha_nombramiento"] })
-  .refine((v) => v.tipo_documento === "informe" || v.no_documento, { error: "Requerido para un oficio", path: ["no_documento"] })
   .refine((v) => !v.no_documento || v.fecha_documento, { error: "Requerida", path: ["fecha_documento"] });
 
 export const documentoEmitidoSchema = z.object({
