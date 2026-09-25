@@ -212,3 +212,37 @@ export async function puedeOperarInforme(
     .maybeSingle();
   return roles?.supervisor_nit === usuario.nit || roles?.coordinador_nit === usuario.nit;
 }
+
+/**
+ * Espeja `authz.puede_nombrar_seguimiento`: emitir nombramientos de seguimiento a
+ * recomendaciones es función de jefatura (director, subdirector de la subdirección, jefe/subjefe
+ * del departamento) — la misma lista blanca de cargos que `departamentosGestionables`.
+ */
+export async function departamentosParaNombrarSeguimiento(
+  usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
+  supabase: SupabaseServerClient,
+): Promise<string[]> {
+  return departamentosGestionables(usuario, supabase);
+}
+
+/**
+ * Espeja `authz.puede_dar_seguimiento`: registrar el seguimiento de una recomendación lo puede
+ * hacer quien opera el informe (equipo/jefatura) o el auditor nombrado para darle seguimiento,
+ * aunque no haya sido parte del equipo de la auditoría original.
+ */
+export async function puedeDarSeguimiento(
+  usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
+  informeId: string,
+  supabase: SupabaseServerClient,
+): Promise<boolean> {
+  if (await puedeOperarInforme(usuario, informeId, supabase)) return true;
+  if (!puedeEscribir(usuario)) return false;
+
+  const { data } = await supabase
+    .from("documentos_seguimiento_informes")
+    .select("documento_id, documentos_seguimiento!inner(documentos_seguimiento_auditores!inner(usuario_nit))")
+    .eq("informe_id", informeId)
+    .eq("documentos_seguimiento.documentos_seguimiento_auditores.usuario_nit", usuario!.nit)
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}

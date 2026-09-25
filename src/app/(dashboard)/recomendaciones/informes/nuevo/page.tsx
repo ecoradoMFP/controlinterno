@@ -16,7 +16,7 @@ export default async function NuevoInformePage({
   const usuario = await getUsuarioActual();
 
   if (!usuario || !puedeEscribir(usuario)) {
-    redirect("/recomendaciones");
+    redirect("/recomendaciones/informes");
   }
 
   const supabase = await createClient();
@@ -40,7 +40,7 @@ export default async function NuevoInformePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/recomendaciones" label="Volver a Seguimiento a recomendaciones" />
+      <BackLink href="/recomendaciones/informes" label="Volver a Informes de auditoría" />
 
       <Card>
         <CardHeader>

@@ -4,16 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
-import {
-  deficienciaFormSchema,
-  recomendacionFormSchema,
-  seguimientoFormSchema,
-} from "@/lib/validations/recomendacion";
+import { deficienciaFormSchema, recomendacionFormSchema } from "@/lib/validations/recomendacion";
 
-function fail(informeId: string, message: string, fieldErrors?: Record<string, string>): never {
+function fail(informeId: string, message: string): never {
   const params = new URLSearchParams({ error: message });
-  if (fieldErrors) params.set("fieldErrors", JSON.stringify(fieldErrors));
-  redirect(`/recomendaciones/${informeId}?${params.toString()}`);
+  redirect(`/recomendaciones/informes/${informeId}?${params.toString()}`);
 }
 
 async function verificarAlcance(informeId: string) {
@@ -39,8 +34,8 @@ export async function agregarMiembroEquipoInforme(formData: FormData) {
   });
   if (error) fail(informeId, "No se pudo agregar al equipo.");
 
-  revalidatePath(`/recomendaciones/${informeId}`);
-  redirect(`/recomendaciones/${informeId}`);
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 export async function eliminarMiembroEquipoInforme(formData: FormData) {
@@ -57,8 +52,8 @@ export async function eliminarMiembroEquipoInforme(formData: FormData) {
     .eq("usuario_nit", usuarioNit);
   if (error) fail(informeId, "No se pudo quitar al miembro del equipo.");
 
-  revalidatePath(`/recomendaciones/${informeId}`);
-  redirect(`/recomendaciones/${informeId}`);
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 export async function agregarDeficiencia(formData: FormData) {
@@ -87,8 +82,8 @@ export async function agregarDeficiencia(formData: FormData) {
   });
   if (error) fail(informeId, "No se pudo agregar la deficiencia.");
 
-  revalidatePath(`/recomendaciones/${informeId}`);
-  redirect(`/recomendaciones/${informeId}`);
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 export async function agregarRecomendacion(formData: FormData) {
@@ -100,7 +95,9 @@ export async function agregarRecomendacion(formData: FormData) {
 
   const parsed = recomendacionFormSchema.safeParse({
     texto: formData.get("texto"),
+    responsables: formData.get("responsables") ?? undefined,
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
+    estado_inicial: formData.get("estado_inicial") ?? undefined,
   });
   if (!parsed.success) fail(informeId, "Revisa el texto de la recomendación.");
 
@@ -109,50 +106,33 @@ export async function agregarRecomendacion(formData: FormData) {
     .select("id", { count: "exact", head: true })
     .eq("deficiencia_id", deficienciaId);
 
+  const recomendacionId = crypto.randomUUID();
   const { error } = await supabase.from("recomendaciones").insert({
+    id: recomendacionId,
     deficiencia_id: deficienciaId,
     numero: (count ?? 0) + 1,
     texto: parsed.data.texto,
+    responsables: parsed.data.responsables || null,
     fecha_implementacion: parsed.data.fecha_implementacion || null,
     creado_por_nit: usuario.nit,
   });
   if (error) fail(informeId, "No se pudo agregar la recomendación.");
 
-  revalidatePath(`/recomendaciones/${informeId}`);
-  redirect(`/recomendaciones/${informeId}`);
-}
+  // 1ra etapa de la matriz de DAF: el estado que ya trae la recomendación al informe final se
+  // guarda como fila sin documento (numero_seguimiento 0). "Pendiente" es el default de la tabla, no
+  // hace falta registrarlo.
+  if (parsed.data.estado_inicial !== "pendiente") {
+    const { error: errorEstado } = await supabase.from("seguimientos_recomendacion").insert({
+      recomendacion_id: recomendacionId,
+      documento_id: null,
+      // El trigger seguimientos_recomendacion_asignar_numero decide el número real.
+      numero_seguimiento: 0,
+      estado: parsed.data.estado_inicial,
+      registrado_por_nit: usuario.nit,
+    });
+    if (errorEstado) fail(informeId, "La recomendación se agregó, pero no se pudo registrar su estado inicial.");
+  }
 
-export async function registrarSeguimiento(formData: FormData) {
-  const informeId = String(formData.get("informe_id") ?? "");
-  const recomendacionId = String(formData.get("recomendacion_id") ?? "");
-  if (!informeId || !recomendacionId) fail(informeId, "Falta identificar la recomendación.");
-
-  const { usuario, supabase } = await verificarAlcance(informeId);
-
-  const parsed = seguimientoFormSchema.safeParse({
-    no_informe_seguimiento: formData.get("no_informe_seguimiento"),
-    fecha: formData.get("fecha"),
-    estado: formData.get("estado"),
-    comentario: formData.get("comentario") ?? undefined,
-  });
-  if (!parsed.success) fail(informeId, "Revisa los campos del seguimiento.");
-
-  const { count } = await supabase
-    .from("seguimientos_recomendacion")
-    .select("id", { count: "exact", head: true })
-    .eq("recomendacion_id", recomendacionId);
-
-  const { error } = await supabase.from("seguimientos_recomendacion").insert({
-    recomendacion_id: recomendacionId,
-    numero_seguimiento: (count ?? 0) + 1,
-    no_informe_seguimiento: parsed.data.no_informe_seguimiento,
-    fecha: parsed.data.fecha,
-    estado: parsed.data.estado,
-    comentario: parsed.data.comentario || null,
-    registrado_por_nit: usuario.nit,
-  });
-  if (error) fail(informeId, "No se pudo registrar el seguimiento.");
-
-  revalidatePath(`/recomendaciones/${informeId}`);
-  redirect(`/recomendaciones/${informeId}`);
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
 }

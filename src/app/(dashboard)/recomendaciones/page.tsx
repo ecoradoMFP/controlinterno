@@ -1,106 +1,243 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { departamentosParaNombrarSeguimiento, getUsuarioActual } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { RecomendacionesKpiCards } from "@/components/recomendaciones/kpi-cards";
-import { ESTADO_RECOMENDACION_TONO, type EstadoRecomendacionEnum } from "@/types/domain";
+import { estaAbierta, estaVencida, etiquetaCai, haceCuanto, hoyGuatemala } from "@/lib/recomendaciones";
+import { cn } from "@/lib/utils";
+import {
+  ESTADO_RECOMENDACION_LABELS,
+  ESTADO_RECOMENDACION_TONO,
+  ESTADOS_RECOMENDACION,
+  type EstadoRecomendacionEnum,
+} from "@/types/domain";
 
-export default async function RecomendacionesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ soloPendientes?: string }>;
-}) {
-  const { soloPendientes } = await searchParams;
-  const mostrarSoloPendientes = soloPendientes === "1";
+// "abiertas" es el filtro por defecto: la bandeja existe para dar seguimiento a lo que falta.
+const FILTROS_ESTADO: Record<string, string> = {
+  abiertas: "Abiertas",
+  vencidas: "Vencidas",
+  ...Object.fromEntries(ESTADOS_RECOMENDACION.map((e) => [e, ESTADO_RECOMENDACION_LABELS[e]])),
+  todas: "Todas",
+};
 
-  const supabase = await createClient();
+type Filtros = { estado?: string; dependencia?: string; departamento?: string; anio?: string; q?: string };
 
-  // Sin filtro manual de departamento en ninguna consulta: RLS (informes_auditoria_select,
-  // recomendaciones_select) ya devuelve solo lo que está dentro del alcance del usuario actual
-  // — mismo criterio que /documentos y /reportes.
-  const [{ data: informes }, { data: recomendaciones }] = await Promise.all([
-    supabase
-      .from("informes_auditoria")
-      .select("id, no_nombramiento, dependencia_auditada, fecha, departamentos(nombre)")
-      .order("created_at", { ascending: false }),
-    supabase.from("recomendaciones").select("id, estado_actual, deficiencias(informe_id)"),
-  ]);
+function urlConFiltros(actuales: Filtros, cambios: Filtros) {
+  const params = new URLSearchParams(
+    Object.entries({ ...actuales, ...cambios }).filter((e): e is [string, string] => !!e[1]),
+  );
+  return `/recomendaciones?${params.toString()}`;
+}
 
-  const conteoPorInforme = new Map<string, Record<EstadoRecomendacionEnum, number>>();
-  const totales: Record<EstadoRecomendacionEnum, number> = { pendiente: 0, en_proceso: 0, atendida: 0 };
+const SELECT_CLASES =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
-  for (const r of recomendaciones ?? []) {
-    const informeId = r.deficiencias?.informe_id;
-    if (!informeId) continue;
-    totales[r.estado_actual] += 1;
-    const actual = conteoPorInforme.get(informeId) ?? { pendiente: 0, en_proceso: 0, atendida: 0 };
-    actual[r.estado_actual] += 1;
-    conteoPorInforme.set(informeId, actual);
-  }
+export default async function BandejaRecomendacionesPage({ searchParams }: { searchParams: Promise<Filtros> }) {
+  const filtros = await searchParams;
+  const estadoFiltro = filtros.estado && filtros.estado in FILTROS_ESTADO ? filtros.estado : "abiertas";
+  const hoy = hoyGuatemala();
 
-  const totalRecomendaciones = totales.pendiente + totales.en_proceso + totales.atendida;
+  const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
+  const puedeNombrar = (await departamentosParaNombrarSeguimiento(usuario, supabase)).length > 0;
 
-  const filas = (informes ?? [])
-    .map((i) => ({ informe: i, conteo: conteoPorInforme.get(i.id) ?? { pendiente: 0, en_proceso: 0, atendida: 0 } }))
-    .filter((f) => !mostrarSoloPendientes || f.conteo.pendiente + f.conteo.en_proceso > 0);
+  // Sin filtro manual de alcance: RLS (recomendaciones_select) ya devuelve solo las
+  // recomendaciones de informes visibles para el usuario actual.
+  const { data } = await supabase
+    .from("recomendaciones")
+    .select(
+      `id, numero, texto, fecha_implementacion, estado_actual,
+       deficiencias(numero, titulo, informes_auditoria(id, no_nombramiento, cai, dependencia_auditada, anio_ejecucion, fecha_informe_final, departamento_id, departamentos(nombre))),
+       seguimientos_recomendacion(numero_seguimiento, documentos_seguimiento(no_documento, fecha_documento, no_nombramiento, fecha_nombramiento))`,
+    );
+
+  const filas = (data ?? []).flatMap((r) => {
+    const informe = r.deficiencias?.informes_auditoria;
+    if (!r.deficiencias || !informe) return [];
+    const ultimo = [...r.seguimientos_recomendacion]
+      .filter((s) => s.documentos_seguimiento)
+      .sort((a, b) => b.numero_seguimiento - a.numero_seguimiento)[0];
+    return [
+      {
+        ...r,
+        deficiencia: r.deficiencias,
+        informe,
+        anio: informe.anio_ejecucion ?? (informe.fecha_informe_final ? Number(informe.fecha_informe_final.slice(0, 4)) : null),
+        vencida: estaVencida(r.estado_actual, r.fecha_implementacion, hoy),
+        ultimoDocumento: ultimo?.documentos_seguimiento ?? null,
+        seguimientos: r.seguimientos_recomendacion.filter((s) => s.numero_seguimiento > 0).length,
+      },
+    ];
+  });
+
+  // Opciones de los filtros a partir de lo que el usuario puede ver.
+  const dependencias = [...new Set(filas.map((f) => f.informe.dependencia_auditada))].sort();
+  const departamentos = [
+    ...new Map(filas.map((f) => [f.informe.departamento_id, f.informe.departamentos?.nombre ?? ""])),
+  ].sort((a, b) => a[1].localeCompare(b[1]));
+  const anios = [...new Set(filas.map((f) => f.anio).filter((a): a is number => a !== null))].sort((a, b) => b - a);
+
+  const q = (filtros.q ?? "").trim().toLowerCase();
+  const visibles = filas
+    .filter((f) => {
+      if (estadoFiltro === "abiertas" && !estaAbierta(f.estado_actual)) return false;
+      if (estadoFiltro === "vencidas" && !f.vencida) return false;
+      if (ESTADOS_RECOMENDACION.includes(estadoFiltro as EstadoRecomendacionEnum) && f.estado_actual !== estadoFiltro) {
+        return false;
+      }
+      if (filtros.dependencia && f.informe.dependencia_auditada !== filtros.dependencia) return false;
+      if (filtros.departamento && f.informe.departamento_id !== filtros.departamento) return false;
+      if (filtros.anio && String(f.anio) !== filtros.anio) return false;
+      if (q) {
+        const texto = [f.informe.cai, f.informe.no_nombramiento, f.deficiencia.titulo, f.texto].join(" ").toLowerCase();
+        if (!texto.includes(q)) return false;
+      }
+      return true;
+    })
+    // Vencidas primero, luego por fecha de implementación más próxima.
+    .sort(
+      (a, b) =>
+        Number(b.vencida) - Number(a.vencida) ||
+        (a.fecha_implementacion ?? "9999").localeCompare(b.fecha_implementacion ?? "9999"),
+    );
+
+  const conteo = (estado: EstadoRecomendacionEnum) => filas.filter((f) => f.estado_actual === estado).length;
+  const hayFiltros = !!(filtros.dependencia || filtros.departamento || filtros.anio || q);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Seguimiento a recomendaciones</h1>
           <p className="text-sm text-muted-foreground">
-            Registro y control de las recomendaciones emitidas por cada informe de auditoría, hasta que quedan
-            atendidas.
+            Cada recomendación se sigue, informe tras informe, hasta que queda cumplida.
           </p>
         </div>
-        <Button render={<Link href="/recomendaciones/nuevo" />}>Nuevo informe</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href="/recomendaciones/informes" />}>
+            Informes de auditoría
+          </Button>
+          {puedeNombrar ? (
+            <Button render={<Link href="/recomendaciones/documentos/nuevo" />}>Emitir nombramiento de seguimiento</Button>
+          ) : null}
+        </div>
       </div>
 
       <RecomendacionesKpiCards
-        totalInformes={informes?.length ?? 0}
-        totalRecomendaciones={totalRecomendaciones}
-        pendientes={totales.pendiente}
-        enProceso={totales.en_proceso}
-        atendidas={totales.atendida}
+        abiertas={filas.filter((f) => estaAbierta(f.estado_actual)).length}
+        vencidas={filas.filter((f) => f.vencida).length}
+        noCumplidas={conteo("no_cumplida")}
+        cumplidas={conteo("cumplida")}
+        total={filas.length}
       />
 
       <div className="rounded-xl border shadow-sm">
-        <div className="flex items-center justify-between border-b p-4">
-          <h2 className="font-medium">Informes de auditoría</h2>
-          <Link
-            href={`/recomendaciones?${mostrarSoloPendientes ? "" : "soloPendientes=1"}`}
-            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {mostrarSoloPendientes ? "Ver todos" : "Ver solo con pendientes/en proceso"}
-          </Link>
-        </div>
+        <form method="get" className="flex flex-col gap-3 border-b p-4">
+          <input type="hidden" name="estado" value={estadoFiltro} />
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(FILTROS_ESTADO).map(([valor, label]) => (
+              <Link
+                key={valor}
+                href={urlConFiltros(filtros, { estado: valor })}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  estadoFiltro === valor
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_8rem_1fr_auto]">
+            <select name="dependencia" defaultValue={filtros.dependencia ?? ""} className={SELECT_CLASES} aria-label="Dependencia">
+              <option value="">Todas las dependencias</option>
+              {dependencias.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+            <select name="departamento" defaultValue={filtros.departamento ?? ""} className={SELECT_CLASES} aria-label="Departamento">
+              <option value="">Todos los departamentos</option>
+              {departamentos.map(([id, nombre]) => (
+                <option key={id} value={id}>
+                  {nombre}
+                </option>
+              ))}
+            </select>
+            <select name="anio" defaultValue={filtros.anio ?? ""} className={SELECT_CLASES} aria-label="Año">
+              <option value="">Todos los años</option>
+              {anios.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+            <Input name="q" defaultValue={filtros.q ?? ""} placeholder="Buscar CAI, nombramiento o texto" />
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" className="h-8">
+                Filtrar
+              </Button>
+              {hayFiltros ? (
+                <Button variant="ghost" size="sm" className="h-8" render={<Link href={`/recomendaciones?estado=${estadoFiltro}`} />}>
+                  Limpiar
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </form>
 
-        {filas.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Ningún informe capturado todavía.</p>
+        {visibles.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">
+            {filas.length === 0 ? "Ninguna recomendación capturada todavía." : "Ninguna recomendación coincide con los filtros."}
+          </p>
         ) : (
           <ul className="divide-y">
-            {filas.map(({ informe, conteo }) => (
-              <li key={informe.id} className="p-4">
-                <Link href={`/recomendaciones/${informe.id}`} className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="codigo-expediente text-sm font-medium">{informe.no_nombramiento}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {informe.dependencia_auditada} · {informe.departamentos?.nombre} · {informe.fecha}
-                    </p>
+            {visibles.map((f) => (
+              <li key={f.id}>
+                <Link
+                  href={`/recomendaciones/${f.id}`}
+                  className="grid gap-2 p-4 hover:bg-muted/40 md:grid-cols-[9rem_1fr_14rem] md:gap-4"
+                >
+                  <div className="flex flex-wrap gap-1.5 md:flex-col">
+                    <SemaforoChip tono={ESTADO_RECOMENDACION_TONO[f.estado_actual]} label={ESTADO_RECOMENDACION_LABELS[f.estado_actual]} />
+                    {f.vencida ? <SemaforoChip tono="naranja" label="Vencida" /> : null}
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {conteo.pendiente > 0 ? (
-                      <SemaforoChip tono={ESTADO_RECOMENDACION_TONO.pendiente} label={`${conteo.pendiente} pendiente(s)`} />
-                    ) : null}
-                    {conteo.en_proceso > 0 ? (
-                      <SemaforoChip tono={ESTADO_RECOMENDACION_TONO.en_proceso} label={`${conteo.en_proceso} en proceso`} />
-                    ) : null}
-                    {conteo.atendida > 0 ? (
-                      <SemaforoChip tono={ESTADO_RECOMENDACION_TONO.atendida} label={`${conteo.atendida} atendida(s)`} />
-                    ) : null}
-                    {conteo.pendiente + conteo.en_proceso + conteo.atendida === 0 ? (
-                      <span className="text-xs text-muted-foreground">Sin recomendaciones aún</span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="codigo-expediente font-medium text-foreground">
+                        {[etiquetaCai(f.informe.cai), f.informe.no_nombramiento].filter(Boolean).join(" · ")}
+                      </span>{" "}
+                      · {f.informe.dependencia_auditada}
+                    </p>
+                    <p className="mt-0.5 text-sm font-medium">
+                      Def. {f.deficiencia.numero} · {f.deficiencia.titulo}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{f.texto}</p>
+                  </div>
+                  <div className="flex flex-col gap-0.5 text-xs text-muted-foreground md:text-right">
+                    {f.ultimoDocumento ? (
+                      <>
+                        <span>
+                          Últ. seguimiento:{" "}
+                          <span className="codigo-expediente text-foreground">
+                            {f.ultimoDocumento.no_documento ?? `Nombramiento ${f.ultimoDocumento.no_nombramiento}`}
+                          </span>
+                        </span>
+                        {f.ultimoDocumento.fecha_documento ?? f.ultimoDocumento.fecha_nombramiento ? (
+                          <span>{haceCuanto((f.ultimoDocumento.fecha_documento ?? f.ultimoDocumento.fecha_nombramiento)!, hoy)}</span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span>Sin seguimiento todavía</span>
+                    )}
+                    {f.fecha_implementacion && estaAbierta(f.estado_actual) ? (
+                      <span className={cn(f.vencida && "font-medium text-foreground")}>
+                        Implementar antes de: {f.fecha_implementacion}
+                      </span>
                     ) : null}
                   </div>
                 </Link>
