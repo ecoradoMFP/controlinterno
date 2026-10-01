@@ -47,3 +47,4 @@ credenciales-prueba.local.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+credenciales-prueba.remoto.txt
