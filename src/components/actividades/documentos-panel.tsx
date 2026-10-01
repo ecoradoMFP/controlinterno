@@ -1,5 +1,4 @@
 import {
-  actualizarRutaDocumento,
   agregarDocumentoActividad,
   avanzarDocumento,
   marcarNoAplica,
@@ -41,18 +40,11 @@ export type DocumentoConDetalle = DocumentoActividad & {
 
 /**
  * A quién va el documento con la próxima entrega. Espeja la función SQL `avanzar_documento`
- * (que es la que decide de verdad): primera entrega → primer revisor de la matriz; después de
- * una corrección → el cargo que la devolvió.
+ * (que es la que decide de verdad): siempre al primer revisor de la matriz, también después de
+ * una corrección — la revisión reinicia (Auditor → Subjefe → Jefe, según corresponda).
  */
-function destinoEntrega(documento: DocumentoConDetalle, cadena: CargoEnum[]): CargoEnum | null {
-  const revisores = cadena.slice(1);
-  if (documento.fase_actual === "correccion") {
-    const ultimaDevolucion = [...documento.movimientos]
-      .filter((m) => m.tipo_evento === "devolucion_correccion")
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-    if (ultimaDevolucion?.de_cargo && revisores.includes(ultimaDevolucion.de_cargo)) return ultimaDevolucion.de_cargo;
-  }
-  return revisores[0] ?? null;
+function destinoEntrega(_documento: DocumentoConDetalle, cadena: CargoEnum[]): CargoEnum | null {
+  return cadena[1] ?? null;
 }
 
 export function DocumentosPanel({
@@ -181,9 +173,14 @@ export function DocumentosPanel({
                         </Button>
                       ) : null}
                       {puedeDevolver ? (
-                        <Button type="submit" name="accion" value="devolver" size="sm" variant="outline">
-                          Devolver al Auditor para corrección
-                        </Button>
+                        <>
+                          <Button type="submit" name="accion" value="devolver" size="sm" variant="outline">
+                            Devolver al Auditor para corrección
+                          </Button>
+                          <span className="self-center text-xs text-muted-foreground">
+                            Al corregirse, la revisión se reinicia: Auditor → Subjefe → Jefe, según corresponda.
+                          </span>
+                        </>
                       ) : null}
                       {puedeVistoBueno ? (
                         <Button type="submit" name="accion" value="visto_bueno" size="sm" variant="ghost">
@@ -227,21 +224,6 @@ export function DocumentosPanel({
                 {generaDocumento && !d.no_aplica ? (
                   <div className="mt-3 flex flex-col gap-2 border-t pt-3">
                     <RutaExpediente ruta={d.ruta_completa} etiqueta="Archivo" />
-                    {puedeEditar ? (
-                      <form action={actualizarRutaDocumento} className="flex flex-wrap items-center gap-2">
-                        <input type="hidden" name="actividad_id" value={actividadId} />
-                        <input type="hidden" name="documento_actividad_id" value={d.id} />
-                        <Input
-                          name="ruta_archivo"
-                          defaultValue={d.ruta_archivo ?? ""}
-                          placeholder="Ruta relativa del archivo en el expediente digital"
-                          className="h-8 max-w-md text-xs"
-                        />
-                        <Button type="submit" size="sm" variant="outline" className="h-8">
-                          Guardar ruta
-                        </Button>
-                      </form>
-                    ) : null}
                   </div>
                 ) : null}
 

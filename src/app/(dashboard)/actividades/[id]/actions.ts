@@ -9,7 +9,6 @@ import {
   puedeCorregirHechoConsumado,
   puedeEscribir,
 } from "@/lib/auth";
-import { normalizarRutaExpediente } from "@/lib/expediente-digital";
 import { cierreExpedienteSchema, nombramientoSchema } from "@/lib/validations/actividad";
 import {
   SIGUIENTE_ETAPA,
@@ -324,28 +323,6 @@ export async function avanzarDocumento(formData: FormData) {
   redirect(`/actividades/${actividadId}?tab=documentos`);
 }
 
-export async function actualizarRutaDocumento(formData: FormData) {
-  const actividadId = String(formData.get("actividad_id"));
-  const documentoId = String(formData.get("documento_actividad_id"));
-
-  const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para modificar el documento.");
-
-  const ruta = normalizarRutaExpediente(String(formData.get("ruta_archivo") ?? ""));
-  if (!ruta.ok) fail(actividadId, "documentos", ruta.error);
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("documentos_actividad")
-    .update({ ruta_archivo: ruta.ruta })
-    .eq("id", documentoId);
-
-  if (error) fail(actividadId, "documentos", "No se pudo guardar la ruta del archivo.");
-
-  revalidatePath(`/actividades/${actividadId}`);
-  redirect(`/actividades/${actividadId}?tab=documentos`);
-}
-
 function campo(formData: FormData, nombre: string) {
   return formData.get(nombre) ?? undefined;
 }
@@ -368,12 +345,9 @@ export async function actualizarNombramiento(formData: FormData) {
   });
   if (!parsed.success) fail(actividadId, "expediente", parsed.error.issues[0]?.message ?? "Revisa las fechas.");
 
-  const ruta = normalizarRutaExpediente(String(formData.get("ruta_expediente") ?? ""));
-  if (!ruta.ok) fail(actividadId, "expediente", ruta.error);
-
   const { error } = await supabase
     .from("actividades")
-    .update({ ...parsed.data, ruta_expediente: ruta.ruta })
+    .update(parsed.data)
     .eq("id", actividadId);
 
   if (error) fail(actividadId, "expediente", "No se pudieron guardar los datos del nombramiento.");

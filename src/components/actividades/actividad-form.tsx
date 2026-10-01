@@ -183,16 +183,10 @@ export function ActividadForm({
         </Field>
       </div>
 
-      <Field
-        label="Carpeta del expediente digital (opcional)"
-        htmlFor="ruta_expediente"
-        error={fieldErrors?.ruta_expediente}
-      >
-        <Input id="ruta_expediente" name="ruta_expediente" placeholder="Auditorias/2026/DAF/NAI-001-2026" />
-        <p className="text-xs text-muted-foreground">
-          Si la dejas vacía se asigna Auditorias/&lt;año&gt;/&lt;departamento&gt;/&lt;nombramiento&gt;.
-        </p>
-      </Field>
+      <p className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+        La carpeta del expediente digital se asigna sola al crear la auditoría
+        (Auditorias/año/departamento/tipo/correlativo).
+      </p>
 
       <Field
         label="Expedientes relacionados (opcional, separados por coma)"

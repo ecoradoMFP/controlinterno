@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
-import { normalizarRutaExpediente, sugerirRutaExpediente } from "@/lib/expediente-digital";
 import {
   actividadFormSchema,
   parseExpedientesRelacionados,
@@ -54,25 +53,6 @@ export async function crearActividad(formData: FormData) {
 
   const supabase = await createClient();
 
-  // Expediente digital: si no se indicó carpeta, se asigna la de la convención
-  // (Auditorias/<año>/<depto>/<nombramiento>) para que todas las auditorías queden ordenadas
-  // igual cuando exista el servidor de archivos.
-  const ruta = normalizarRutaExpediente(String(formData.get("ruta_expediente") ?? ""));
-  if (!ruta.ok) fail(ruta.error, { ruta_expediente: ruta.error });
-  let rutaExpediente = ruta.ruta;
-  if (!rutaExpediente) {
-    const { data: departamento } = await supabase
-      .from("departamentos")
-      .select("nombre")
-      .eq("id", rest.departamento_id)
-      .maybeSingle();
-    rutaExpediente = sugerirRutaExpediente({
-      noNombramiento: rest.no_nombramiento,
-      fecha: rest.fecha_emision_nombramiento ?? rest.fecha_inicio_plazo,
-      departamento: departamento?.nombre ?? null,
-    });
-  }
-
   // El id se genera aquí (no se deja el default `gen_random_uuid()` de la columna) para no
   // encadenar `.select().single()` tras el insert: `actividades_select` decide visibilidad
   // consultando `actividades` de nuevo por id, y esa fila recién insertada, dentro del mismo
@@ -85,7 +65,6 @@ export async function crearActividad(formData: FormData) {
   const { error } = await supabase.from("actividades").insert({
     id,
     ...rest,
-    ruta_expediente: rutaExpediente,
     expedientes_relacionados: parseExpedientesRelacionados(expedientes_relacionados),
   });
 

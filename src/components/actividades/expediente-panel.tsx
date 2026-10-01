@@ -71,14 +71,7 @@ export function ExpedientePanel({
             <Input id="area" name="area" defaultValue={actividad.area ?? ""} disabled={!puedeGestionar} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="ruta_expediente">Carpeta del expediente digital</Label>
-            <Input
-              id="ruta_expediente"
-              name="ruta_expediente"
-              defaultValue={actividad.ruta_expediente ?? ""}
-              placeholder="Auditorias/2026/DAF/NAI-001-2026"
-              disabled={!puedeGestionar}
-            />
+            <Label>Carpeta del expediente digital (la asigna el sistema)</Label>
             <RutaExpediente ruta={rutaCompleta} etiqueta="Ruta completa" />
           </div>
           <div className="flex flex-col gap-2">
