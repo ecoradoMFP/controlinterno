@@ -8,16 +8,16 @@ insert into subdirecciones (nombre) values
 -- subdirector_nit queda NULL: no se inventan NIT de funcionarios reales. Se completa cuando
 -- se dé de alta a la persona real vía el flujo administrativo (sección 12.4).
 
-insert into departamentos (nombre, subdireccion_id)
-select 'Departamento de Auditorías Financieras', s.id
+insert into departamentos (nombre, sigla, subdireccion_id)
+select 'Departamento de Auditorías Financieras', 'DAF', s.id
 from subdirecciones s
 where s.nombre = 'Subdirección de Auditorías Financieras, Administrativas y de Procesos'
 union all
-select 'Departamento de Auditorías Administrativas y de Procesos', s.id
+select 'Departamento de Auditorías Administrativas y de Procesos', 'DAAP', s.id
 from subdirecciones s
 where s.nombre = 'Subdirección de Auditorías Financieras, Administrativas y de Procesos'
 union all
-select 'Departamento de Auditorías Especiales', s.id
+select 'Departamento de Auditorías Especiales', 'DAE', s.id
 from subdirecciones s
 where s.nombre = 'Subdirección de Auditorías Especiales';
 
