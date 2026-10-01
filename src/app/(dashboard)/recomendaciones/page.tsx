@@ -3,23 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { departamentosParaNombrarSeguimiento, getUsuarioActual } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SemaforoChip } from "@/components/semaforo-chip";
 import { RecomendacionesKpiCards } from "@/components/recomendaciones/kpi-cards";
-import { estaAbierta, estaVencida, etiquetaCai, haceCuanto, hoyGuatemala } from "@/lib/recomendaciones";
+import { ListaRecomendaciones } from "@/components/recomendaciones/lista-recomendaciones";
+import { cargarDocumentosSeguimiento, cargarRecomendaciones } from "@/lib/recomendaciones-datos";
 import { cn } from "@/lib/utils";
-import {
-  ESTADO_RECOMENDACION_LABELS,
-  ESTADO_RECOMENDACION_TONO,
-  ESTADOS_RECOMENDACION,
-  type EstadoRecomendacionEnum,
-} from "@/types/domain";
+import { ESTADOS_RECOMENDACION, ESTADO_RECOMENDACION_LABELS, type EstadoRecomendacionEnum } from "@/types/domain";
 
-// "abiertas" es el filtro por defecto: la bandeja existe para dar seguimiento a lo que falta.
+// "activas" es el filtro por defecto: la bandeja existe para dar seguimiento a lo que falta. Las
+// cumplidas y las ya evaluadas este año viven en /recomendaciones/historico y
+// /recomendaciones/en-seguimiento — por eso no hay aquí ni "cumplida" ni un "todas" que las
+// incluya (sería idéntico a "activas").
 const FILTROS_ESTADO: Record<string, string> = {
-  abiertas: "Abiertas",
+  activas: "Activas",
   vencidas: "Vencidas",
-  ...Object.fromEntries(ESTADOS_RECOMENDACION.map((e) => [e, ESTADO_RECOMENDACION_LABELS[e]])),
-  todas: "Todas",
+  ...Object.fromEntries(
+    ESTADOS_RECOMENDACION.filter((e) => e !== "cumplida").map((e) => [e, ESTADO_RECOMENDACION_LABELS[e]]),
+  ),
 };
 
 type Filtros = { estado?: string; dependencia?: string; departamento?: string; anio?: string; q?: string };
@@ -36,40 +35,19 @@ const SELECT_CLASES =
 
 export default async function BandejaRecomendacionesPage({ searchParams }: { searchParams: Promise<Filtros> }) {
   const filtros = await searchParams;
-  const estadoFiltro = filtros.estado && filtros.estado in FILTROS_ESTADO ? filtros.estado : "abiertas";
-  const hoy = hoyGuatemala();
+  const estadoFiltro = filtros.estado && filtros.estado in FILTROS_ESTADO ? filtros.estado : "activas";
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
-  const puedeNombrar = (await departamentosParaNombrarSeguimiento(usuario, supabase)).length > 0;
+  const [puedeNombrar, todasLasFilas, documentos] = await Promise.all([
+    departamentosParaNombrarSeguimiento(usuario, supabase).then((deps) => deps.length > 0),
+    cargarRecomendaciones(supabase),
+    cargarDocumentosSeguimiento(supabase),
+  ]);
+  const documentosPorCompletar = documentos.filter((d) => d.paso !== "completo").length;
 
-  // Sin filtro manual de alcance: RLS (recomendaciones_select) ya devuelve solo las
-  // recomendaciones de informes visibles para el usuario actual.
-  const { data } = await supabase
-    .from("recomendaciones")
-    .select(
-      `id, numero, texto, fecha_implementacion, estado_actual,
-       deficiencias(numero, titulo, informes_auditoria(id, no_nombramiento, cai, dependencia_auditada, anio_ejecucion, fecha_informe_final, departamento_id, departamentos(nombre))),
-       seguimientos_recomendacion(numero_seguimiento, documentos_seguimiento(no_documento, fecha_documento, no_nombramiento, fecha_nombramiento))`,
-    );
-
-  const filas = (data ?? []).flatMap((r) => {
-    const informe = r.deficiencias?.informes_auditoria;
-    if (!r.deficiencias || !informe) return [];
-    const ultimo = [...r.seguimientos_recomendacion]
-      .filter((s) => s.documentos_seguimiento)
-      .sort((a, b) => b.numero_seguimiento - a.numero_seguimiento)[0];
-    return [
-      {
-        ...r,
-        deficiencia: r.deficiencias,
-        informe,
-        anio: informe.anio_ejecucion ?? (informe.fecha_informe_final ? Number(informe.fecha_informe_final.slice(0, 4)) : null),
-        vencida: estaVencida(r.estado_actual, r.fecha_implementacion, hoy),
-        ultimoDocumento: ultimo?.documentos_seguimiento ?? null,
-        seguimientos: r.seguimientos_recomendacion.filter((s) => s.numero_seguimiento > 0).length,
-      },
-    ];
-  });
+  // Esta bandeja solo muestra lo "activo": las cumplidas y las ya evaluadas este año viven en
+  // /recomendaciones/historico y /recomendaciones/en-seguimiento (ver ubicarRecomendacion).
+  const filas = todasLasFilas.filter((f) => f.bucket === "activa");
 
   // Opciones de los filtros a partir de lo que el usuario puede ver.
   const dependencias = [...new Set(filas.map((f) => f.informe.dependencia_auditada))].sort();
@@ -81,7 +59,6 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
   const q = (filtros.q ?? "").trim().toLowerCase();
   const visibles = filas
     .filter((f) => {
-      if (estadoFiltro === "abiertas" && !estaAbierta(f.estado_actual)) return false;
       if (estadoFiltro === "vencidas" && !f.vencida) return false;
       if (ESTADOS_RECOMENDACION.includes(estadoFiltro as EstadoRecomendacionEnum) && f.estado_actual !== estadoFiltro) {
         return false;
@@ -102,7 +79,6 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
         (a.fecha_implementacion ?? "9999").localeCompare(b.fecha_implementacion ?? "9999"),
     );
 
-  const conteo = (estado: EstadoRecomendacionEnum) => filas.filter((f) => f.estado_actual === estado).length;
   const hayFiltros = !!(filtros.dependencia || filtros.departamento || filtros.anio || q);
 
   return (
@@ -115,6 +91,15 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href="/recomendaciones/documentos" />}>
+            Nombramientos e informes de seguimiento
+          </Button>
+          <Button variant="outline" render={<Link href="/recomendaciones/en-seguimiento" />}>
+            En seguimiento
+          </Button>
+          <Button variant="outline" render={<Link href="/recomendaciones/historico" />}>
+            Histórico de atendidas
+          </Button>
           <Button variant="outline" render={<Link href="/recomendaciones/informes" />}>
             Informes de auditoría
           </Button>
@@ -124,12 +109,27 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
         </div>
       </div>
 
+      {documentosPorCompletar > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
+          <div className="text-sm">
+            <p className="font-medium">
+              {documentosPorCompletar === 1
+                ? "Tienes 1 nombramiento de seguimiento por completar"
+                : `Tienes ${documentosPorCompletar} nombramientos de seguimiento por completar`}
+            </p>
+            <p className="text-muted-foreground">Ahí evalúas las recomendaciones, emites el informe y lo cargas al SAG-UDAI.</p>
+          </div>
+          <Button size="lg" render={<Link href="/recomendaciones/documentos" />}>
+            Ver nombramientos por completar
+          </Button>
+        </div>
+      ) : null}
+
       <RecomendacionesKpiCards
-        abiertas={filas.filter((f) => estaAbierta(f.estado_actual)).length}
+        activas={filas.length}
         vencidas={filas.filter((f) => f.vencida).length}
-        noCumplidas={conteo("no_cumplida")}
-        cumplidas={conteo("cumplida")}
-        total={filas.length}
+        enSeguimiento={todasLasFilas.filter((f) => f.bucket === "en_seguimiento").length}
+        atendidas={todasLasFilas.filter((f) => f.bucket === "atendida").length}
       />
 
       <div className="rounded-xl border shadow-sm">
@@ -190,62 +190,10 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
           </div>
         </form>
 
-        {visibles.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">
-            {filas.length === 0 ? "Ninguna recomendación capturada todavía." : "Ninguna recomendación coincide con los filtros."}
-          </p>
+        {filas.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">Ninguna recomendación activa por ahora.</p>
         ) : (
-          <ul className="divide-y">
-            {visibles.map((f) => (
-              <li key={f.id}>
-                <Link
-                  href={`/recomendaciones/${f.id}`}
-                  className="grid gap-2 p-4 hover:bg-muted/40 md:grid-cols-[9rem_1fr_14rem] md:gap-4"
-                >
-                  {/* Único chip: el estado actual. "Vencida" es un plazo, no un estado — va como
-                   * texto junto a la fecha de implementación. */}
-                  <div>
-                    <SemaforoChip tono={ESTADO_RECOMENDACION_TONO[f.estado_actual]} label={ESTADO_RECOMENDACION_LABELS[f.estado_actual]} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">
-                      <span className="codigo-expediente font-medium text-foreground">
-                        {[etiquetaCai(f.informe.cai), f.informe.no_nombramiento].filter(Boolean).join(" · ")}
-                      </span>{" "}
-                      · {f.informe.dependencia_auditada}
-                    </p>
-                    <p className="mt-0.5 text-sm font-medium">
-                      Def. {f.deficiencia.numero} · {f.deficiencia.titulo}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{f.texto}</p>
-                  </div>
-                  <div className="flex flex-col gap-0.5 text-xs text-muted-foreground md:text-right">
-                    {f.ultimoDocumento ? (
-                      <>
-                        <span>
-                          Últ. seguimiento:{" "}
-                          <span className="codigo-expediente text-foreground">
-                            {f.ultimoDocumento.no_documento ??
-                              (f.ultimoDocumento.no_nombramiento ? `Nombramiento ${f.ultimoDocumento.no_nombramiento}` : "en elaboración")}
-                          </span>
-                        </span>
-                        {f.ultimoDocumento.fecha_documento ?? f.ultimoDocumento.fecha_nombramiento ? (
-                          <span>{haceCuanto((f.ultimoDocumento.fecha_documento ?? f.ultimoDocumento.fecha_nombramiento)!, hoy)}</span>
-                        ) : null}
-                      </>
-                    ) : (
-                      <span>Sin seguimiento todavía</span>
-                    )}
-                    {f.fecha_implementacion && estaAbierta(f.estado_actual) ? (
-                      <span className={cn(f.vencida && "font-medium text-destructive")}>
-                        {f.vencida ? "Vencida · debía implementarse el" : "Implementar antes de:"} {f.fecha_implementacion}
-                      </span>
-                    ) : null}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ListaRecomendaciones filas={visibles} contexto="activa" />
         )}
       </div>
     </div>

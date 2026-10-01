@@ -1,46 +1,42 @@
-import { AlarmClock, CheckCircle2, ListChecks, XCircle } from "lucide-react";
+import Link from "next/link";
+import { AlarmClock, CheckCircle2, History, ListChecks } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 
 export function RecomendacionesKpiCards({
-  abiertas,
+  activas,
   vencidas,
-  noCumplidas,
-  cumplidas,
-  total,
+  enSeguimiento,
+  atendidas,
 }: {
-  abiertas: number;
+  activas: number;
   vencidas: number;
-  noCumplidas: number;
-  cumplidas: number;
-  total: number;
+  enSeguimiento: number;
+  atendidas: number;
 }) {
-  const pctCumplidas = total > 0 ? (cumplidas / total) * 100 : 0;
-
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {/* Mismos tonos que ESTADO_RECOMENDACION_TONO (no_cumplida=rojo, cumplida=verde); las
-       * vencidas usan naranja, igual que el semáforo de plazos. */}
-      <StatCard
-        icon={ListChecks}
-        label="Abiertas"
-        value={String(abiertas)}
-        detail="Pendientes, en proceso o no cumplidas"
-      />
+      {/* Mismos tonos que ESTADO_RECOMENDACION_TONO; las vencidas usan naranja, igual que el
+       * semáforo de plazos. "En seguimiento" y "Atendidas" llevan a sus propios paneles. */}
+      <StatCard icon={ListChecks} label="Activas" value={String(activas)} detail="Pendientes, en proceso o no cumplidas" />
       <StatCard
         icon={AlarmClock}
         tone="naranja"
         label="Vencidas"
         value={String(vencidas)}
-        detail="Abiertas con fecha de implementación pasada"
+        detail="Activas con fecha de implementación pasada"
       />
-      <StatCard icon={XCircle} tone="rojo" label="No cumplidas" value={String(noCumplidas)} />
-      <StatCard
-        icon={CheckCircle2}
-        tone="verde"
-        label="Cumplidas"
-        value={String(cumplidas)}
-        detail={total > 0 ? `${pctCumplidas.toFixed(0)}% del total` : undefined}
-      />
+      <Link href="/recomendaciones/en-seguimiento" className="block">
+        <StatCard
+          icon={CheckCircle2}
+          tone="amarillo"
+          label="En seguimiento"
+          value={String(enSeguimiento)}
+          detail="Ya evaluadas este año, sin quedar cumplidas"
+        />
+      </Link>
+      <Link href="/recomendaciones/historico" className="block">
+        <StatCard icon={History} tone="verde" label="Atendidas" value={String(atendidas)} detail="Histórico por año" />
+      </Link>
     </div>
   );
 }

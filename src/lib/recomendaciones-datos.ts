@@ -1,0 +1,98 @@
+import type { createClient } from "@/lib/supabase/server";
+import { estaVencida, hoyGuatemala, ubicarRecomendacion } from "@/lib/recomendaciones";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+// Usado tanto por la bandeja principal como por los paneles de "en seguimiento" e "histórico":
+// una sola consulta, un solo cálculo de a qué panel pertenece cada recomendación.
+const CAMPOS = `id, numero, texto, fecha_implementacion, estado_actual,
+   deficiencias(numero, titulo, informes_auditoria(id, no_nombramiento, cai, dependencia_auditada, anio_ejecucion, fecha_informe_final, departamento_id, departamentos(nombre))),
+   seguimientos_recomendacion(numero_seguimiento, estado, documentos_seguimiento(no_documento, fecha_documento, no_nombramiento, fecha_nombramiento))`;
+
+export type FilaRecomendacion = Awaited<ReturnType<typeof cargarRecomendaciones>>[number];
+
+/**
+ * Todas las recomendaciones visibles para el usuario actual (RLS decide el alcance) con los
+ * campos derivados que usan los 3 paneles: a qué panel pertenece (bucket/anio, ver
+ * ubicarRecomendacion), si está vencida y su último documento de seguimiento (emitido o no, para
+ * mostrarlo en la fila aunque todavía no mueva de panel).
+ */
+export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
+  const hoy = hoyGuatemala();
+  const { data } = await supabase.from("recomendaciones").select(CAMPOS);
+
+  return (data ?? []).flatMap((r) => {
+    const informe = r.deficiencias?.informes_auditoria;
+    if (!r.deficiencias || !informe) return [];
+    const ultimo = [...r.seguimientos_recomendacion]
+      .filter((s) => s.documentos_seguimiento)
+      .sort((a, b) => b.numero_seguimiento - a.numero_seguimiento)[0];
+    const { bucket, anio: anioBucket } = ubicarRecomendacion(r.seguimientos_recomendacion, hoy);
+    return [
+      {
+        ...r,
+        deficiencia: r.deficiencias,
+        informe,
+        anio: informe.anio_ejecucion ?? (informe.fecha_informe_final ? Number(informe.fecha_informe_final.slice(0, 4)) : null),
+        vencida: estaVencida(r.estado_actual, r.fecha_implementacion, hoy),
+        ultimoDocumento: ultimo?.documentos_seguimiento ?? null,
+        seguimientos: r.seguimientos_recomendacion.filter((s) => s.numero_seguimiento > 0).length,
+        bucket,
+        anioBucket,
+      },
+    ];
+  });
+}
+
+export type PasoDocumento = "evaluar" | "emitir" | "sag" | "completo";
+
+/**
+ * Nombramientos de seguimiento visibles para el usuario actual, cada uno con el paso del ciclo en
+ * que va (mismo criterio que la pantalla del documento): evaluar recomendaciones -> emitir el
+ * informe -> cargarlo al SAG-UDAI -> completo. Sirve para la lista de nombramientos y para el
+ * aviso de "por completar" en la bandeja.
+ */
+export async function cargarDocumentosSeguimiento(supabase: SupabaseServerClient) {
+  const [{ data: documentos }, { data: evaluaciones }] = await Promise.all([
+    supabase
+      .from("documentos_seguimiento")
+      .select(
+        `id, no_nombramiento, fecha_nombramiento, no_documento, fecha_documento, fecha_carga_sag_udai, tipo_documento, departamentos(nombre),
+         documentos_seguimiento_auditores(usuarios(nombre)),
+         documentos_seguimiento_informes(informes_auditoria(id, cai, no_nombramiento, dependencia_auditada, deficiencias(recomendaciones(id, estado_actual))))`,
+      ),
+    supabase.from("seguimientos_recomendacion").select("documento_id, recomendacion_id").not("documento_id", "is", null),
+  ]);
+
+  const evaluadasPorDocumento = new Map<string, Set<string>>();
+  for (const e of evaluaciones ?? []) {
+    if (!e.documento_id) continue;
+    const set = evaluadasPorDocumento.get(e.documento_id) ?? new Set<string>();
+    set.add(e.recomendacion_id);
+    evaluadasPorDocumento.set(e.documento_id, set);
+  }
+
+  return (documentos ?? []).map((d) => {
+    const informes = d.documentos_seguimiento_informes.flatMap((c) => (c.informes_auditoria ? [c.informes_auditoria] : []));
+    const recomendaciones = informes.flatMap((i) => i.deficiencias.flatMap((def) => def.recomendaciones));
+    const evaluadas = evaluadasPorDocumento.get(d.id) ?? new Set<string>();
+    const emitido = !!d.no_documento;
+    // Emitido: la cédula está cerrada, ya no "faltan" recomendaciones.
+    const porEvaluar = emitido ? 0 : recomendaciones.filter((r) => r.estado_actual !== "cumplida" && !evaluadas.has(r.id)).length;
+    const paso: PasoDocumento = !emitido
+      ? porEvaluar > 0 || evaluadas.size === 0
+        ? "evaluar"
+        : "emitir"
+      : d.fecha_carga_sag_udai
+        ? "completo"
+        : "sag";
+    return {
+      ...d,
+      informes,
+      auditores: d.documentos_seguimiento_auditores.flatMap((a) => (a.usuarios ? [a.usuarios.nombre] : [])),
+      evaluadas: evaluadas.size,
+      porEvaluar,
+      paso,
+    };
+  });
+}
