@@ -31,7 +31,7 @@ export default async function InformeDetallePage({
   // RLS ya decide qué informe es visible (mismo criterio que actividades): sin fila, es un 404.
   if (!informe) notFound();
 
-  const [{ data: equipo }, { data: deficiencias }, { data: candidatos }] = await Promise.all([
+  const [{ data: equipo }, { data: deficiencias }, { data: candidatos }, { data: historial }] = await Promise.all([
     supabase.from("informes_auditoria_equipo").select("*, usuarios(nombre, cargo, puesto)").eq("informe_id", id),
     supabase
       .from("deficiencias")
@@ -39,6 +39,11 @@ export default async function InformeDetallePage({
       .eq("informe_id", id)
       .order("numero"),
     supabase.from("usuarios").select("*").eq("activo", true).order("nombre"),
+    supabase
+      .from("recomendaciones_historial")
+      .select("id, accion, motivo, created_at, datos_anteriores, datos_nuevos, usuarios(nombre)")
+      .eq("informe_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const nitsEnEquipo = new Set((equipo ?? []).map((m) => m.usuario_nit));
@@ -109,6 +114,7 @@ export default async function InformeDetallePage({
             deficiencias={deficienciasOrdenadas}
             soloPendientes={soloPendientes === "1"}
             puedeEditar={puedeEditar}
+            historial={historial ?? []}
           />
         </TabsContent>
         <TabsContent value="equipo">
