@@ -31,25 +31,24 @@ function erroresPorCampo(issues: { path: PropertyKey[]; message: string }[]) {
   return fieldErrors;
 }
 
-// La jefatura emite el nombramiento de seguimiento: nombra auditor(es) y los CAI/informes que
-// cubre. A partir de ahí los auditores nombrados pueden registrar el seguimiento de esas
-// recomendaciones (authz.puede_dar_seguimiento).
+// La jefatura emite el nombramiento de seguimiento de UN informe: nombra auditor(es). A partir de
+// ahí los auditores nombrados pueden registrar el seguimiento de las recomendaciones de ese
+// informe (authz.puede_dar_seguimiento).
 export async function crearNombramientoSeguimiento(formData: FormData) {
-  const informesPrevios = formData.getAll("informes").map(String);
-  const ruta = `/recomendaciones/documentos/nuevo${informesPrevios.length ? `?informe=${informesPrevios[0]}` : ""}`;
+  const informeElegido = String(formData.get("informe_id") ?? "");
+  const ruta = `/recomendaciones/documentos/nuevo${informeElegido ? `?informe=${informeElegido}` : ""}`;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
   const campo = (nombre: string) => formData.get(nombre) || undefined;
   const parsed = nombramientoFormSchema.safeParse({
     departamento_id: formData.get("departamento_id"),
-    tipo_documento: formData.get("tipo_documento"),
     no_nombramiento: campo("no_nombramiento"),
     fecha_nombramiento: campo("fecha_nombramiento"),
     no_documento: campo("no_documento"),
     fecha_documento: campo("fecha_documento"),
     auditores: formData.getAll("auditores").map(String),
-    informes: informesPrevios,
+    informe_id: campo("informe_id"),
   });
   if (!parsed.success) fail(ruta, "Revisa los campos marcados.", erroresPorCampo(parsed.error.issues));
   const datos = parsed.data;
@@ -60,16 +59,16 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     fail(ruta, "No tienes permiso para emitir nombramientos de seguimiento en ese departamento.");
   }
 
-  const esOficio = datos.tipo_documento === "oficio";
   // Id generado aquí: la visibilidad del documento se decide re-consultando la tabla, así que
-  // no se encadena `.select()` tras el insert (mismo patrón que crearInforme).
+  // no se encadena `.select()` tras el insert (mismo patrón que crearInforme). tipo_documento no
+  // se pide aquí: esta pantalla siempre produce un nombramiento -> informe (default de la
+  // columna); un oficio no lleva nombramiento y no se crea desde este flujo.
   const id = crypto.randomUUID();
   const { error } = await supabase.from("documentos_seguimiento").insert({
     id,
     departamento_id: datos.departamento_id,
-    tipo_documento: datos.tipo_documento,
-    no_nombramiento: esOficio ? null : datos.no_nombramiento || null,
-    fecha_nombramiento: esOficio ? null : datos.fecha_nombramiento || null,
+    no_nombramiento: datos.no_nombramiento,
+    fecha_nombramiento: datos.fecha_nombramiento,
     no_documento: datos.no_documento || null,
     fecha_documento: datos.fecha_documento || null,
     creado_por_nit: usuario!.nit,
@@ -83,16 +82,14 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     );
   }
 
-  const [{ error: errorAuditores }, { error: errorInformes }] = await Promise.all([
+  const [{ error: errorAuditores }, { error: errorInforme }] = await Promise.all([
     supabase
       .from("documentos_seguimiento_auditores")
       .insert([...new Set(datos.auditores)].map((usuario_nit) => ({ documento_id: id, usuario_nit }))),
-    supabase
-      .from("documentos_seguimiento_informes")
-      .insert([...new Set(datos.informes)].map((informe_id) => ({ documento_id: id, informe_id }))),
+    supabase.from("documentos_seguimiento_informes").insert({ documento_id: id, informe_id: datos.informe_id }),
   ]);
-  if (errorAuditores || errorInformes) {
-    fail(`/recomendaciones/documentos/${id}`, "El nombramiento se registró, pero no se pudieron guardar todos sus auditores o CAI.");
+  if (errorAuditores || errorInforme) {
+    fail(`/recomendaciones/documentos/${id}`, "El nombramiento se registró, pero no se pudieron guardar todos sus auditores o el informe.");
   }
 
   revalidatePath("/recomendaciones");

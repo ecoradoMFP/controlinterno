@@ -51,25 +51,20 @@ export const recomendacionFormSchema = z.object({
   estado_inicial: estadoRecomendacion.default("pendiente"),
 });
 
-// Nombramiento de seguimiento: lo emite la jefatura, nombra a uno o varios auditores y cubre uno
-// o varios CAI/informes. El número del informe u oficio resultante se registra al emitirse, y
-// con eso se cierra su cédula. Un oficio (la excepción) no lleva nombramiento.
+// Nombramiento de seguimiento: lo emite la jefatura, es por UN informe (CAI) y nombra a uno o
+// varios auditores. Cubre todas las recomendaciones del informe, también las que se agreguen
+// después. El número del informe resultante se registra al emitirse, y con eso se cierra su
+// cédula. (Un oficio, la excepción sin nombramiento, no se crea desde aquí.)
 export const nombramientoFormSchema = z
   .object({
     departamento_id: z.string().trim().min(1, "Requerido"),
-    tipo_documento: z.enum(["informe", "oficio"]),
-    no_nombramiento: z.string().trim().optional(),
-    fecha_nombramiento: fechaOpcional,
+    informe_id: z.uuid({ error: "Elige un informe" }),
+    no_nombramiento: z.string().trim().min(1, "Requerido"),
+    fecha_nombramiento: z.iso.date({ error: "Requerida" }),
     no_documento: z.string().trim().optional(),
     fecha_documento: fechaOpcional,
     auditores: z.array(z.string().trim().min(1)).min(1, "Nombra al menos a un auditor"),
-    informes: z.array(z.uuid()).min(1, "Elige al menos un CAI/informe"),
   })
-  .refine((v) => v.tipo_documento === "oficio" || v.no_nombramiento, {
-    error: "Requerido para un informe de seguimiento",
-    path: ["no_nombramiento"],
-  })
-  .refine((v) => v.tipo_documento === "oficio" || v.fecha_nombramiento, { error: "Requerida", path: ["fecha_nombramiento"] })
   .refine((v) => !v.no_documento || v.fecha_documento, { error: "Requerida", path: ["fecha_documento"] });
 
 export const documentoEmitidoSchema = z.object({

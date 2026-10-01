@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { etiquetaCai } from "@/lib/recomendaciones";
-import { CARGO_LABELS, TIPO_DOCUMENTO_SEGUIMIENTO_LABELS } from "@/types/domain";
+import { CARGO_LABELS } from "@/types/domain";
 
 const SELECT_CLASES =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
@@ -32,15 +32,19 @@ export default async function NuevoNombramientoSeguimientoPage({
     // Solo informes con recomendaciones abiertas: son los que tiene sentido seguir.
     supabase
       .from("informes_auditoria")
-      .select("id, no_nombramiento, cai, dependencia_auditada, departamento_id, deficiencias(recomendaciones(estado_actual))"),
+      .select(
+        "id, no_nombramiento, cai, dependencia_auditada, departamento_id, deficiencias(recomendaciones(estado_actual))",
+      ),
   ]);
 
+  // Un nombramiento es por informe: solo se ofrecen los que aún tienen recomendaciones abiertas
+  // (las cumplidas ya cerraron su ciclo), más el preseleccionado por si llegó desde su detalle.
   const informesAbiertos = (informes ?? [])
-    .map((i) => ({
-      ...i,
-      abiertas: i.deficiencias.flatMap((d) => d.recomendaciones).filter((r) => r.estado_actual !== "cumplida").length,
-    }))
-    .filter((i) => i.abiertas > 0 || i.id === informePreseleccionado)
+    .filter(
+      (i) =>
+        i.id === informePreseleccionado ||
+        i.deficiencias.some((d) => d.recomendaciones.some((r) => r.estado_actual !== "cumplida")),
+    )
     .sort((a, b) => a.dependencia_auditada.localeCompare(b.dependencia_auditada));
 
   const departamentoPorDefecto =
@@ -63,8 +67,8 @@ export default async function NuevoNombramientoSeguimientoPage({
         <CardHeader>
           <CardTitle>Emitir nombramiento de seguimiento</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Nombra a los auditores que darán seguimiento y los CAI que cubre. Ellos podrán registrar el resultado de cada
-            recomendación; el número del informe se registra cuando se emita.
+            Nombra a los auditores que darán seguimiento a un informe. Ellos podrán registrar el resultado de cada una de
+            sus recomendaciones, incluidas las que se agreguen después; el número del informe se registra cuando se emita.
           </p>
         </CardHeader>
         <CardContent>
@@ -85,12 +89,6 @@ export default async function NuevoNombramientoSeguimientoPage({
                   ))}
                 </select>
               </Campo>
-              <Campo label="Tipo de documento que resultará" htmlFor="tipo_documento">
-                <select id="tipo_documento" name="tipo_documento" defaultValue="informe" className={SELECT_CLASES}>
-                  <option value="informe">{TIPO_DOCUMENTO_SEGUIMIENTO_LABELS.informe} (lo normal)</option>
-                  <option value="oficio">{TIPO_DOCUMENTO_SEGUIMIENTO_LABELS.oficio} (plazo corto, mismo año)</option>
-                </select>
-              </Campo>
               <Campo label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors.no_nombramiento}>
                 <Input id="no_nombramiento" name="no_nombramiento" placeholder="DAI-DAF-SR-CAI-06-2026" />
               </Campo>
@@ -100,8 +98,7 @@ export default async function NuevoNombramientoSeguimientoPage({
             </div>
 
             <p className="-mt-3 text-xs text-muted-foreground">
-              Un oficio no lleva nombramiento: deja esos campos en blanco. El número del informe u oficio se registra
-              cuando se emita, después de evaluar las recomendaciones.
+              El número del informe resultante se registra cuando se emita, después de evaluar las recomendaciones.
             </p>
 
             <fieldset className="flex flex-col gap-2">
@@ -122,34 +119,22 @@ export default async function NuevoNombramientoSeguimientoPage({
               </div>
             </fieldset>
 
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 text-sm font-medium">CAI / informes que cubre</legend>
-              {fieldErrors.informes ? <p className="text-xs text-destructive">{fieldErrors.informes}</p> : null}
+            <Campo label="Informe (CAI) al que se da seguimiento" htmlFor="informe_id" error={fieldErrors.informe_id}>
               {informesAbiertos.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay informes con recomendaciones abiertas.</p>
               ) : (
-                <div className="grid max-h-72 gap-1 overflow-y-auto rounded-lg border p-2">
+                <select id="informe_id" name="informe_id" defaultValue={informePreseleccionado ?? ""} className={SELECT_CLASES}>
+                  <option value="" disabled>
+                    Elige un informe…
+                  </option>
                   {informesAbiertos.map((i) => (
-                    <label key={i.id} className="flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm hover:bg-muted/50 has-checked:bg-primary/5">
-                      <input
-                        type="checkbox"
-                        name="informes"
-                        value={i.id}
-                        defaultChecked={i.id === informePreseleccionado}
-                        className="mt-0.5 accent-primary"
-                      />
-                      <span>
-                        <span className="codigo-expediente font-medium">
-                          {[etiquetaCai(i.cai), i.no_nombramiento].filter(Boolean).join(" · ")}
-                        </span>{" "}
-                        · {i.dependencia_auditada}
-                        <span className="block text-xs text-muted-foreground">{i.abiertas} recomendación(es) abierta(s)</span>
-                      </span>
-                    </label>
+                    <option key={i.id} value={i.id}>
+                      {[etiquetaCai(i.cai), i.no_nombramiento].filter(Boolean).join(" · ")} · {i.dependencia_auditada}
+                    </option>
                   ))}
-                </div>
+                </select>
               )}
-            </fieldset>
+            </Campo>
 
             <Button type="submit" className="w-fit">
               Emitir nombramiento
