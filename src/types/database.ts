@@ -983,6 +983,7 @@ export type Database = {
       }
       recomendaciones: {
         Row: {
+          anulada_en: string | null
           creado_por_nit: string
           created_at: string
           deficiencia_id: string
@@ -991,9 +992,11 @@ export type Database = {
           id: string
           numero: number
           responsables: string | null
+          motivo_ultimo_cambio: string | null
           texto: string
         }
         Insert: {
+          anulada_en?: string | null
           creado_por_nit: string
           created_at?: string
           deficiencia_id: string
@@ -1002,9 +1005,12 @@ export type Database = {
           id?: string
           numero: number
           responsables?: string | null
+          motivo_ultimo_cambio?: string | null
           texto: string
         }
         Update: {
+          anulada_en?: string | null
+          motivo_ultimo_cambio?: string | null
           creado_por_nit?: string
           created_at?: string
           deficiencia_id?: string
@@ -1029,6 +1035,50 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "deficiencias"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      recomendaciones_historial: {
+        Row: {
+          accion: string
+          created_at: string
+          datos_anteriores: Json
+          datos_nuevos: Json | null
+          id: string
+          informe_id: string
+          motivo: string
+          recomendacion_id: string
+          usuario_nit: string
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          datos_anteriores: Json
+          datos_nuevos?: Json | null
+          id?: string
+          informe_id: string
+          motivo: string
+          recomendacion_id: string
+          usuario_nit: string
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          datos_anteriores?: Json
+          datos_nuevos?: Json | null
+          id?: string
+          informe_id?: string
+          motivo?: string
+          recomendacion_id?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recomendaciones_historial_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
           },
         ]
       }
@@ -1206,7 +1256,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      anular_recomendacion: {
+        Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
     }
     Enums: {
       ambito_semaforo_enum: "hito" | "oficio" | "actividad"

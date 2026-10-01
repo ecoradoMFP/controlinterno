@@ -78,3 +78,11 @@ export const seguimientoFormSchema = z.object({
   acciones_responsables: z.string().trim().optional(),
   comentario_auditoria: z.string().trim().optional(),
 });
+
+// Corregir una recomendación ya capturada: siempre con motivo (queda en el historial).
+export const edicionRecomendacionSchema = z.object({
+  texto: z.string().trim().min(1, "Requerido"),
+  responsables: z.string().trim().optional(),
+  fecha_implementacion: fechaOpcional,
+  motivo: z.string().trim().min(5, "Explica brevemente el motivo (mínimo 5 caracteres)"),
+});

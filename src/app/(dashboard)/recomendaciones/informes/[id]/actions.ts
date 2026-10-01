@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
-import { deficienciaFormSchema, recomendacionFormSchema } from "@/lib/validations/recomendacion";
+import { deficienciaFormSchema, edicionRecomendacionSchema, recomendacionFormSchema } from "@/lib/validations/recomendacion";
 
 function fail(informeId: string, message: string): never {
   const params = new URLSearchParams({ error: message });
@@ -101,16 +101,19 @@ export async function agregarRecomendacion(formData: FormData) {
   });
   if (!parsed.success) fail(informeId, "Revisa el texto de la recomendación.");
 
-  const { count } = await supabase
+  // Siguiente número entre las recomendaciones vigentes (las eliminadas ya no se ven ni cuentan).
+  const { data: ultima } = await supabase
     .from("recomendaciones")
-    .select("id", { count: "exact", head: true })
-    .eq("deficiencia_id", deficienciaId);
+    .select("numero")
+    .eq("deficiencia_id", deficienciaId)
+    .order("numero", { ascending: false })
+    .limit(1);
 
   const recomendacionId = crypto.randomUUID();
   const { error } = await supabase.from("recomendaciones").insert({
     id: recomendacionId,
     deficiencia_id: deficienciaId,
-    numero: (count ?? 0) + 1,
+    numero: (ultima?.[0]?.numero ?? 0) + 1,
     texto: parsed.data.texto,
     responsables: parsed.data.responsables || null,
     fecha_implementacion: parsed.data.fecha_implementacion || null,
@@ -135,4 +138,61 @@ export async function agregarRecomendacion(formData: FormData) {
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
   redirect(`/recomendaciones/informes/${informeId}`);
+}
+
+// Corregir un error de captura. El trigger de la base exige el motivo, rechaza el cambio si la
+// recomendación ya tiene seguimientos evaluados y guarda el valor anterior en el historial.
+export async function editarRecomendacion(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  const recomendacionId = String(formData.get("recomendacion_id") ?? "");
+  if (!informeId || !recomendacionId) fail(informeId, "Falta identificar la recomendación.");
+
+  const { supabase } = await verificarAlcance(informeId);
+
+  const parsed = edicionRecomendacionSchema.safeParse({
+    texto: formData.get("texto"),
+    responsables: formData.get("responsables") ?? undefined,
+    fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
+    motivo: formData.get("motivo"),
+  });
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la recomendación.");
+
+  const { error } = await supabase
+    .from("recomendaciones")
+    .update({
+      texto: parsed.data.texto,
+      responsables: parsed.data.responsables || null,
+      fecha_implementacion: parsed.data.fecha_implementacion || null,
+      motivo_ultimo_cambio: parsed.data.motivo,
+    })
+    .eq("id", recomendacionId);
+  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo guardar la corrección."));
+
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
+}
+
+// "Eliminar" = anular: la recomendación deja de verse pero queda en el historial con su motivo.
+export async function eliminarRecomendacion(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  const recomendacionId = String(formData.get("recomendacion_id") ?? "");
+  if (!informeId || !recomendacionId) fail(informeId, "Falta identificar la recomendación.");
+
+  const { supabase } = await verificarAlcance(informeId);
+
+  const motivo = String(formData.get("motivo") ?? "").trim();
+  if (motivo.length < 5) fail(informeId, "Explica brevemente el motivo (mínimo 5 caracteres).");
+
+  const { error } = await supabase.rpc("anular_recomendacion", { p_id: recomendacionId, p_motivo: motivo });
+  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo eliminar la recomendación."));
+
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  revalidatePath("/recomendaciones");
+  redirect(`/recomendaciones/informes/${informeId}`);
+}
+
+// Los mensajes de las reglas de la base (motivo, seguimientos evaluados, permisos) ya están
+// redactados para el usuario; cualquier otro error se reemplaza por uno genérico.
+function mensajeDeCambio(mensaje: string, generico: string) {
+  return /motivo del cambio|seguimientos evaluados|No tienes permiso/.test(mensaje) ? mensaje : generico;
 }
