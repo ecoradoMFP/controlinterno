@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual } from "@/lib/auth";
@@ -43,6 +44,11 @@ export default async function ConfiguracionPage({
           Umbrales (sección 5) y calendario de feriados (sección 4.12) — exclusivo de Dirección.
         </p>
       </div>
+
+      <Link href="/configuracion/estructura" className="rounded-xl border p-4 shadow-sm hover:bg-muted/40">
+        <p className="font-medium">Estructura organizacional del Ministerio →</p>
+        <p className="text-xs text-muted-foreground">Direcciones y viceministerios que aparecen al elegir la dependencia auditada.</p>
+      </Link>
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">

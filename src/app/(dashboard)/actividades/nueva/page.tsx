@@ -33,13 +33,14 @@ export default async function NuevaActividadPage({
           .then((r) => r.data ?? undefined)
       : undefined;
 
-  const [{ data: departamentos }, { data: usuarios }] = await Promise.all([
+  const [{ data: departamentos }, { data: usuarios }, { data: unidades }] = await Promise.all([
     departamentoFijo ? Promise.resolve({ data: null }) : supabase.from("departamentos").select("*").order("nombre"),
     supabase
       .from("usuarios")
       .select("*")
       .eq("activo", true)
       .order("nombre"),
+    supabase.from("unidades_ministerio").select("id, nombre, padre_id, orden").eq("activo", true),
   ]);
 
   return (
@@ -53,6 +54,7 @@ export default async function NuevaActividadPage({
         <CardContent>
           <ActividadForm
             departamentos={departamentos ?? []}
+            unidades={unidades ?? []}
             usuarios={usuarios ?? []}
             departamentoFijo={departamentoFijo}
             error={error}

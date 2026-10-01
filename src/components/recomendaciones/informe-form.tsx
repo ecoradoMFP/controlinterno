@@ -1,4 +1,5 @@
 import { crearInforme } from "@/app/(dashboard)/recomendaciones/informes/actions";
+import { SelectDependencia, type UnidadMinisterio } from "@/components/select-dependencia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +15,14 @@ import type { Departamento, Usuario } from "@/types/domain";
 
 export function InformeForm({
   departamentos,
+  unidades,
   usuarios,
   departamentoFijo,
   error,
   fieldErrors,
 }: {
   departamentos: Departamento[];
+  unidades: UnidadMinisterio[];
   usuarios: Usuario[];
   departamentoFijo?: Departamento;
   error?: string;
@@ -49,7 +52,7 @@ export function InformeForm({
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Dependencia auditada" htmlFor="dependencia_auditada" error={fieldErrors?.dependencia_auditada}>
-          <Input id="dependencia_auditada" name="dependencia_auditada" required />
+          <SelectDependencia unidades={unidades} />
         </Field>
         <Field label="Tipo de auditoría (opcional)" htmlFor="tipo_auditoria">
           <Input id="tipo_auditoria" name="tipo_auditoria" placeholder="Cumplimiento y financiera, operativa..." />

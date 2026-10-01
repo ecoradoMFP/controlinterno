@@ -1,4 +1,5 @@
 import { crearActividad } from "@/app/(dashboard)/actividades/actions";
+import { SelectDependencia, type UnidadMinisterio } from "@/components/select-dependencia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +14,14 @@ import type { Departamento, Usuario } from "@/types/domain";
 
 export function ActividadForm({
   departamentos,
+  unidades,
   usuarios,
   departamentoFijo,
   error,
   fieldErrors,
 }: {
   departamentos: Departamento[];
+  unidades: UnidadMinisterio[];
   usuarios: Usuario[];
   /** Si el usuario solo puede crear en su propio departamento (Jefe/Subjefe), se fija y no se muestra el selector. */
   departamentoFijo?: Departamento;
@@ -100,7 +103,7 @@ export function ActividadForm({
       </Field>
 
       <Field label="Dependencia auditada" htmlFor="dependencia_auditada" error={fieldErrors?.dependencia_auditada}>
-        <Input id="dependencia_auditada" name="dependencia_auditada" required />
+        <SelectDependencia unidades={unidades} />
       </Field>
 
       <Field label="Tipo de auditoría" htmlFor="tipo_auditoria" error={fieldErrors?.tipo_auditoria}>
