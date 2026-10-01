@@ -112,6 +112,14 @@ export function OficioForm({
         </Field>
       </div>
 
+      <Field
+        label="Ruta del archivo en el expediente digital (opcional)"
+        htmlFor="ruta_archivo"
+        error={fieldErrors?.ruta_archivo}
+      >
+        <Input id="ruta_archivo" name="ruta_archivo" placeholder="Oficios/2026/DAF/DAI-DAF-001-2026.pdf" />
+      </Field>
+
       <Field label="Observaciones (opcional)" htmlFor="observaciones">
         <Textarea id="observaciones" name="observaciones" />
       </Field>

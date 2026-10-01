@@ -45,52 +45,409 @@ insert into documentos_catalogo (etapa, orden, nombre, observaciones) values
     'Numerado 19 en el archivo fuente DOCUMENTOS_QUE_SE_GENERAN_EN_EL_CAI, saltando el 17; renumerado secuencialmente aquí (sección 4.5.1).');
 
 -- ── 3. Matriz de revisión (documento × departamento × cargo) ──
--- IMPORTANTE: el prompt maestro (sección 4.5.1) es explícito en que esta matriz completa
--- (~15 columnas de marcas por cada una de las 18 filas) debe importarse tal cual del Excel
--- fuente, no retranscribirse a mano por riesgo de error. Ese Excel todavía no se ha
--- entregado, así que aquí solo se siembran los DOS ejemplos que el propio prompt documenta
--- literalmente, a modo de smoke test del modelo. El resto de la matriz llega en un script de
--- importación aparte cuando se reciba el archivo fuente — no se debe completar a mano.
-with doc_cronograma as (
-  select id from documentos_catalogo where etapa = 'planificacion' and orden = 1
-),
-doc_memorando as (
-  select id from documentos_catalogo where etapa = 'planificacion' and orden = 9
+-- Misma importación que la migración 20260918000001_matriz_revision_documentos.sql (Excel
+-- "REVISIONES POR DOCUMENTO"). Se repite aquí porque en un `supabase db reset` las migraciones
+-- corren antes que este seed, cuando el catálogo todavía está vacío, y la matriz quedaba sin
+-- filas — el flujo de revisión guiado (`avanzar_documento`) depende de ella completa.
+delete from documentos_catalogo_revision;
+
+with doc as (
+  select id, etapa, orden from documentos_catalogo
 ),
 dep as (
   select id, nombre from departamentos
 )
 insert into documentos_catalogo_revision (documento_catalogo_id, departamento_id, cargo, orden_revision)
--- Cronograma proyectado: Auditor elabora y Subjefe revisa en los 3 departamentos; Jefe
--- revisa solo en Especiales y Administrativas, NO en Financieras.
--- (cast explícito a cargo_enum: dentro de un UNION, Postgres resuelve el literal como text
--- y no lo castea implícitamente al tipo de la columna destino).
-select (select id from doc_cronograma), dep.id, 'auditor'::cargo_enum, 1 from dep where dep.nombre = 'Departamento de Auditorías Financieras'
+-- Cronograma proyectado (etapa=planificacion, orden=1)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 1 and dep.nombre = 'Departamento de Auditorías Especiales'
 union all
-select (select id from doc_cronograma), dep.id, 'subjefe'::cargo_enum, 2 from dep where dep.nombre = 'Departamento de Auditorías Financieras'
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 1 and dep.nombre = 'Departamento de Auditorías Especiales'
 union all
-select (select id from doc_cronograma), dep.id, 'auditor'::cargo_enum, 1 from dep where dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 1 and dep.nombre = 'Departamento de Auditorías Financieras'
 union all
-select (select id from doc_cronograma), dep.id, 'subjefe'::cargo_enum, 2 from dep where dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 1 and dep.nombre = 'Departamento de Auditorías Financieras'
 union all
-select (select id from doc_cronograma), dep.id, 'jefe'::cargo_enum, 3 from dep where dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 1 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
 union all
-select (select id from doc_cronograma), dep.id, 'auditor'::cargo_enum, 1 from dep where dep.nombre = 'Departamento de Auditorías Especiales'
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 1 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
 union all
-select (select id from doc_cronograma), dep.id, 'subjefe'::cargo_enum, 2 from dep where dep.nombre = 'Departamento de Auditorías Especiales'
+-- Conocimiento y Comprensión del Área (etapa=planificacion, orden=2)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Especiales'
 union all
-select (select id from doc_cronograma), dep.id, 'jefe'::cargo_enum, 3 from dep where dep.nombre = 'Departamento de Auditorías Especiales'
--- Memorando de Planificación y Cronograma: pasa por los 5 cargos, igual en los 3 departamentos.
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Especiales'
 union all
-select (select id from doc_memorando), dep.id, 'auditor'::cargo_enum, 1 from dep
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Especiales'
 union all
-select (select id from doc_memorando), dep.id, 'subjefe'::cargo_enum, 2 from dep
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Financieras'
 union all
-select (select id from doc_memorando), dep.id, 'jefe'::cargo_enum, 3 from dep
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Financieras'
 union all
-select (select id from doc_memorando), dep.id, 'subdirector'::cargo_enum, 4 from dep
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Financieras'
 union all
-select (select id from doc_memorando), dep.id, 'director'::cargo_enum, 5 from dep;
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 2 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Requerimiento de Información (etapa=planificacion, orden=3)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 3 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Elaboración de Matriz de Evaluación de Riesgos y Controles (etapa=planificacion, orden=4)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 4 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Cuestionario de Control Interno (etapa=planificacion, orden=5)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 5 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Ponderación de la Matriz de Evaluación (etapa=planificacion, orden=6)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 6 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Gestión de Áreas (etapa=planificacion, orden=7)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 7 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 7 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 7 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 7 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 7 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 7 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Programa de Auditoría (etapa=planificacion, orden=8)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 8 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Memorando de Planificación y Cronograma (etapa=planificacion, orden=9)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'planificacion' and doc.orden = 9 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Requerimiento de Documentos a verificar en la Muestra (etapa=ejecucion, orden=10)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 10 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- PT Cédula Centralizadora (etapa=ejecucion, orden=11)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 11 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- PT Cédula Sumaria, Analítica, Atributos Sistema (etapa=ejecucion, orden=12)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 12 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- PT Cédula General (etapa=ejecucion, orden=13)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'ejecucion' and doc.orden = 13 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Determinación de deficiencias (etapa=comunicacion_resultados, orden=14)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 14 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Elaboración de Conclusiones preliminares (etapa=comunicacion_resultados, orden=15)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 15 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Notificación de Conclusiones preliminares (etapa=comunicacion_resultados, orden=16)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 16 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Análisis de Respuestas (etapa=comunicacion_resultados, orden=17)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 17 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+-- Elaboración y Conclusión final (etapa=comunicacion_resultados, orden=18)
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Especiales'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Financieras'
+union all
+select doc.id, dep.id, 'auditor'::cargo_enum, 1 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subjefe'::cargo_enum, 2 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'jefe'::cargo_enum, 3 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'subdirector'::cargo_enum, 4 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+union all
+select doc.id, dep.id, 'director'::cargo_enum, 5 from doc, dep where doc.etapa = 'comunicacion_resultados' and doc.orden = 18 and dep.nombre = 'Departamento de Auditorías Administrativas y de Procesos'
+;
 
 -- ── 4. Calendario de feriados (sección 4.12) ──
 -- Bootstrap con los feriados oficiales fijos/calculables de Guatemala para 2026, más el

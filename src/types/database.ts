@@ -36,48 +36,76 @@ export type Database = {
     Tables: {
       actividades: {
         Row: {
+          area: string | null
           auditor_principal_nit: string
+          concluida: boolean
           created_at: string
           departamento_id: string
           dependencia_auditada: string
           etapa_actual: Database["public"]["Enums"]["etapa_actividad_enum"]
           expedientes_relacionados: string[]
+          fecha_emision_nombramiento: string | null
+          fecha_entrega_archivo: string | null
           fecha_inicio_plazo: string
           fecha_notificacion: string
+          fecha_notificacion_cgc: string | null
+          fecha_notificacion_dependencia: string | null
+          fecha_notificacion_equipo: string | null
+          fecha_notificacion_informe: string | null
           id: string
           no_nombramiento: string
+          observaciones: string | null
           periodo_evaluado_fin: string
           periodo_evaluado_inicio: string
+          ruta_expediente: string | null
           tipo_auditoria: string
         }
         Insert: {
+          area?: string | null
           auditor_principal_nit: string
           created_at?: string
           departamento_id: string
           dependencia_auditada: string
           etapa_actual?: Database["public"]["Enums"]["etapa_actividad_enum"]
           expedientes_relacionados?: string[]
+          fecha_emision_nombramiento?: string | null
+          fecha_entrega_archivo?: string | null
           fecha_inicio_plazo: string
           fecha_notificacion: string
+          fecha_notificacion_cgc?: string | null
+          fecha_notificacion_dependencia?: string | null
+          fecha_notificacion_equipo?: string | null
+          fecha_notificacion_informe?: string | null
           id?: string
           no_nombramiento: string
+          observaciones?: string | null
           periodo_evaluado_fin: string
           periodo_evaluado_inicio: string
+          ruta_expediente?: string | null
           tipo_auditoria: string
         }
         Update: {
+          area?: string | null
           auditor_principal_nit?: string
           created_at?: string
           departamento_id?: string
           dependencia_auditada?: string
           etapa_actual?: Database["public"]["Enums"]["etapa_actividad_enum"]
           expedientes_relacionados?: string[]
+          fecha_emision_nombramiento?: string | null
+          fecha_entrega_archivo?: string | null
           fecha_inicio_plazo?: string
           fecha_notificacion?: string
+          fecha_notificacion_cgc?: string | null
+          fecha_notificacion_dependencia?: string | null
+          fecha_notificacion_equipo?: string | null
+          fecha_notificacion_informe?: string | null
           id?: string
           no_nombramiento?: string
+          observaciones?: string | null
           periodo_evaluado_fin?: string
           periodo_evaluado_inicio?: string
+          ruta_expediente?: string | null
           tipo_auditoria?: string
         }
         Relationships: [
@@ -330,6 +358,7 @@ export type Database = {
           fase_actual: Database["public"]["Enums"]["fase_documento_enum"]
           hito_id: string | null
           id: string
+          ruta_archivo: string | null
         }
         Insert: {
           actividad_id: string
@@ -339,6 +368,7 @@ export type Database = {
           fase_actual?: Database["public"]["Enums"]["fase_documento_enum"]
           hito_id?: string | null
           id?: string
+          ruta_archivo?: string | null
         }
         Update: {
           actividad_id?: string
@@ -348,6 +378,7 @@ export type Database = {
           fase_actual?: Database["public"]["Enums"]["fase_documento_enum"]
           hito_id?: string | null
           id?: string
+          ruta_archivo?: string | null
         }
         Relationships: [
           {
@@ -376,6 +407,7 @@ export type Database = {
       documentos_catalogo: {
         Row: {
           etapa: Database["public"]["Enums"]["etapa_documento_enum"]
+          genera_documento: boolean
           id: string
           nombre: string
           observaciones: string | null
@@ -383,6 +415,7 @@ export type Database = {
         }
         Insert: {
           etapa: Database["public"]["Enums"]["etapa_documento_enum"]
+          genera_documento?: boolean
           id?: string
           nombre: string
           observaciones?: string | null
@@ -390,6 +423,7 @@ export type Database = {
         }
         Update: {
           etapa?: Database["public"]["Enums"]["etapa_documento_enum"]
+          genera_documento?: boolean
           id?: string
           nombre?: string
           observaciones?: string | null
@@ -444,6 +478,7 @@ export type Database = {
           id: string
           no_documento: string | null
           no_nombramiento: string | null
+          ruta_archivo: string | null
           tipo_documento: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
         }
         Insert: {
@@ -456,6 +491,7 @@ export type Database = {
           id?: string
           no_documento?: string | null
           no_nombramiento?: string | null
+          ruta_archivo?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
         }
         Update: {
@@ -468,6 +504,7 @@ export type Database = {
           id?: string
           no_documento?: string | null
           no_nombramiento?: string | null
+          ruta_archivo?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
         }
         Relationships: [
@@ -609,6 +646,7 @@ export type Database = {
       }
       informes_auditoria: {
         Row: {
+          actividad_id: string | null
           anio_ejecucion: number | null
           cai: string | null
           coordinador_nit: string | null
@@ -624,10 +662,12 @@ export type Database = {
           periodo_auditado_fin: string | null
           periodo_auditado_inicio: string | null
           riesgo: string | null
+          ruta_archivo: string | null
           supervisor_nit: string | null
           tipo_auditoria: string | null
         }
         Insert: {
+          actividad_id?: string | null
           anio_ejecucion?: never
           cai?: string | null
           coordinador_nit?: string | null
@@ -643,10 +683,12 @@ export type Database = {
           periodo_auditado_fin?: string | null
           periodo_auditado_inicio?: string | null
           riesgo?: string | null
+          ruta_archivo?: string | null
           supervisor_nit?: string | null
           tipo_auditoria?: string | null
         }
         Update: {
+          actividad_id?: string | null
           anio_ejecucion?: never
           cai?: string | null
           coordinador_nit?: string | null
@@ -662,10 +704,18 @@ export type Database = {
           periodo_auditado_fin?: string | null
           periodo_auditado_inicio?: string | null
           riesgo?: string | null
+          ruta_archivo?: string | null
           supervisor_nit?: string | null
           tipo_auditoria?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "informes_auditoria_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: true
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "informes_auditoria_coordinador_nit_fkey"
             columns: ["coordinador_nit"]
@@ -841,6 +891,7 @@ export type Database = {
           plazo_respuesta_dias: number | null
           puesto_destinatario: string | null
           responsable_elaboracion_nit: string
+          ruta_archivo: string | null
         }
         Insert: {
           actividad_id?: string | null
@@ -860,6 +911,7 @@ export type Database = {
           plazo_respuesta_dias?: number | null
           puesto_destinatario?: string | null
           responsable_elaboracion_nit: string
+          ruta_archivo?: string | null
         }
         Update: {
           actividad_id?: string | null
@@ -879,6 +931,7 @@ export type Database = {
           plazo_respuesta_dias?: number | null
           puesto_destinatario?: string | null
           responsable_elaboracion_nit?: string
+          ruta_archivo?: string | null
         }
         Relationships: [
           {
@@ -1206,7 +1259,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      avanzar_documento: {
+        Args: {
+          p_accion: string
+          p_documento_id: string
+          p_fase_esperada?: Database["public"]["Enums"]["fase_documento_enum"]
+          p_observacion?: string
+          p_responsable_esperado?: Database["public"]["Enums"]["cargo_enum"]
+        }
+        Returns: undefined
+      }
+      ruta_expediente_valida: { Args: { p_ruta: string }; Returns: boolean }
     }
     Enums: {
       ambito_semaforo_enum: "hito" | "oficio" | "actividad"

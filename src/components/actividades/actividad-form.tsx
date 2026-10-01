@@ -38,7 +38,13 @@ export function ActividadForm({
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
-          <Input id="no_nombramiento" name="no_nombramiento" placeholder="NAI-001-2026" required />
+          <Input
+            id="no_nombramiento"
+            name="no_nombramiento"
+            placeholder="NAI-001-2026, DAI-DAF-SR-CAI-01-2026, ..."
+            maxLength={80}
+            required
+          />
         </Field>
 
         {departamentoFijo ? (
@@ -115,6 +121,10 @@ export function ActividadForm({
         />
       </Field>
 
+      <Field label="Área (opcional)" htmlFor="area" error={fieldErrors?.area}>
+        <Input id="area" name="area" placeholder="Área o alcance según el nombramiento" />
+      </Field>
+
       <div className="grid grid-cols-2 gap-4">
         <Field
           label="Período evaluado — inicio"
@@ -148,6 +158,41 @@ export function ActividadForm({
           <Input id="fecha_notificacion" name="fecha_notificacion" type="date" required />
         </Field>
       </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Field
+          label="Emisión del nombramiento"
+          htmlFor="fecha_emision_nombramiento"
+          error={fieldErrors?.fecha_emision_nombramiento}
+        >
+          <Input id="fecha_emision_nombramiento" name="fecha_emision_nombramiento" type="date" />
+        </Field>
+        <Field
+          label="Notificación al equipo"
+          htmlFor="fecha_notificacion_equipo"
+          error={fieldErrors?.fecha_notificacion_equipo}
+        >
+          <Input id="fecha_notificacion_equipo" name="fecha_notificacion_equipo" type="date" />
+        </Field>
+        <Field
+          label="Notificación a la dependencia"
+          htmlFor="fecha_notificacion_dependencia"
+          error={fieldErrors?.fecha_notificacion_dependencia}
+        >
+          <Input id="fecha_notificacion_dependencia" name="fecha_notificacion_dependencia" type="date" />
+        </Field>
+      </div>
+
+      <Field
+        label="Carpeta del expediente digital (opcional)"
+        htmlFor="ruta_expediente"
+        error={fieldErrors?.ruta_expediente}
+      >
+        <Input id="ruta_expediente" name="ruta_expediente" placeholder="Auditorias/2026/DAF/NAI-001-2026" />
+        <p className="text-xs text-muted-foreground">
+          Si la dejas vacía se asigna Auditorias/&lt;año&gt;/&lt;departamento&gt;/&lt;nombramiento&gt;.
+        </p>
+      </Field>
 
       <Field
         label="Expedientes relacionados (opcional, separados por coma)"

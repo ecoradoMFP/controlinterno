@@ -20,7 +20,7 @@ export default async function ActividadesPage() {
   // exactamente el alcance correcto para quien esté autenticado (sección 8).
   const { data: actividades, error } = await supabase
     .from("actividades")
-    .select("id, no_nombramiento, dependencia_auditada, tipo_auditoria, etapa_actual, fecha_notificacion, departamentos(nombre)")
+    .select("id, no_nombramiento, dependencia_auditada, tipo_auditoria, etapa_actual, fecha_notificacion, concluida, departamentos(nombre)")
     .order("created_at", { ascending: false });
 
   return (
@@ -45,7 +45,7 @@ export default async function ActividadesPage() {
               <TableHead>Dependencia auditada</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Etapa</TableHead>
-              <TableHead>Notificación</TableHead>
+              <TableHead>Límite de notificación</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -61,7 +61,11 @@ export default async function ActividadesPage() {
                   <TableCell>{a.dependencia_auditada}</TableCell>
                   <TableCell>{a.tipo_auditoria}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[a.etapa_actual]}</Badge>
+                    {a.concluida ? (
+                      <Badge>Concluida</Badge>
+                    ) : (
+                      <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[a.etapa_actual]}</Badge>
+                    )}
                   </TableCell>
                   <TableCell>{a.fecha_notificacion}</TableCell>
                 </TableRow>

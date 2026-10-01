@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeCerrarEtapaActividad, puedeEscribir } from "@/lib/auth";
+import {
+  getUsuarioActual,
+  puedeCerrarEtapaActividad,
+  puedeCorregirHechoConsumado,
+  puedeEscribir,
+} from "@/lib/auth";
+import { rutaCompletaExpediente } from "@/lib/expediente-digital";
 import { BackLink } from "@/components/nav/back-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EquipoPanel } from "@/components/actividades/equipo-panel";
 import { CronogramaPanel } from "@/components/actividades/cronograma-panel";
 import { DocumentosPanel } from "@/components/actividades/documentos-panel";
+import { ExpedientePanel } from "@/components/actividades/expediente-panel";
 import { BitacoraPanel } from "@/components/actividades/bitacora-panel";
 import { cerrarEtapa } from "./actions";
-import { ETAPA_ACTIVIDAD_LABELS, SIGUIENTE_ETAPA, type Movimiento } from "@/types/domain";
+import { ETAPA_ACTIVIDAD_LABELS, SIGUIENTE_ETAPA, type CargoEnum, type Movimiento } from "@/types/domain";
 import { UMBRAL_POR_DEFECTO, type UmbralSemaforo } from "@/lib/semaforo";
 
 export default async function ActividadDetallePage({
@@ -52,6 +59,7 @@ export default async function ActividadDetallePage({
     { data: feriadosRows },
     { data: matrizRevision },
     { data: etapaHistorial },
+    { data: informeVinculado },
   ] = await Promise.all([
     supabase
       .from("actividades_equipo")
@@ -59,7 +67,9 @@ export default async function ActividadDetallePage({
       .eq("actividad_id", id),
     supabase
       .from("documentos_actividad")
-      .select("*, documentos_catalogo(nombre, etapa), movimientos(*, registrado_por:usuarios(nombre))")
+      .select(
+        "*, documentos_catalogo(nombre, etapa, orden, genera_documento), movimientos(*, registrado_por:usuarios(nombre))",
+      )
       .eq("actividad_id", id)
       .order("created_at"),
     supabase.from("documentos_catalogo").select("*").order("etapa").order("orden"),
@@ -81,9 +91,13 @@ export default async function ActividadDetallePage({
       .select("*, cerrado_por:usuarios(nombre)")
       .eq("actividad_id", id)
       .order("timestamp"),
+    supabase.from("informes_auditoria").select("id").eq("actividad_id", id).maybeSingle(),
   ]);
 
-  const documentosSeguros = documentos ?? [];
+  // Orden del catálogo (1-18): los documentos de una etapa se crean juntos al abrirla.
+  const documentosSeguros = [...(documentos ?? [])].sort(
+    (a, b) => (a.documentos_catalogo?.orden ?? 0) - (b.documentos_catalogo?.orden ?? 0),
+  );
   const idsUsados = new Set(documentosSeguros.map((d) => d.documento_catalogo_id));
   // No se puede iniciar un documento de una etapa que la actividad todavía no alcanzó (mismo
   // orden fijo que refuerza la base de datos vía RLS) — el dropdown de "iniciar documento"
@@ -92,11 +106,10 @@ export default async function ActividadDetallePage({
     (c) => !idsUsados.has(c.id) && c.etapa === actividad.etapa_actual,
   );
 
-  // Sección 4.5: quién revisa cada documento varía por documento y departamento — la matriz
-  // real (`documentos_catalogo_revision`) solo está sembrada para 2 de los 18 documentos hasta
-  // ahora (ver nota en la migración de sección 4.5), así que esto es una sugerencia informativa
-  // cuando hay dato, nunca una validación bloqueante.
-  const ordenRevisionPorDocumento = new Map<string, string[]>();
+  // Matriz de revisión del departamento (`documentos_catalogo_revision`, importada completa):
+  // define el flujo guiado de cada documento. La que decide de verdad es la función SQL
+  // `avanzar_documento`; aquí solo se usa para rotular los botones.
+  const ordenRevisionPorDocumento = new Map<string, CargoEnum[]>();
   for (const fila of matrizRevision ?? []) {
     const lista = ordenRevisionPorDocumento.get(fila.documento_catalogo_id) ?? [];
     lista.push(fila.cargo);
@@ -115,7 +128,18 @@ export default async function ActividadDetallePage({
     )
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  const puedeEditar = puedeEscribir(usuario);
+  const puedeEditar = puedeEscribir(usuario) && !actividad.concluida;
+
+  // Fechas del Registro Auxiliar de Nombramientos que salen de la bitácora del Informe de
+  // Auditoría (último documento del catálogo): primera entrega a Jefe y a Director.
+  const informe = documentosSeguros.find((d) => d.documentos_catalogo?.orden === 18);
+  const primeraEntregaA = (cargo: CargoEnum) => {
+    const fechas = ((informe?.movimientos ?? []) as Movimiento[])
+      .filter((m) => m.a_cargo === cargo && (m.tipo_evento === "entrega" || m.tipo_evento === "aprobacion"))
+      .map((m) => m.timestamp)
+      .sort();
+    return fechas[0] ? new Date(fechas[0]).toLocaleDateString("es-GT") : null;
+  };
   // No es lo mismo que `puedeEditar`: cerrar etapa exige además el alcance de cargo de la
   // política RLS `actividades_update` (jefe/subjefe/subdirector/director, nunca Auditor) — ver
   // `puedeCerrarEtapaActividad`.
@@ -139,6 +163,11 @@ export default async function ActividadDetallePage({
       ? (equipo ?? []).filter((m) => !m.fecha_recibido || !m.fecha_declaracion_independencia).length
       : 0;
   const pendientesEtapa = docsPendientesEtapa + hitosPendientesEtapa + equipoIncompleto;
+  const documentosConDetalle = documentosSeguros.map((d) => ({
+    ...d,
+    movimientos: d.movimientos as unknown as Movimiento[],
+    ruta_completa: rutaCompletaExpediente(d.ruta_archivo),
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,7 +181,10 @@ export default async function ActividadDetallePage({
               <p className="text-sm text-muted-foreground">{actividad.dependencia_auditada}</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>
+              <div className="flex gap-2">
+                {actividad.concluida ? <Badge>Concluida</Badge> : null}
+                <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>
+              </div>
               <Link
                 href={`/actividades/${id}/hoja-de-ruta`}
                 className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
@@ -186,7 +218,7 @@ export default async function ActividadDetallePage({
           <Info label="Departamento" value={actividad.departamentos?.nombre} />
           <Info label="Auditor principal" value={actividad.auditor_principal?.nombre} />
           <Info label="Tipo de auditoría" value={actividad.tipo_auditoria} />
-          <Info label="Notificación" value={actividad.fecha_notificacion} />
+          <Info label="Límite de notificación (plazo)" value={actividad.fecha_notificacion} />
           <Info label="Período evaluado" value={`${actividad.periodo_evaluado_inicio} — ${actividad.periodo_evaluado_fin}`} />
           <Info label="Inicio de plazo" value={actividad.fecha_inicio_plazo} />
           <Info
@@ -208,6 +240,7 @@ export default async function ActividadDetallePage({
           <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="bitacora">Bitácora</TabsTrigger>
+          <TabsTrigger value="expediente">Nombramiento y cierre</TabsTrigger>
         </TabsList>
         <TabsContent value="equipo">
           <EquipoPanel
@@ -231,10 +264,22 @@ export default async function ActividadDetallePage({
         <TabsContent value="documentos">
           <DocumentosPanel
             actividadId={id}
-            documentos={documentosSeguros}
+            documentos={documentosConDetalle}
             catalogoDisponible={catalogoDisponible}
             ordenRevisionPorDocumento={ordenRevisionPorDocumento}
+            usuario={usuario}
             puedeEditar={puedeEditar}
+          />
+        </TabsContent>
+        <TabsContent value="expediente">
+          <ExpedientePanel
+            actividad={actividad}
+            rutaCompleta={rutaCompletaExpediente(actividad.ruta_expediente)}
+            informeId={informeVinculado?.id ?? null}
+            fechaProyectoJefatura={primeraEntregaA("jefe")}
+            fechaProyectoDireccion={primeraEntregaA("director")}
+            puedeGestionar={puedeCerrarEtapa}
+            puedeCorregirCierre={puedeCorregirHechoConsumado(usuario)}
           />
         </TabsContent>
         <TabsContent value="bitacora">

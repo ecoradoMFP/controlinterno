@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
@@ -61,6 +62,14 @@ export default async function InformeDetallePage({
             {informe.dependencia_auditada}
             {informe.tipo_auditoria ? ` · ${informe.tipo_auditoria}` : ""}
           </p>
+          {informe.actividad_id ? (
+            <Link
+              href={`/actividades/${informe.actividad_id}`}
+              className="w-fit text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Ver la auditoría de origen
+            </Link>
+          ) : null}
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
           <Info label="Departamento" value={informe.departamentos?.nombre} />

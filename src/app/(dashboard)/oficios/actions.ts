@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { oficioFormSchema } from "@/lib/validations/oficio";
+import { normalizarRutaExpediente } from "@/lib/expediente-digital";
 
 function fail(message: string, fieldErrors?: Record<string, string>): never {
   const params = new URLSearchParams({ error: message });
@@ -44,6 +45,9 @@ export async function crearOficio(formData: FormData) {
 
   const { actividad_id, fecha_vencimiento, ...rest } = parsed.data;
 
+  const ruta = normalizarRutaExpediente(String(formData.get("ruta_archivo") ?? ""));
+  if (!ruta.ok) fail(ruta.error, { ruta_archivo: ruta.error });
+
   const supabase = await createClient();
 
   // Mismo patrón que crearActividad: id generado aquí y sin `.select()` tras el insert, para
@@ -57,6 +61,7 @@ export async function crearOficio(formData: FormData) {
     ...rest,
     actividad_id: actividad_id || null,
     fecha_vencimiento: fecha_vencimiento || null,
+    ruta_archivo: ruta.ruta,
   });
 
   if (error) {

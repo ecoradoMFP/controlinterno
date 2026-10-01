@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeguimientoPanel } from "@/components/oficios/seguimiento-panel";
 import { ParticipantesPanel } from "@/components/oficios/participantes-panel";
 import { BackLink } from "@/components/nav/back-link";
+import { RutaExpediente } from "@/components/actividades/ruta-expediente";
+import { rutaCompletaExpediente } from "@/lib/expediente-digital";
 
 export default async function OficioDetallePage({
   params,
@@ -63,6 +65,9 @@ export default async function OficioDetallePage({
           <Info label="Fecha de emisión" value={oficio.fecha_emision} />
           <Info label="Plazo de respuesta" value={oficio.plazo_respuesta_dias ? `${oficio.plazo_respuesta_dias} días` : undefined} />
           <Info label="Fecha de vencimiento" value={oficio.fecha_vencimiento} />
+          <div className="col-span-2 sm:col-span-4">
+            <RutaExpediente ruta={rutaCompletaExpediente(oficio.ruta_archivo)} etiqueta="Archivo" />
+          </div>
         </CardContent>
       </Card>
 
