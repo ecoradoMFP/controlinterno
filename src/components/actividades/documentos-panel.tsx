@@ -2,6 +2,7 @@ import {
   actualizarRutaDocumento,
   agregarDocumentoActividad,
   avanzarDocumento,
+  marcarNoAplica,
   registrarMovimiento,
 } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,7 @@ export function DocumentosPanel({
   catalogoDisponible,
   ordenRevisionPorDocumento,
   usuario,
+  etapaActual,
   puedeEditar,
 }: {
   actividadId: string;
@@ -67,10 +69,15 @@ export function DocumentosPanel({
   catalogoDisponible: DocumentoCatalogo[];
   ordenRevisionPorDocumento: Map<string, CargoEnum[]>;
   usuario: Pick<Usuario, "cargo" | "permiso_sistema"> | null;
+  etapaActual: string;
   puedeEditar: boolean;
 }) {
   const esControlTotal = usuario?.permiso_sistema === "control_total";
   const puedeVistoBueno = usuario?.cargo === "subdirector" || usuario?.cargo === "director";
+  // Espeja la validación de `marcar_no_aplica`: decisión de jefatura o control_total.
+  const puedeNoAplica =
+    esControlTotal ||
+    (usuario?.cargo != null && ["subjefe", "jefe", "subdirector", "director"].includes(usuario.cargo));
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,6 +101,7 @@ export function DocumentosPanel({
             const puedeDevolver =
               enRevision && (esResponsable || esControlTotal || usuario?.permiso_sistema === "captura_delegada");
             const generaDocumento = d.documentos_catalogo?.genera_documento ?? true;
+            const hayAcciones = !!destino || puedeAprobar || puedeDevolver || puedeVistoBueno;
 
             return (
               <div key={d.id} className="rounded-xl border p-4">
@@ -107,7 +115,11 @@ export function DocumentosPanel({
                   </div>
                   <div className="flex items-center gap-3">
                     {!generaDocumento ? <Badge variant="outline">Sin documento</Badge> : null}
-                    <Badge variant={finalizado ? "default" : "secondary"}>{FASE_DOCUMENTO_LABELS[d.fase_actual]}</Badge>
+                    {d.no_aplica ? (
+                      <Badge variant="outline">No aplica</Badge>
+                    ) : (
+                      <Badge variant={finalizado ? "default" : "secondary"}>{FASE_DOCUMENTO_LABELS[d.fase_actual]}</Badge>
+                    )}
                     <Link
                       href={`/actividades/${actividadId}/hoja-de-ruta?documento=${d.id}`}
                       className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
@@ -117,7 +129,36 @@ export function DocumentosPanel({
                   </div>
                 </div>
 
-                {puedeEditar && (!finalizado || puedeVistoBueno) ? (
+                {d.no_aplica ? (
+                  <div className="flex flex-col gap-2 border-t pt-3 text-sm">
+                    <p>
+                      <span className="text-muted-foreground">Justificación de No aplica: </span>
+                      {d.no_aplica_justificacion}
+                    </p>
+                    {puedeEditar && puedeNoAplica && d.documentos_catalogo?.etapa === etapaActual ? (
+                      <details>
+                        <summary className="cursor-pointer text-xs text-muted-foreground">Revertir No aplica</summary>
+                        <form action={marcarNoAplica} className="mt-2 flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="actividad_id" value={actividadId} />
+                          <input type="hidden" name="documento_actividad_id" value={d.id} />
+                          <input type="hidden" name="revertir" value="1" />
+                          <Textarea name="justificacion" rows={1} required minLength={10} placeholder="Motivo para revertir" className="max-w-md" />
+                          <Button type="submit" size="sm" variant="outline">Revertir</Button>
+                        </form>
+                      </details>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {puedeEditar && !d.no_aplica && !finalizado && !hayAcciones ? (
+                  <p className="border-t pt-3 text-xs text-muted-foreground">
+                    {enRevision
+                      ? `En revisión de ${CARGO_LABELS[d.cargo_actual_responsable]}: lo aprueba o devuelve ese cargo.`
+                      : `En ${FASE_DOCUMENTO_LABELS[d.fase_actual].toLowerCase()} con ${CARGO_LABELS[d.cargo_actual_responsable]}: lo entrega ese cargo.`}
+                  </p>
+                ) : null}
+
+                {puedeEditar && !d.no_aplica && hayAcciones && (!finalizado || puedeVistoBueno) ? (
                   <form action={avanzarDocumento} className="flex flex-col gap-2 border-t pt-3">
                     <input type="hidden" name="actividad_id" value={actividadId} />
                     <input type="hidden" name="documento_actividad_id" value={d.id} />
@@ -164,7 +205,26 @@ export function DocumentosPanel({
                   </form>
                 ) : null}
 
-                {generaDocumento ? (
+                {puedeEditar && puedeNoAplica && !finalizado ? (
+                  <details className="mt-3 border-t pt-3">
+                    <summary className="cursor-pointer text-xs text-muted-foreground">Marcar como No aplica</summary>
+                    <form action={marcarNoAplica} className="mt-2 flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="actividad_id" value={actividadId} />
+                      <input type="hidden" name="documento_actividad_id" value={d.id} />
+                      <Textarea
+                        name="justificacion"
+                        rows={1}
+                        required
+                        minLength={10}
+                        placeholder="Justificación (obligatoria, queda en la bitácora)"
+                        className="max-w-md"
+                      />
+                      <Button type="submit" size="sm" variant="outline">Confirmar No aplica</Button>
+                    </form>
+                  </details>
+                ) : null}
+
+                {generaDocumento && !d.no_aplica ? (
                   <div className="mt-3 flex flex-col gap-2 border-t pt-3">
                     <RutaExpediente ruta={d.ruta_completa} etiqueta="Archivo" />
                     {puedeEditar ? (

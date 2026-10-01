@@ -44,6 +44,10 @@ insert into documentos_catalogo (etapa, orden, nombre, observaciones) values
   ('comunicacion_resultados', 18, 'Elaboración y Conclusión final (Informe de Auditoría)',
     'Numerado 19 en el archivo fuente DOCUMENTOS_QUE_SE_GENERAN_EN_EL_CAI, saltando el 17; renumerado secuencialmente aquí (sección 4.5.1).');
 
+-- Pasos que no generan un documento como tal (mismo dato que la migración
+-- 20261002000002_documentos_no_aplica.sql; se repite por el orden migraciones → seed).
+update documentos_catalogo set genera_documento = false where orden in (2, 7);
+
 -- ── 3. Matriz de revisión (documento × departamento × cargo) ──
 -- Misma importación que la migración 20260918000001_matriz_revision_documentos.sql (Excel
 -- "REVISIONES POR DOCUMENTO"). Se repite aquí porque en un `supabase db reset` las migraciones

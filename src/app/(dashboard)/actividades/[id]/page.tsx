@@ -268,6 +268,7 @@ export default async function ActividadDetallePage({
             catalogoDisponible={catalogoDisponible}
             ordenRevisionPorDocumento={ordenRevisionPorDocumento}
             usuario={usuario}
+            etapaActual={actividad.etapa_actual}
             puedeEditar={puedeEditar}
           />
         </TabsContent>

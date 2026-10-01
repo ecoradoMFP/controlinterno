@@ -358,6 +358,10 @@ export type Database = {
           fase_actual: Database["public"]["Enums"]["fase_documento_enum"]
           hito_id: string | null
           id: string
+          no_aplica: boolean
+          no_aplica_fecha: string | null
+          no_aplica_justificacion: string | null
+          no_aplica_por_nit: string | null
           ruta_archivo: string | null
         }
         Insert: {
@@ -368,6 +372,10 @@ export type Database = {
           fase_actual?: Database["public"]["Enums"]["fase_documento_enum"]
           hito_id?: string | null
           id?: string
+          no_aplica?: boolean
+          no_aplica_fecha?: string | null
+          no_aplica_justificacion?: string | null
+          no_aplica_por_nit?: string | null
           ruta_archivo?: string | null
         }
         Update: {
@@ -378,6 +386,10 @@ export type Database = {
           fase_actual?: Database["public"]["Enums"]["fase_documento_enum"]
           hito_id?: string | null
           id?: string
+          no_aplica?: boolean
+          no_aplica_fecha?: string | null
+          no_aplica_justificacion?: string | null
+          no_aplica_por_nit?: string | null
           ruta_archivo?: string | null
         }
         Relationships: [
@@ -1267,6 +1279,10 @@ export type Database = {
           p_observacion?: string
           p_responsable_esperado?: Database["public"]["Enums"]["cargo_enum"]
         }
+        Returns: undefined
+      }
+      marcar_no_aplica: {
+        Args: { p_documento_id: string; p_justificacion: string; p_revertir?: boolean }
         Returns: undefined
       }
       ruta_expediente_valida: { Args: { p_ruta: string }; Returns: boolean }

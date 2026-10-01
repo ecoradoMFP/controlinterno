@@ -480,3 +480,33 @@ export async function crearInformeRecomendaciones(formData: FormData) {
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/recomendaciones/informes/${informeId}`);
 }
+
+/**
+ * "No aplica" con justificación: decisión de la jefatura (función SQL `marcar_no_aplica`, que
+ * valida cargo, etapa y justificación y deja constancia en la bitácora). Cuenta como resuelto
+ * para cerrar la etapa; se puede revertir con motivo mientras la etapa siga abierta.
+ */
+export async function marcarNoAplica(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const documentoId = String(formData.get("documento_actividad_id"));
+  const justificacion = String(formData.get("justificacion") ?? "").trim();
+  const revertir = formData.get("revertir") === "1";
+
+  const usuario = await getUsuarioActual();
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para esta acción.");
+  if (justificacion.length < 10) fail(actividadId, "documentos", "Escribe la justificación (al menos 10 caracteres).");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("marcar_no_aplica", {
+    p_documento_id: documentoId,
+    p_justificacion: justificacion,
+    p_revertir: revertir,
+  });
+
+  if (error) {
+    fail(actividadId, "documentos", error.code === "P0001" ? error.message : "No se pudo registrar el cambio.");
+  }
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=documentos`);
+}
