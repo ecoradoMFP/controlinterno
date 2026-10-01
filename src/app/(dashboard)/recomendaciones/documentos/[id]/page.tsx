@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileDown } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeEscribir } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { PasosCiclo, type PasoCiclo } from "@/components/recomendaciones/pasos-ciclo";
 import { etiquetaCai } from "@/lib/recomendaciones";
+import { cargarCedulaDocumento } from "@/lib/recomendaciones-datos";
 import {
   ESTADO_RECOMENDACION_LABELS,
   ESTADO_RECOMENDACION_TONO,
@@ -36,40 +38,9 @@ export default async function DocumentoSeguimientoPage({
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  const { data: documento } = await supabase
-    .from("documentos_seguimiento")
-    .select(
-      `*, departamentos(nombre), documentos_seguimiento_auditores(usuario_nit, usuarios(nombre, puesto, cargo)),
-       documentos_seguimiento_informes(informes_auditoria(id, no_nombramiento, cai, dependencia_auditada,
-         deficiencias(numero, titulo, recomendaciones(id, numero, texto, estado_actual))))`,
-    )
-    .eq("id", id)
-    .maybeSingle();
-  if (!documento) notFound();
-
-  // Evaluaciones registradas en este documento (RLS: solo las de recomendaciones visibles).
-  const { data: evaluaciones } = await supabase
-    .from("seguimientos_recomendacion")
-    .select("recomendacion_id, numero_seguimiento, estado, comentario_auditoria")
-    .eq("documento_id", id);
-  const evaluacionPorRecomendacion = new Map((evaluaciones ?? []).map((e) => [e.recomendacion_id, e]));
-
-  // Cédula: lo que este documento evaluó y, mientras no se emita (la emisión la cierra), las
-  // recomendaciones abiertas de los CAI cubiertos que faltan por evaluar.
-  const emitido = !!documento.no_documento;
-  const filas = documento.documentos_seguimiento_informes
-    .flatMap((c) => (c.informes_auditoria ? [c.informes_auditoria] : []))
-    .sort((a, b) => (a.cai ?? a.no_nombramiento ?? "").localeCompare(b.cai ?? b.no_nombramiento ?? ""))
-    .flatMap((informe) =>
-      [...informe.deficiencias]
-        .sort((a, b) => a.numero - b.numero)
-        .flatMap((d) =>
-          [...d.recomendaciones]
-            .sort((a, b) => a.numero - b.numero)
-            .map((r) => ({ informe, deficiencia: d, recomendacion: r, evaluacion: evaluacionPorRecomendacion.get(r.id) })),
-        ),
-    )
-    .filter((f) => f.evaluacion || (!emitido && f.recomendacion.estado_actual !== "cumplida"));
+  const cedula = await cargarCedulaDocumento(supabase, id);
+  if (!cedula) notFound();
+  const { documento, filas, emitido } = cedula;
 
   const porEvaluar = filas.filter((f) => !f.evaluacion).length;
   const totales = Object.fromEntries(
@@ -300,6 +271,11 @@ export default async function DocumentoSeguimientoPage({
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-medium">Cédula de seguimiento</h2>
+          {filas.length > 0 ? (
+            <Button variant="outline" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>
+              <FileDown /> Descargar cédula en Word
+            </Button>
+          ) : null}
           {porEvaluar > 0 ? (
             <p className="text-xs text-muted-foreground">{porEvaluar} recomendación(es) por evaluar en este seguimiento</p>
           ) : null}

@@ -96,3 +96,64 @@ export async function cargarDocumentosSeguimiento(supabase: SupabaseServerClient
     };
   });
 }
+
+/**
+ * Cédula de un nombramiento/informe de seguimiento: una fila por recomendación de los informes
+ * que cubre, con su evaluación en ESTE documento (si ya la tiene) y los seguimientos anteriores
+ * ya emitidos. Mientras el documento no se emita (la emisión cierra la cédula) incluye también las
+ * recomendaciones abiertas que faltan por evaluar. La comparten la pantalla y la exportación a
+ * Word para que nunca difieran. RLS decide qué recomendaciones ve el usuario.
+ */
+export async function cargarCedulaDocumento(supabase: SupabaseServerClient, id: string) {
+  const { data: documento } = await supabase
+    .from("documentos_seguimiento")
+    .select(
+      `*, departamentos(nombre), documentos_seguimiento_auditores(usuario_nit, usuarios(nombre, puesto, cargo)),
+       documentos_seguimiento_informes(informes_auditoria(id, no_nombramiento, cai, tipo_auditoria, dependencia_auditada,
+         periodo_auditado_inicio, periodo_auditado_fin, fecha_notificacion,
+         deficiencias(numero, titulo, descripcion, recomendaciones(id, numero, texto, responsables, estado_actual))))`,
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (!documento) return null;
+
+  const informes = documento.documentos_seguimiento_informes
+    .flatMap((c) => (c.informes_auditoria ? [c.informes_auditoria] : []))
+    .sort((a, b) => (a.cai ?? a.no_nombramiento ?? "").localeCompare(b.cai ?? b.no_nombramiento ?? ""));
+  const idsRecomendaciones = informes.flatMap((i) => i.deficiencias.flatMap((d) => d.recomendaciones.map((r) => r.id)));
+
+  const { data: seguimientos } = await supabase
+    .from("seguimientos_recomendacion")
+    .select(
+      "recomendacion_id, documento_id, numero_seguimiento, estado, acciones_responsables, comentario_auditoria, documentos_seguimiento(no_documento, fecha_documento)",
+    )
+    .in("recomendacion_id", idsRecomendaciones);
+
+  const emitido = !!documento.no_documento;
+  const filas = informes
+    .flatMap((informe) =>
+      [...informe.deficiencias]
+        .sort((a, b) => a.numero - b.numero)
+        .flatMap((deficiencia) =>
+          [...deficiencia.recomendaciones]
+            .sort((a, b) => a.numero - b.numero)
+            .map((recomendacion) => {
+              const propios = (seguimientos ?? []).filter((s) => s.recomendacion_id === recomendacion.id);
+              const evaluacion = propios.find((s) => s.documento_id === id);
+              const anteriores = propios
+                .filter(
+                  (s) =>
+                    s.documento_id !== id &&
+                    s.numero_seguimiento > 0 &&
+                    s.documentos_seguimiento?.no_documento &&
+                    (!evaluacion || s.numero_seguimiento < evaluacion.numero_seguimiento),
+                )
+                .sort((a, b) => a.numero_seguimiento - b.numero_seguimiento);
+              return { informe, deficiencia, recomendacion, evaluacion, anteriores };
+            }),
+        ),
+    )
+    .filter((f) => f.evaluacion || (!emitido && f.recomendacion.estado_actual !== "cumplida"));
+
+  return { documento, informes, filas, emitido };
+}
