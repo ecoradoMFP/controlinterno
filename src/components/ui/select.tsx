@@ -4,9 +4,36 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/lib/utils"
+import { valorGuardado } from "@/lib/form-persistence"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+// Igual que el Root de base-ui, pero si el formulario falló y la página regresó con `?error=`,
+// recupera el valor que el usuario había elegido (ver lib/form-persistence.ts).
+function Select<Value, Multiple extends boolean | undefined = false>(props: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const { name, defaultValue, value, onValueChange } = props
+  const restaurable = !!name && value === undefined && !props.multiple
+  const [valor, setValor] = React.useState<unknown>(defaultValue ?? null)
+
+  React.useEffect(() => {
+    if (!restaurable) return
+    const guardado = valorGuardado(name!)
+    if (guardado === undefined) return
+    const temporizador = setTimeout(() => setValor(guardado || null), 0)
+    return () => clearTimeout(temporizador)
+  }, [restaurable, name])
+
+  if (!restaurable) return <SelectPrimitive.Root {...props} />
+  return (
+    <SelectPrimitive.Root
+      {...props}
+      value={valor as never}
+      onValueChange={((v: unknown, details: never) => {
+        setValor(v)
+        ;(onValueChange as ((v: unknown, d: never) => void) | undefined)?.(v, details)
+      }) as never}
+    />
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
