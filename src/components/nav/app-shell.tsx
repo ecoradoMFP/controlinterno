@@ -64,8 +64,8 @@ function Brand({ variant = "inline" }: { variant?: "inline" | "stacked" }) {
         <Image
           src="/minfin-logo-azul.png"
           alt="Ministerio de Finanzas Públicas"
-          width={1280}
-          height={421}
+          width={1823}
+          height={500}
           priority
           className="h-auto w-full"
         />
@@ -78,8 +78,8 @@ function Brand({ variant = "inline" }: { variant?: "inline" | "stacked" }) {
       <Image
         src="/minfin-logo-azul.png"
         alt="Ministerio de Finanzas Públicas"
-        width={1280}
-        height={421}
+        width={1823}
+        height={500}
         priority
         className="h-8 w-auto"
       />
