@@ -45,7 +45,7 @@ export default async function CaiPage({
 
   const { data: informe } = await supabase
     .from("informes_auditoria")
-    .select("id, cai, no_nombramiento, dependencia_auditada, tipo_auditoria, departamento_id, departamentos(nombre)")
+    .select("id, cai, no_nombramiento, dependencia_auditada, tipo_auditoria, departamento_id, bloqueado_en, departamentos(nombre)")
     .eq("id", id)
     .maybeSingle();
   // RLS decide la visibilidad: sin fila, es un 404.
@@ -104,7 +104,7 @@ export default async function CaiPage({
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button variant="outline" render={<Link href={`/recomendaciones/informes/${id}`} />}>
-            Ver o editar el informe
+            {informe.bloqueado_en ? "Ver el informe (captura bloqueada)" : "Ver o editar el informe"}
           </Button>
           {documento ? (
             <Button variant="outline" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>

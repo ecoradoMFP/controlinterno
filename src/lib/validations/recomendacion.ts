@@ -77,6 +77,13 @@ export const seguimientoFormSchema = z.object({
   comentario_auditoria: z.string().trim().optional(),
 });
 
+// Corregir una deficiencia ya capturada: igual que la recomendación, siempre con motivo.
+export const edicionDeficienciaSchema = z.object({
+  titulo: z.string().trim().min(1, "Requerido"),
+  descripcion: z.string().trim().optional(),
+  motivo: z.string().trim().min(5, "Explica brevemente el motivo (mínimo 5 caracteres)"),
+});
+
 // Corregir una recomendación ya capturada: siempre con motivo (queda en el historial).
 export const edicionRecomendacionSchema = z.object({
   texto: z.string().trim().min(1, "Requerido"),

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
   agregarDeficienciaConRecomendacion,
+  editarDeficiencia,
+  eliminarDeficiencia,
   agregarRecomendacion,
   editarRecomendacion,
   eliminarRecomendacion,
@@ -20,6 +22,8 @@ import {
 type RecomendacionConSeguimientos = Recomendacion & { seguimientos_recomendacion: SeguimientoRecomendacion[] };
 export type CambioRecomendacion = {
   id: string
+  /** "deficiencia" o "recomendacion": las dos bitácoras se muestran juntas. */
+  entidad: "deficiencia" | "recomendacion"
   accion: string
   motivo: string
   created_at: string
@@ -75,6 +79,7 @@ export function DeficienciasPanel({
                   {d.numero}. {d.titulo}
                 </p>
                 {d.descripcion ? <p className="mt-1 text-sm text-muted-foreground">{d.descripcion}</p> : null}
+                {puedeEditar ? <CorregirDeficiencia deficiencia={d} informeId={informeId} /> : null}
 
                 <div className="mt-3 flex flex-col gap-3 border-t pt-3">
                   {recomendacionesVisibles.length === 0 ? (
@@ -258,11 +263,67 @@ function RecomendacionItem({
   );
 }
 
-const CAMPOS_CAMBIO: [string, string][] = [
-  ["texto", "Texto"],
-  ["responsables", "Responsables"],
-  ["fecha_implementacion", "Fecha de implementación"],
-];
+const CAMPOS_CAMBIO: Record<CambioRecomendacion["entidad"], [string, string][]> = {
+  recomendacion: [
+    ["texto", "Texto"],
+    ["responsables", "Responsables"],
+    ["fecha_implementacion", "Fecha de implementación"],
+  ],
+  deficiencia: [
+    ["titulo", "Título"],
+    ["descripcion", "Descripción"],
+  ],
+};
+
+// Corregir el título o la descripción de una deficiencia: igual que la recomendación, con motivo
+// obligatorio y bitácora. Si alguna de sus recomendaciones ya tiene seguimientos evaluados, no.
+function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: DeficienciaConRecomendaciones; informeId: string }) {
+  const conSeguimientos = deficiencia.recomendaciones.some((r) =>
+    r.seguimientos_recomendacion.some((s) => s.numero_seguimiento > 0),
+  );
+  if (conSeguimientos) {
+    return <p className="mt-2 text-xs text-muted-foreground">Ya tiene seguimientos evaluados: no se puede corregir.</p>;
+  }
+  return (
+    <details className="mt-2 rounded-md border bg-background p-3">
+      <summary className="cursor-pointer text-sm font-medium">Corregir o eliminar esta deficiencia</summary>
+      <form action={editarDeficiencia} className="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="informe_id" value={informeId} />
+        <input type="hidden" name="deficiencia_id" value={deficiencia.id} />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">Título de la deficiencia</label>
+          <Input name="titulo" required defaultValue={deficiencia.titulo} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">Descripción (opcional)</label>
+          <Textarea name="descripcion" rows={2} defaultValue={deficiencia.descripcion ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">¿Por qué se corrige? (obligatorio, queda en el historial)</label>
+          <Input name="motivo" required minLength={5} placeholder="Ej.: error de digitación en el título" />
+        </div>
+        <Button type="submit" size="sm" className="w-fit">
+          Guardar corrección
+        </Button>
+      </form>
+      <form action={eliminarDeficiencia} className="mt-4 flex flex-col gap-3 border-t pt-3">
+        <input type="hidden" name="informe_id" value={informeId} />
+        <input type="hidden" name="deficiencia_id" value={deficiencia.id} />
+        <p className="text-xs text-muted-foreground">
+          Eliminarla también elimina su recomendación. Dejan de verse en las listas y en la cédula, pero el sistema conserva en
+          el historial quién la eliminó, cuándo, por qué y cómo estaba.
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">¿Por qué se elimina? (obligatorio)</label>
+          <Input name="motivo" required minLength={5} placeholder="Ej.: deficiencia capturada por error" />
+        </div>
+        <Button type="submit" size="sm" variant="destructive" className="w-fit">
+          Eliminar deficiencia y su recomendación
+        </Button>
+      </form>
+    </details>
+  );
+}
 
 // Bitácora de correcciones y eliminaciones: la escribe la base de datos, no se puede alterar.
 function HistorialCambios({ historial }: { historial: CambioRecomendacion[] }) {
@@ -282,13 +343,13 @@ function HistorialCambios({ historial }: { historial: CambioRecomendacion[] }) {
                 {new Date(c.created_at).toLocaleString("es-GT", { timeZone: "America/Guatemala" })} · {c.usuarios?.nombre ?? "—"}
               </p>
               <p className="font-medium">
-                {c.accion === "anulada" ? "Eliminó" : "Corrigió"} la recomendación {antes.numero}
+                {c.accion === "anulada" ? "Eliminó" : "Corrigió"} {c.entidad === "deficiencia" ? "la deficiencia" : "la recomendación"} {antes.numero}
               </p>
               <p className="text-xs">Motivo: {c.motivo}</p>
               {c.accion === "anulada" ? (
-                <p className="mt-1 text-xs whitespace-pre-line text-muted-foreground">Decía: {antes.texto}</p>
+                <p className="mt-1 text-xs whitespace-pre-line text-muted-foreground">Decía: {c.entidad === "deficiencia" ? antes.titulo : antes.texto}</p>
               ) : (
-                CAMPOS_CAMBIO.filter(([k]) => (antes[k] ?? null) !== (despues?.[k] ?? null)).map(([k, etiqueta]) => (
+                CAMPOS_CAMBIO[c.entidad].filter(([k]) => (antes[k] ?? null) !== (despues?.[k] ?? null)).map(([k, etiqueta]) => (
                   <p key={k} className="mt-1 text-xs whitespace-pre-line text-muted-foreground">
                     {etiqueta}: <span className="line-through">{antes[k] ?? "(vacío)"}</span> → {despues?.[k] ?? "(vacío)"}
                   </p>

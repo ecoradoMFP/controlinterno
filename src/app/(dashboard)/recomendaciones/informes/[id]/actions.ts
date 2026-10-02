@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
+import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
 import {
   deficienciaConRecomendacionSchema,
   deficienciaFormSchema,
+  edicionDeficienciaSchema,
   edicionRecomendacionSchema,
   recomendacionFormSchema,
 } from "@/lib/validations/recomendacion";
@@ -23,7 +24,72 @@ async function verificarAlcance(informeId: string) {
   if (!(await puedeOperarInforme(usuario, informeId, supabase))) {
     fail(informeId, "No tienes permiso para modificar este informe.");
   }
+  // Un CAI bloqueado ya no admite cambios de captura (la base de datos también lo exige).
+  const { data: informe } = await supabase.from("informes_auditoria").select("bloqueado_en").eq("id", informeId).maybeSingle();
+  if (informe?.bloqueado_en) {
+    fail(informeId, "El CAI está bloqueado: ya no se pueden agregar ni modificar deficiencias, recomendaciones ni el equipo.");
+  }
   return { usuario: usuario!, supabase };
+}
+
+// Cerrar la captura del CAI. Lo hace quien puede operar el informe; desbloquear es de la jefatura.
+export async function bloquearInforme(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  if (!informeId) fail(informeId, "Falta identificar el informe.");
+  const { supabase } = await verificarAlcance(informeId);
+
+  // El trigger informes_auditoria_bloqueo asigna quién y cuándo.
+  const { error } = await supabase.from("informes_auditoria").update({ bloqueado_en: new Date().toISOString() }).eq("id", informeId);
+  if (error) fail(informeId, "No se pudo bloquear el CAI.");
+
+  revalidatePath("/recomendaciones", "layout");
+  redirect(`/recomendaciones/informes/${informeId}`);
+}
+
+export async function desbloquearInforme(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  if (!informeId) fail(informeId, "Falta identificar el informe.");
+  const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
+
+  const { data: informe } = await supabase.from("informes_auditoria").select("departamento_id").eq("id", informeId).maybeSingle();
+  const gestionables = await departamentosParaNombrarSeguimiento(usuario, supabase);
+  if (!informe || !gestionables.includes(informe.departamento_id)) fail(informeId, "Solo la jefatura puede desbloquear un CAI.");
+
+  const { error } = await supabase.from("informes_auditoria").update({ bloqueado_en: null }).eq("id", informeId);
+  if (error) fail(informeId, "No se pudo desbloquear el CAI.");
+
+  revalidatePath("/recomendaciones", "layout");
+  redirect(`/recomendaciones/informes/${informeId}`);
+}
+
+// Corregir un error de captura de la deficiencia. El trigger exige el motivo, rechaza el cambio si
+// alguna de sus recomendaciones ya tiene seguimientos evaluados y guarda el valor anterior.
+export async function editarDeficiencia(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  const deficienciaId = String(formData.get("deficiencia_id") ?? "");
+  if (!informeId || !deficienciaId) fail(informeId, "Falta identificar la deficiencia.");
+
+  const { supabase } = await verificarAlcance(informeId);
+
+  const parsed = edicionDeficienciaSchema.safeParse({
+    titulo: formData.get("titulo"),
+    descripcion: formData.get("descripcion") ?? undefined,
+    motivo: formData.get("motivo"),
+  });
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la deficiencia.");
+
+  const { error } = await supabase
+    .from("deficiencias")
+    .update({
+      titulo: parsed.data.titulo,
+      descripcion: parsed.data.descripcion || null,
+      motivo_ultimo_cambio: parsed.data.motivo,
+    })
+    .eq("id", deficienciaId);
+  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo guardar la corrección."));
+
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 export async function agregarMiembroEquipoInforme(formData: FormData) {
@@ -73,14 +139,16 @@ export async function agregarDeficiencia(formData: FormData) {
   });
   if (!parsed.success) fail(informeId, "Revisa el título de la deficiencia.");
 
-  const { count } = await supabase
+  const { data: ultima } = await supabase
     .from("deficiencias")
-    .select("id", { count: "exact", head: true })
-    .eq("informe_id", informeId);
+    .select("numero")
+    .eq("informe_id", informeId)
+    .order("numero", { ascending: false })
+    .limit(1);
 
   const { error } = await supabase.from("deficiencias").insert({
     informe_id: informeId,
-    numero: (count ?? 0) + 1,
+    numero: (ultima?.[0]?.numero ?? 0) + 1,
     titulo: parsed.data.titulo,
     descripcion: parsed.data.descripcion || null,
     creado_por_nit: usuario.nit,
@@ -107,16 +175,19 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData) {
   });
   if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la deficiencia.");
 
-  const { count } = await supabase
+  // Siguiente número entre las deficiencias vigentes (las eliminadas ya no se ven ni cuentan).
+  const { data: ultima } = await supabase
     .from("deficiencias")
-    .select("id", { count: "exact", head: true })
-    .eq("informe_id", informeId);
+    .select("numero")
+    .eq("informe_id", informeId)
+    .order("numero", { ascending: false })
+    .limit(1);
 
   const deficienciaId = crypto.randomUUID();
   const { error: errorDef } = await supabase.from("deficiencias").insert({
     id: deficienciaId,
     informe_id: informeId,
-    numero: (count ?? 0) + 1,
+    numero: (ultima?.[0]?.numero ?? 0) + 1,
     titulo: parsed.data.titulo,
     descripcion: parsed.data.descripcion || null,
     creado_por_nit: usuario.nit,
@@ -214,6 +285,26 @@ export async function editarRecomendacion(formData: FormData) {
   redirect(`/recomendaciones/informes/${informeId}`);
 }
 
+// "Eliminar" una deficiencia = anularla junto con su recomendación: dejan de verse pero quedan en
+// la bitácora con su motivo, quién y cuándo.
+export async function eliminarDeficiencia(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  const deficienciaId = String(formData.get("deficiencia_id") ?? "");
+  if (!informeId || !deficienciaId) fail(informeId, "Falta identificar la deficiencia.");
+
+  const { supabase } = await verificarAlcance(informeId);
+
+  const motivo = String(formData.get("motivo") ?? "").trim();
+  if (motivo.length < 5) fail(informeId, "Explica brevemente el motivo (mínimo 5 caracteres).");
+
+  const { error } = await supabase.rpc("anular_deficiencia", { p_id: deficienciaId, p_motivo: motivo });
+  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo eliminar la deficiencia."));
+
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  revalidatePath("/recomendaciones", "layout");
+  redirect(`/recomendaciones/informes/${informeId}`);
+}
+
 // "Eliminar" = anular: la recomendación deja de verse pero queda en el historial con su motivo.
 export async function eliminarRecomendacion(formData: FormData) {
   const informeId = String(formData.get("informe_id") ?? "");
@@ -236,5 +327,5 @@ export async function eliminarRecomendacion(formData: FormData) {
 // Los mensajes de las reglas de la base (motivo, seguimientos evaluados, permisos) ya están
 // redactados para el usuario; cualquier otro error se reemplaza por uno genérico.
 function mensajeDeCambio(mensaje: string, generico: string) {
-  return /motivo del cambio|seguimientos evaluados|No tienes permiso/.test(mensaje) ? mensaje : generico;
+  return /motivo del cambio|seguimientos evaluados|No tienes permiso|bloqueado/.test(mensaje) ? mensaje : generico;
 }

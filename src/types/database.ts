@@ -277,29 +277,35 @@ export type Database = {
       }
       deficiencias: {
         Row: {
+          anulada_en: string | null
           creado_por_nit: string
           created_at: string
           descripcion: string | null
           id: string
           informe_id: string
+          motivo_ultimo_cambio: string | null
           numero: number
           titulo: string
         }
         Insert: {
+          anulada_en?: string | null
           creado_por_nit: string
           created_at?: string
           descripcion?: string | null
           id?: string
           informe_id: string
+          motivo_ultimo_cambio?: string | null
           numero: number
           titulo: string
         }
         Update: {
+          anulada_en?: string | null
           creado_por_nit?: string
           created_at?: string
           descripcion?: string | null
           id?: string
           informe_id?: string
+          motivo_ultimo_cambio?: string | null
           numero?: number
           titulo?: string
         }
@@ -660,6 +666,8 @@ export type Database = {
         Row: {
           actividad_id: string | null
           anio_ejecucion: number | null
+          bloqueado_en: string | null
+          bloqueado_por_nit: string | null
           cai: string | null
           coordinador_nit: string | null
           creado_por_nit: string
@@ -680,6 +688,8 @@ export type Database = {
         }
         Insert: {
           actividad_id?: string | null
+          bloqueado_en?: string | null
+          bloqueado_por_nit?: string | null
           anio_ejecucion?: never
           cai?: string | null
           coordinador_nit?: string | null
@@ -701,6 +711,8 @@ export type Database = {
         }
         Update: {
           actividad_id?: string | null
+          bloqueado_en?: string | null
+          bloqueado_por_nit?: string | null
           anio_ejecucion?: never
           cai?: string | null
           coordinador_nit?: string | null
@@ -1103,6 +1115,50 @@ export type Database = {
           },
         ]
       }
+      deficiencias_historial: {
+        Row: {
+          accion: string
+          created_at: string
+          datos_anteriores: Json
+          datos_nuevos: Json | null
+          deficiencia_id: string
+          id: string
+          informe_id: string
+          motivo: string
+          usuario_nit: string
+        }
+        Insert: {
+          accion?: string
+          created_at?: string
+          datos_anteriores: Json
+          datos_nuevos?: Json | null
+          deficiencia_id: string
+          id?: string
+          informe_id: string
+          motivo: string
+          usuario_nit: string
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          datos_anteriores?: Json
+          datos_nuevos?: Json | null
+          deficiencia_id?: string
+          id?: string
+          informe_id?: string
+          motivo?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deficiencias_historial_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
       recomendaciones_historial: {
         Row: {
           accion: string
@@ -1321,6 +1377,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      anular_deficiencia: {
+        Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
       anular_recomendacion: {
         Args: { p_id: string; p_motivo: string }
         Returns: undefined
