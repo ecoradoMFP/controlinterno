@@ -12,7 +12,10 @@ const nextConfig: NextConfig = {
       // permiten ambos orígenes: el que realmente manda el navegador (localhost:3000) y el
       // dominio del túnel (comodín porque VS Code genera un subdominio nuevo cada vez), por si
       // alguien accede directo a la URL de devtunnels en vez de a través del forward local.
-      allowedOrigins: ["localhost:3000", "127.0.0.1:3000", "**.devtunnels.ms"],
+      // Los orígenes de desarrollo (localhost y los túneles de VS Code) solo se aceptan fuera de
+      // producción: en producción un origen ajeno no debe poder invocar Server Actions.
+      allowedOrigins:
+        process.env.NODE_ENV === "production" ? [] : ["localhost:3000", "127.0.0.1:3000", "**.devtunnels.ms"],
     },
   },
 };

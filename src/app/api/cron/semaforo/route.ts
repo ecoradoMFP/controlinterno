@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
@@ -24,9 +25,18 @@ import { construirMapaOrganizacional, responsablesPorCargo } from "@/lib/organiz
  * $CRON_SECRET` a sus propias invocaciones cuando esa variable de entorno existe.
  */
 export async function GET(request: NextRequest) {
+  // Falla cerrado: en producción sin CRON_SECRET el endpoint no responde (antes quedaba abierto).
+  // En desarrollo, sin la variable, se permite para poder probarlo a mano.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!cronSecret && process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Cron no configurado" }, { status: 503 });
+  }
+  if (cronSecret) {
+    const enviado = Buffer.from(request.headers.get("authorization") ?? "");
+    const esperado = Buffer.from(`Bearer ${cronSecret}`);
+    if (enviado.length !== esperado.length || !timingSafeEqual(enviado, esperado)) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
   }
 
   const sb = createServiceRoleClient();

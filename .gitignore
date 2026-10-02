@@ -48,3 +48,9 @@ credenciales-prueba.local.txt
 *.tsbuildinfo
 next-env.d.ts
 credenciales-prueba.remoto.txt
+
+# cargos/departamentos del personal real (PII), solo local
+personal-roles.local.json
+
+# archivos de bloqueo de LibreOffice
+.~lock.*
