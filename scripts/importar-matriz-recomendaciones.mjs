@@ -361,6 +361,27 @@ for (const informe of informes.values()) {
   });
 }
 
+// ── reglas de captura que exige la base (supabase/migrations/20261002000005): un informe que no
+// las cumpla no se carga, se reporta para corregir la matriz ──
+
+function incumplimientos(informe) {
+  const faltas = [];
+  if (!informe.nombramiento) faltas.push("sin No. de nombramiento");
+  if (!informe.cai) faltas.push("sin CAI");
+  if (!informe.fecha_nombramiento) faltas.push("sin fecha de nombramiento");
+  if (!informe.tipo_auditoria) faltas.push("sin tipo de auditoría");
+  for (const d of informe.deficiencias.values()) {
+    if (d.recomendaciones.length > 1) faltas.push(`la deficiencia ${d.numero} tiene ${d.recomendaciones.length} recomendaciones (solo se permite una)`);
+    if (d.recomendaciones.some((r) => !r.fecha_implementacion)) faltas.push(`la deficiencia ${d.numero} tiene una recomendación sin fecha de implementación`);
+  }
+  return faltas;
+}
+
+for (const informe of informes.values()) {
+  const faltas = incumplimientos(informe);
+  if (faltas.length) advertir(`${informe.nombramiento || `CAI ${informe.cai}`}: NO se cargará — ${faltas.join("; ")}.`);
+}
+
 // ── validaciones de coherencia (no bloquean, solo se reportan) ──
 
 for (const informe of informes.values()) {
@@ -474,6 +495,7 @@ for (const [clave, informe] of informes) {
     advertir(`${nombre}: ya existe en ${departamento.nombre}, no se vuelve a cargar.`);
     continue;
   }
+  if (incumplimientos(informe).length) continue;
 
   const informeId = randomUUID();
   await ok(

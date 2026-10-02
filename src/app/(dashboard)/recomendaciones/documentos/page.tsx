@@ -45,7 +45,7 @@ export default async function NombramientosSeguimientoPage() {
         </div>
         {gestionables.length > 0 ? (
           <Button size="lg" render={<Link href="/recomendaciones/documentos/nuevo" />}>
-            Emitir nombramiento de seguimiento
+            Nombramiento emitido
           </Button>
         ) : null}
       </div>
@@ -83,10 +83,11 @@ function TarjetaDocumento({ d, destacado }: { d: Documento; destacado?: boolean 
       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 hover:bg-muted/40"
     >
       <div className="flex min-w-0 flex-col gap-1 text-sm">
-        <p className="codigo-expediente font-medium">{titulo}</p>
+        <p className="codigo-expediente font-medium">
+          {d.informes.map((i) => etiquetaCai(i.cai) ?? i.no_nombramiento).join(" | ") || "Sin informe asociado"}
+        </p>
         <p className="text-muted-foreground">
-          {d.informes.map((i) => [etiquetaCai(i.cai), i.dependencia_auditada].filter(Boolean).join(" · ")).join(" | ") ||
-            "Sin informe asociado"}
+          {[titulo, ...d.informes.map((i) => i.dependencia_auditada)].filter(Boolean).join(" · ")}
         </p>
         <p className="text-xs text-muted-foreground">
           {[

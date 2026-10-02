@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
+import { etiquetaCai } from "@/lib/recomendaciones";
 import { BackLink } from "@/components/nav/back-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,11 +63,17 @@ export default async function InformeDetallePage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="codigo-expediente text-lg">{informe.no_nombramiento ?? informe.cai}</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {informe.dependencia_auditada}
-            {informe.tipo_auditoria ? ` · ${informe.tipo_auditoria}` : ""}
-          </p>
+          <CardTitle className="codigo-expediente text-lg">{etiquetaCai(informe.cai) ?? informe.no_nombramiento}</CardTitle>
+          <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:gap-10">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Dependencia auditada</p>
+              <p className="text-base">{informe.dependencia_auditada}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Tipo de auditoría</p>
+              <p className="text-base">{informe.tipo_auditoria ?? "—"}</p>
+            </div>
+          </div>
           {informe.actividad_id ? (
             <Link
               href={`/actividades/${informe.actividad_id}`}
@@ -78,7 +85,7 @@ export default async function InformeDetallePage({
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
           <Info label="Departamento" value={informe.departamentos?.nombre} />
-          <Info label="CAI" value={informe.cai} />
+          <Info label="No. de nombramiento" value={informe.no_nombramiento} />
           <Info label="Fecha de nombramiento" value={informe.fecha_nombramiento} />
           <Info label="Fecha del informe final" value={informe.fecha_informe_final} />
           <Info label="Fecha de notificación" value={informe.fecha_notificacion} />

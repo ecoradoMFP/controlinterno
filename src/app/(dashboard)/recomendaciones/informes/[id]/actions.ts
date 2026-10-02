@@ -97,9 +97,15 @@ export async function agregarRecomendacion(formData: FormData) {
     texto: formData.get("texto"),
     responsables: formData.get("responsables") ?? undefined,
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
-    estado_inicial: formData.get("estado_inicial") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, "Revisa el texto de la recomendación.");
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa el texto de la recomendación.");
+
+  // Cada deficiencia de un CAI lleva una sola recomendación (se cierra una a una).
+  const { count: vigentes } = await supabase
+    .from("recomendaciones")
+    .select("id", { count: "exact", head: true })
+    .eq("deficiencia_id", deficienciaId);
+  if ((vigentes ?? 0) > 0) fail(informeId, "Esta deficiencia ya tiene su recomendación.");
 
   // Siguiente número entre las recomendaciones vigentes (las eliminadas ya no se ven ni cuentan).
   const { data: ultima } = await supabase
@@ -109,32 +115,15 @@ export async function agregarRecomendacion(formData: FormData) {
     .order("numero", { ascending: false })
     .limit(1);
 
-  const recomendacionId = crypto.randomUUID();
   const { error } = await supabase.from("recomendaciones").insert({
-    id: recomendacionId,
     deficiencia_id: deficienciaId,
     numero: (ultima?.[0]?.numero ?? 0) + 1,
     texto: parsed.data.texto,
     responsables: parsed.data.responsables || null,
-    fecha_implementacion: parsed.data.fecha_implementacion || null,
+    fecha_implementacion: parsed.data.fecha_implementacion,
     creado_por_nit: usuario.nit,
   });
   if (error) fail(informeId, "No se pudo agregar la recomendación.");
-
-  // 1ra etapa de la matriz de DAF: el estado que ya trae la recomendación al informe final se
-  // guarda como fila sin documento (numero_seguimiento 0). "Pendiente" es el default de la tabla, no
-  // hace falta registrarlo.
-  if (parsed.data.estado_inicial !== "pendiente") {
-    const { error: errorEstado } = await supabase.from("seguimientos_recomendacion").insert({
-      recomendacion_id: recomendacionId,
-      documento_id: null,
-      // El trigger seguimientos_recomendacion_asignar_numero decide el número real.
-      numero_seguimiento: 0,
-      estado: parsed.data.estado_inicial,
-      registrado_por_nit: usuario.nit,
-    });
-    if (errorEstado) fail(informeId, "La recomendación se agregó, pero no se pudo registrar su estado inicial.");
-  }
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
   redirect(`/recomendaciones/informes/${informeId}`);

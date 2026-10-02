@@ -2,12 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeDarSeguimiento } from "@/lib/auth";
-import { registrarSeguimiento } from "@/app/(dashboard)/recomendaciones/actions";
 import { BackLink } from "@/components/nav/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { estaVencida, etiquetaCai } from "@/lib/recomendaciones";
 import { cn } from "@/lib/utils";
@@ -18,25 +15,18 @@ import {
   type EstadoRecomendacionEnum,
 } from "@/types/domain";
 
-// Mismo orden de columnas que la cédula impresa: Cumplida / No cumplida / En proceso / Pendiente.
-const OPCIONES_ESTADO: EstadoRecomendacionEnum[] = ["cumplida", "no_cumplida", "en_proceso", "pendiente"];
-
 // Nombramiento/documento con sus auditores nombrados.
 const DOCUMENTO_CAMPOS = "*, documentos_seguimiento_auditores(usuarios(nombre))";
-
-const SELECT_CLASES =
-  "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
 export default async function RecomendacionDetallePage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; fieldErrors?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const { error, fieldErrors: fieldErrorsRaw } = await searchParams;
-  const fieldErrors = fieldErrorsRaw ? (JSON.parse(fieldErrorsRaw) as Record<string, string>) : {};
+  const { error } = await searchParams;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
@@ -152,7 +142,13 @@ export default async function RecomendacionDetallePage({
               <span className="absolute top-1 -left-[1.9rem] size-3 rounded-full border-2 border-dashed border-muted-foreground/60 bg-background ring-4 ring-background" />
               <p className="font-medium">Seguimiento en curso</p>
               <DatosDocumento documento={d} />
-              <p className="text-xs text-muted-foreground">Pendiente de registrar el resultado de esta recomendación.</p>
+              <p className="text-xs text-muted-foreground">
+                Pendiente de registrar el resultado. Se registra junto con las demás recomendaciones del CAI, en el panel de
+                seguimiento del nombramiento.{" "}
+                <Link href={`/recomendaciones/documentos/${d.id}#panel-seguimiento`} className="font-medium text-foreground underline-offset-2 hover:underline">
+                  Ir al panel de seguimiento
+                </Link>
+              </p>
             </li>
           ))}
 
@@ -182,71 +178,12 @@ export default async function RecomendacionDetallePage({
           </p>
           {puedeNombrar ? (
             <Button render={<Link href={`/recomendaciones/documentos/nuevo?informe=${informe.id}`} />}>
-              Emitir nombramiento de seguimiento
+              Nombramiento emitido
             </Button>
           ) : null}
         </div>
       ) : null}
 
-      {puedeEditar && enCurso.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Registrar seguimiento no. {seguimientos.length + 1}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={registrarSeguimiento} className="flex flex-col gap-5">
-              <input type="hidden" name="recomendacion_id" value={recomendacion.id} />
-
-              <Campo label="Nombramiento de seguimiento" htmlFor="documento_id" error={fieldErrors.documento_id}>
-                <select id="documento_id" name="documento_id" required defaultValue={enCurso.length === 1 ? enCurso[0].id : ""} className={SELECT_CLASES}>
-                  <option value="" disabled>
-                    Selecciona el nombramiento
-                  </option>
-                  {enCurso.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.no_nombramiento
-                        ? `Nombramiento ${d.no_nombramiento}`
-                        : `${TIPO_DOCUMENTO_SEGUIMIENTO_LABELS[d.tipo_documento]} en elaboración`}
-                      {d.fecha_nombramiento ? ` del ${d.fecha_nombramiento}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </Campo>
-
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-1 text-sm font-medium">Estado de la recomendación</legend>
-                <div className="flex flex-wrap gap-2">
-                  {OPCIONES_ESTADO.map((e) => (
-                    <label
-                      key={e}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm has-checked:border-primary has-checked:bg-primary/5"
-                    >
-                      <input type="radio" name="estado" value={e} required className="accent-primary" />
-                      {ESTADO_RECOMENDACION_LABELS[e]}
-                    </label>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Al marcarla como cumplida se cierra su ciclo: ya no se podrán registrar más seguimientos.
-                </p>
-              </fieldset>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Campo label="Acciones de los responsables" htmlFor="acciones_responsables">
-                  <Textarea id="acciones_responsables" name="acciones_responsables" rows={5} />
-                </Campo>
-                <Campo label="Comentario de auditoría" htmlFor="comentario_auditoria">
-                  <Textarea id="comentario_auditoria" name="comentario_auditoria" rows={5} />
-                </Campo>
-              </div>
-
-              <Button type="submit" className="w-fit">
-                Registrar seguimiento
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }
@@ -344,26 +281,6 @@ function Bloque({ titulo, texto }: { titulo: string; texto: string }) {
     <div>
       <p className="text-xs font-medium text-muted-foreground">{titulo}</p>
       <p className="whitespace-pre-line">{texto}</p>
-    </div>
-  );
-}
-
-function Campo({
-  label,
-  htmlFor,
-  error,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }

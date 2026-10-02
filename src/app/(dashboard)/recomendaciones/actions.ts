@@ -126,60 +126,92 @@ export async function registrarDocumentoEmitido(formData: FormData) {
   redirect(ruta);
 }
 
-// Un paso más del ciclo de UNA recomendación, dentro de un nombramiento de seguimiento que cubre
-// su informe. El ciclo termina cuando queda "cumplida" — el trigger
-// seguimientos_recomendacion_asignar_numero rechaza cualquier seguimiento posterior.
-export async function registrarSeguimiento(formData: FormData) {
-  const recomendacionId = String(formData.get("recomendacion_id") ?? "");
-  const ruta = `/recomendaciones/${recomendacionId}`;
-  if (!recomendacionId) fail("/recomendaciones", "Falta identificar la recomendación.");
+// Seguimiento de un CAI completo dentro de un nombramiento: en un solo envío se registra el nuevo
+// estado, las acciones y el comentario de cada recomendación pendiente del CAI. Cada recomendación
+// conserva su propio ciclo (un "cumplida" la cierra: el trigger
+// seguimientos_recomendacion_asignar_numero rechaza cualquier seguimiento posterior), pero se
+// capturan juntas. Todas se guardan o ninguna (un solo INSERT).
+export async function registrarSeguimientoCai(formData: FormData) {
+  const documentoId = String(formData.get("documento_id") ?? "");
+  const informeId = String(formData.get("informe_id") ?? "");
+  // Se puede regresar a la página del CAI desde donde se registró; solo rutas internas conocidas.
+  const volverA = String(formData.get("volver_a") ?? "");
+  const ruta = /^\/recomendaciones\/cai\/[0-9a-f-]{36}$/.test(volverA) ? volverA : `/recomendaciones/documentos/${documentoId}`;
+  if (!documentoId || !informeId) fail("/recomendaciones/documentos", "Falta identificar el CAI o el nombramiento.");
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  const { data: recomendacion } = await supabase
-    .from("recomendaciones")
-    .select("id, estado_actual, deficiencias(informe_id)")
-    .eq("id", recomendacionId)
-    .maybeSingle();
-  const informeId = recomendacion?.deficiencias?.informe_id;
-  if (!recomendacion || !informeId) fail("/recomendaciones", "No se encontró la recomendación.");
-
   // Sección 12.3: defensa en profundidad además de RLS (seguimientos_recomendacion_insert).
   if (!(await puedeDarSeguimiento(usuario, informeId, supabase))) {
-    fail(ruta, "No tienes permiso para registrar seguimientos de esta recomendación.");
-  }
-  if (recomendacion.estado_actual === "cumplida") {
-    fail(ruta, "La recomendación ya está cumplida: su ciclo de seguimiento está cerrado.");
+    fail(ruta, "No tienes permiso para registrar el seguimiento de este CAI.");
   }
 
-  const parsed = seguimientoFormSchema.safeParse({
-    documento_id: formData.get("documento_id") || undefined,
-    estado: formData.get("estado"),
-    acciones_responsables: formData.get("acciones_responsables") || undefined,
-    comentario_auditoria: formData.get("comentario_auditoria") || undefined,
-  });
-  if (!parsed.success) fail(ruta, "Revisa los campos del seguimiento.", erroresPorCampo(parsed.error.issues));
+  const [{ data: documento }, { data: cobertura }] = await Promise.all([
+    supabase.from("documentos_seguimiento").select("id, no_documento").eq("id", documentoId).maybeSingle(),
+    supabase
+      .from("documentos_seguimiento_informes")
+      .select("informe_id")
+      .eq("documento_id", documentoId)
+      .eq("informe_id", informeId)
+      .maybeSingle(),
+  ]);
+  if (!documento || !cobertura) fail(ruta, "Este nombramiento no cubre el CAI indicado.");
+  if (documento.no_documento) fail(ruta, "El informe ya se emitió: la cédula está cerrada y no admite más evaluaciones.");
 
-  const { error } = await supabase.from("seguimientos_recomendacion").insert({
-    recomendacion_id: recomendacionId,
-    documento_id: parsed.data.documento_id,
-    // El trigger asigna el correlativo real dentro del ciclo de la recomendación.
-    numero_seguimiento: 1,
-    estado: parsed.data.estado,
-    acciones_responsables: parsed.data.acciones_responsables || null,
-    comentario_auditoria: parsed.data.comentario_auditoria || null,
-    registrado_por_nit: usuario!.nit,
+  const ids = formData.getAll("recomendacion_id").map(String);
+  if (ids.length === 0) fail(ruta, "No hay recomendaciones por evaluar en este CAI.");
+
+  const { data: validas } = await supabase
+    .from("recomendaciones")
+    .select("id, estado_actual, deficiencias!inner(informe_id)")
+    .in("id", ids)
+    .eq("deficiencias.informe_id", informeId);
+  if ((validas ?? []).length !== ids.length) fail(ruta, "Alguna recomendación no pertenece a este CAI.");
+  if ((validas ?? []).some((r) => r.estado_actual === "cumplida")) {
+    fail(ruta, "Alguna recomendación ya está cumplida: su ciclo de seguimiento está cerrado.");
+  }
+
+  const filas = ids.map((rid) => {
+    const parsed = seguimientoFormSchema.safeParse({
+      documento_id: documentoId,
+      estado: formData.get(`estado__${rid}`),
+      acciones_responsables: formData.get(`acciones__${rid}`) || undefined,
+      comentario_auditoria: formData.get(`comentario__${rid}`) || undefined,
+    });
+    return { rid, parsed };
   });
+  const incompletas = filas.filter((f) => !f.parsed.success);
+  if (incompletas.length > 0) {
+    fail(ruta, `Falta elegir el estado de ${incompletas.length} recomendación(es). Se guardan todas juntas.`);
+  }
+
+  const { error } = await supabase.from("seguimientos_recomendacion").insert(
+    filas.map(({ rid, parsed }) => {
+      const d = parsed.data!;
+      return {
+        recomendacion_id: rid,
+        documento_id: documentoId,
+        // El trigger asigna el correlativo real dentro del ciclo de cada recomendación.
+        numero_seguimiento: 1,
+        estado: d.estado,
+        acciones_responsables: d.acciones_responsables || null,
+        comentario_auditoria: d.comentario_auditoria || null,
+        registrado_por_nit: usuario!.nit,
+      };
+    }),
+  );
   if (error) {
     fail(
       ruta,
       error.code === "23505"
-        ? "Esta recomendación ya fue evaluada en ese seguimiento."
-        : "No se pudo registrar el seguimiento.",
+        ? "Alguna recomendación de este CAI ya fue evaluada en este nombramiento."
+        : "No se pudo registrar el seguimiento del CAI.",
     );
   }
 
   revalidatePath("/recomendaciones");
+  revalidatePath(ruta);
+  revalidatePath(`/recomendaciones/documentos/${documentoId}`);
   redirect(ruta);
 }
 

@@ -3,30 +3,22 @@ import { z } from "zod";
 const fechaOpcional = z.iso.date().optional().or(z.literal(""));
 const estadoRecomendacion = z.enum(["pendiente", "en_proceso", "no_cumplida", "cumplida"]);
 
-// DAF identifica cada auditoría por nombramiento y CAI; Administrativas solo por CAI.
+// El módulo da seguimiento solo a CAI, y todo CAI se emite con su nombramiento: ambos son obligatorios.
 export const informeFormSchema = z
   .object({
-    no_nombramiento: z.string().trim().optional(),
-    cai: z.string().trim().optional(),
+    no_nombramiento: z.string().trim().min(1, "Requerido"),
+    cai: z.string().trim().min(1, "Requerido"),
     departamento_id: z.string().trim().min(1, "Requerido"),
     dependencia_auditada: z.string().trim().min(1, "Requerido"),
-    tipo_auditoria: z.string().trim().optional(),
+    tipo_auditoria: z.string().trim().min(1, "Requerido"),
     periodo_auditado_inicio: fechaOpcional,
     periodo_auditado_fin: fechaOpcional,
-    fecha_nombramiento: fechaOpcional,
+    fecha_nombramiento: z.iso.date({ error: "Requerida" }),
     fecha_informe_final: fechaOpcional,
     fecha_notificacion: fechaOpcional,
     supervisor_nit: z.string().trim().optional(),
     coordinador_nit: z.string().trim().optional(),
     riesgo: z.string().trim().optional(),
-  })
-  .refine((v) => v.no_nombramiento || v.cai, {
-    error: "Captura el No. de nombramiento, el CAI, o ambos",
-    path: ["no_nombramiento"],
-  })
-  .refine((v) => !v.no_nombramiento || v.fecha_nombramiento, {
-    error: "Requerida si capturas el nombramiento",
-    path: ["fecha_nombramiento"],
   })
   .refine((v) => !v.periodo_auditado_inicio === !v.periodo_auditado_fin, {
     error: "Captura ambas fechas del período auditado, o ninguna",
@@ -42,13 +34,12 @@ export const deficienciaFormSchema = z.object({
   descripcion: z.string().trim().optional(),
 });
 
-// El estado inicial es el que la recomendación trae al informe final (1ra etapa de la matriz de
-// DAF); los seguimientos posteriores se registran en el desglose de la recomendación.
+// Al cargar el informe toda recomendación nace "Pendiente"; los seguimientos posteriores se
+// registran en el desglose de la recomendación. La fecha de implementación es obligatoria.
 export const recomendacionFormSchema = z.object({
   texto: z.string().trim().min(1, "Requerido"),
   responsables: z.string().trim().optional(),
-  fecha_implementacion: fechaOpcional,
-  estado_inicial: estadoRecomendacion.default("pendiente"),
+  fecha_implementacion: z.iso.date({ error: "La fecha de implementación es obligatoria" }),
 });
 
 // Nombramiento de seguimiento: lo emite la jefatura, es por UN informe (CAI) y nombra a uno o
@@ -83,6 +74,6 @@ export const seguimientoFormSchema = z.object({
 export const edicionRecomendacionSchema = z.object({
   texto: z.string().trim().min(1, "Requerido"),
   responsables: z.string().trim().optional(),
-  fecha_implementacion: fechaOpcional,
+  fecha_implementacion: z.iso.date({ error: "La fecha de implementación es obligatoria" }),
   motivo: z.string().trim().min(5, "Explica brevemente el motivo (mínimo 5 caracteres)"),
 });

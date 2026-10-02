@@ -39,23 +39,24 @@ export function InformeForm({
       ) : null}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
-          <Input id="no_nombramiento" name="no_nombramiento" placeholder="NAI-001-2026" />
-        </Field>
         <Field label="CAI" htmlFor="cai" error={fieldErrors?.cai}>
-          <Input id="cai" name="cai" placeholder="CAI 00006" />
+          <Input id="cai" name="cai" required placeholder="CAI 00006" />
+        </Field>
+        <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
+          <Input id="no_nombramiento" name="no_nombramiento" required placeholder="NAI-001-2026" />
         </Field>
       </div>
       <p className="-mt-3 text-xs text-muted-foreground">
-        Captura al menos uno de los dos: nombramiento o CAI.
+        Este módulo da seguimiento a CAI, y todo CAI lleva su nombramiento: ambos datos son obligatorios.
       </p>
 
+      <h2 className="-mb-2 text-sm font-semibold">Dependencia auditada y tipo de auditoría</h2>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Dependencia auditada" htmlFor="dependencia_auditada" error={fieldErrors?.dependencia_auditada}>
           <SelectDependencia unidades={unidades} />
         </Field>
-        <Field label="Tipo de auditoría (opcional)" htmlFor="tipo_auditoria">
-          <Input id="tipo_auditoria" name="tipo_auditoria" placeholder="Cumplimiento y financiera, operativa..." />
+        <Field label="Tipo de auditoría" htmlFor="tipo_auditoria" error={fieldErrors?.tipo_auditoria}>
+          <Input id="tipo_auditoria" name="tipo_auditoria" required placeholder="Cumplimiento y financiera, operativa..." />
         </Field>
       </div>
 
@@ -83,7 +84,7 @@ export function InformeForm({
 
       <div className="grid grid-cols-3 gap-4">
         <Field label="Fecha de nombramiento" htmlFor="fecha_nombramiento" error={fieldErrors?.fecha_nombramiento}>
-          <Input id="fecha_nombramiento" name="fecha_nombramiento" type="date" />
+          <Input id="fecha_nombramiento" name="fecha_nombramiento" type="date" required />
         </Field>
         <Field label="Fecha del informe final (opcional)" htmlFor="fecha_informe_final">
           <Input id="fecha_informe_final" name="fecha_informe_final" type="date" />

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { FileDown } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -9,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { SemaforoChip } from "@/components/semaforo-chip";
+import { PanelSeguimientoCai } from "@/components/recomendaciones/panel-seguimiento-cai";
 import { PasosCiclo, type PasoCiclo } from "@/components/recomendaciones/pasos-ciclo";
 import { etiquetaCai } from "@/lib/recomendaciones";
 import { cargarCedulaDocumento } from "@/lib/recomendaciones-datos";
 import {
   ESTADO_RECOMENDACION_LABELS,
-  ESTADO_RECOMENDACION_TONO,
   TIPO_DOCUMENTO_SEGUIMIENTO_LABELS,
   type EstadoRecomendacionEnum,
 } from "@/types/domain";
@@ -51,6 +49,9 @@ export default async function DocumentoSeguimientoPage({
   const esAuditorNombrado = documento.documentos_seguimiento_auditores.some((a) => a.usuario_nit === usuario?.nit);
   const gestionables = await departamentosParaNombrarSeguimiento(usuario, supabase);
   const puedeGestionar = puedeEscribir(usuario) && (esAuditorNombrado || gestionables.includes(documento.departamento_id));
+  // Registrar el seguimiento del CAI: auditor nombrado o quien puede operar el informe (misma
+  // regla que authz.puede_dar_seguimiento); la acción del servidor lo vuelve a verificar.
+  const puedeRegistrar = puedeGestionar && !emitido;
 
   // Qué pasará con las recomendaciones al emitir: las cumplidas cierran su ciclo (histórico) y el
   // resto queda "en seguimiento" el resto del año. Se lo decimos antes de que emita.
@@ -196,11 +197,11 @@ export default async function DocumentoSeguimientoPage({
               <p>
                 {filas.length === 0
                   ? "Los informes cubiertos no tienen recomendaciones abiertas que evaluar."
-                  : `Faltan ${porEvaluar} de ${filas.length} recomendaciones por evaluar. Abre cada una y registra su resultado; cuando estén todas, aquí podrás emitir el informe.`}
+                  : `Faltan ${porEvaluar} de ${filas.length} recomendaciones por evaluar. Regístralas en el panel de seguimiento por CAI, más abajo; cuando estén todas, aquí podrás emitir el informe.`}
               </p>
               {primeraPorEvaluar && puedeGestionar ? (
-                <Button size="lg" className="w-fit" render={<Link href={`/recomendaciones/${primeraPorEvaluar.recomendacion.id}`} />}>
-                  Evaluar la siguiente recomendación
+                <Button size="lg" className="w-fit" render={<a href="#panel-seguimiento" />}>
+                  Ir al panel de seguimiento por CAI
                 </Button>
               ) : null}
               {puedeGestionar ? (
@@ -270,7 +271,7 @@ export default async function DocumentoSeguimientoPage({
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-medium">Cédula de seguimiento</h2>
+          <h2 className="font-medium">Seguimiento por CAI</h2>
           {filas.length > 0 ? (
             <Button variant="outline" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>
               <FileDown /> Descargar cédula en Word
@@ -284,43 +285,7 @@ export default async function DocumentoSeguimientoPage({
           <p className="text-sm text-muted-foreground">Los CAI cubiertos no tienen recomendaciones abiertas.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {filas.map((f) => (
-              <Link
-                key={f.recomendacion.id}
-                href={`/recomendaciones/${f.recomendacion.id}`}
-                className="flex flex-col gap-2 rounded-xl border p-4 hover:bg-muted/40"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="codigo-expediente font-medium text-foreground">
-                      {[etiquetaCai(f.informe.cai), f.informe.no_nombramiento].filter(Boolean).join(" · ")}
-                    </span>{" "}
-                    · {f.informe.dependencia_auditada}
-                  </p>
-                  {/* Único indicador de color: el estado ACTUAL de la recomendación. */}
-                  <SemaforoChip
-                    tono={ESTADO_RECOMENDACION_TONO[f.recomendacion.estado_actual]}
-                    label={ESTADO_RECOMENDACION_LABELS[f.recomendacion.estado_actual]}
-                  />
-                </div>
-                <p className="text-sm font-medium">
-                  Def. {f.deficiencia.numero} · {f.deficiencia.titulo}
-                </p>
-                <p className="line-clamp-2 text-sm text-muted-foreground">{f.recomendacion.texto}</p>
-                <p className="text-xs">
-                  {f.evaluacion ? (
-                    <>
-                      <span className="font-medium">Resultado en este seguimiento:</span>{" "}
-                      {ESTADO_RECOMENDACION_LABELS[f.evaluacion.estado]} (seguimiento no. {f.evaluacion.numero_seguimiento} de
-                      la recomendación)
-                      {f.evaluacion.comentario_auditoria ? ` — ${f.evaluacion.comentario_auditoria}` : ""}
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">Por evaluar en este seguimiento →</span>
-                  )}
-                </p>
-              </Link>
-            ))}
+            <PanelSeguimientoCai documentoId={documento.id} filas={filas} puedeRegistrar={puedeRegistrar} />
             <p className="rounded-xl border bg-muted/30 p-4 text-sm">
               <span className="font-medium">Total evaluado:</span>{" "}
               {COLUMNAS_ESTADO.map((e) => `${totales[e]} ${ESTADO_RECOMENDACION_LABELS[e].toLowerCase()}`).join(" · ")}

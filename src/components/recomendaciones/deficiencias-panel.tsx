@@ -10,16 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ESTADO_RECOMENDACION_LABELS,
   ESTADO_RECOMENDACION_TONO,
-  ESTADOS_RECOMENDACION,
   type Deficiencia,
   type Recomendacion,
   type SeguimientoRecomendacion,
@@ -36,8 +28,6 @@ export type CambioRecomendacion = {
   usuarios: { nombre: string } | null
 };
 type DeficienciaConRecomendaciones = Deficiencia & { recomendaciones: RecomendacionConSeguimientos[] };
-
-const OPCIONES_ESTADO = Object.fromEntries(ESTADOS_RECOMENDACION.map((e) => [e, ESTADO_RECOMENDACION_LABELS[e]]));
 
 export function DeficienciasPanel({
   informeId,
@@ -95,12 +85,12 @@ export function DeficienciasPanel({
                     ))
                   )}
 
-                  {puedeEditar ? (
+                  {puedeEditar && d.recomendaciones.length === 0 ? (
                     <form action={agregarRecomendacion} className="flex flex-col gap-3 rounded-md border border-dashed p-3">
                       <input type="hidden" name="informe_id" value={informeId} />
                       <input type="hidden" name="deficiencia_id" value={d.id} />
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-muted-foreground">Nueva recomendación</label>
+                        <label className="text-xs text-muted-foreground">Recomendación de esta deficiencia (queda en estado Pendiente)</label>
                         <Textarea name="texto" rows={3} required />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -111,25 +101,8 @@ export function DeficienciasPanel({
                       </div>
                       <div className="flex flex-wrap items-end gap-3">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs text-muted-foreground">Fecha de implementación (opcional)</label>
-                          <Input name="fecha_implementacion" type="date" />
-                        </div>
-                        {/* 1ra etapa de la matriz de DAF: estado con el que sale la recomendación en
-                         * el informe final; los seguimientos posteriores se registran en el desglose de la recomendación. */}
-                        <div className="flex w-44 flex-col gap-1.5">
-                          <label className="text-xs text-muted-foreground">Estado al informe final</label>
-                          <Select name="estado_inicial" defaultValue="pendiente" items={OPCIONES_ESTADO}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ESTADOS_RECOMENDACION.map((e) => (
-                                <SelectItem key={e} value={e}>
-                                  {ESTADO_RECOMENDACION_LABELS[e]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <label className="text-xs text-muted-foreground">Fecha de implementación</label>
+                          <Input name="fecha_implementacion" type="date" required />
                         </div>
                         <Button type="submit" variant="outline" size="sm">
                           Agregar recomendación
@@ -222,7 +195,7 @@ function RecomendacionItem({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-muted-foreground">Fecha de implementación</label>
-                  <Input name="fecha_implementacion" type="date" className="w-44" defaultValue={recomendacion.fecha_implementacion ?? ""} />
+                  <Input name="fecha_implementacion" type="date" required className="w-44" defaultValue={recomendacion.fecha_implementacion ?? ""} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-muted-foreground">¿Por qué se corrige? (obligatorio, queda en el historial)</label>

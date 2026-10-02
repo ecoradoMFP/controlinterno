@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { etiquetaCai } from "@/lib/recomendaciones";
 import { Button } from "@/components/ui/button";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { BackLink } from "@/components/nav/back-link";
@@ -90,9 +91,9 @@ export default async function RecomendacionesPage({
               <li key={informe.id} className="p-4">
                 <Link href={`/recomendaciones/informes/${informe.id}`} className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="codigo-expediente text-sm font-medium">{informe.no_nombramiento ?? informe.cai}</p>
+                    <p className="codigo-expediente text-sm font-medium">{etiquetaCai(informe.cai) ?? informe.no_nombramiento}</p>
                     <p className="text-xs text-muted-foreground">
-                      {[informe.dependencia_auditada, informe.departamentos?.nombre, informe.fecha_nombramiento].filter(Boolean).join(" · ")}
+                      {[informe.dependencia_auditada, informe.no_nombramiento ? `Nombramiento ${informe.no_nombramiento}` : null, informe.departamentos?.nombre].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">

@@ -104,7 +104,7 @@ export default async function BandejaRecomendacionesPage({ searchParams }: { sea
             Informes de auditoría
           </Button>
           {puedeNombrar ? (
-            <Button render={<Link href="/recomendaciones/documentos/nuevo" />}>Emitir nombramiento de seguimiento</Button>
+            <Button render={<Link href="/recomendaciones/documentos/nuevo" />}>Nombramiento emitido</Button>
           ) : null}
         </div>
       </div>

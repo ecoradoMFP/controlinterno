@@ -137,7 +137,7 @@ export default async function NuevoNombramientoSeguimientoPage({
             </Campo>
 
             <Button type="submit" className="w-fit">
-              Emitir nombramiento
+              Nombramiento emitido
             </Button>
           </form>
         </CardContent>
