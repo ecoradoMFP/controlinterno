@@ -59,7 +59,10 @@ export default async function InformeDetallePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/recomendaciones/informes" label="Volver a Informes de auditoría" />
+      <div className="flex flex-wrap gap-2">
+        <BackLink href="/recomendaciones" label="Volver a las recomendaciones" />
+        <BackLink href={`/recomendaciones/cai/${id}`} label={`Volver al ${etiquetaCai(informe.cai) ?? "CAI"}`} />
+      </div>
 
       <Card>
         <CardHeader>

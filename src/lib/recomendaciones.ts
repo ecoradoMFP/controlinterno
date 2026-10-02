@@ -66,3 +66,49 @@ export function ubicarRecomendacion(
   if (ultimoEmitido.estado === "cumplida") return { bucket: "atendida", anio };
   return { bucket: anio === Number(hoy.slice(0, 4)) ? "en_seguimiento" : "activa", anio };
 }
+
+/**
+ * Paso del ciclo de un CAI: qué falta para completar su seguimiento. Un nombramiento en curso
+ * manda (evaluar -> emitir -> SAG-UDAI); sin él, si hay recomendaciones activas toca registrar el
+ * nombramiento, y si no, el CAI está al día.
+ */
+export type PasoCai = "capturar" | "nombramiento" | "evaluar" | "emitir" | "sag" | "al_dia";
+
+export const PASO_CAI_FALTA: Record<PasoCai, string> = {
+  capturar: "Falta capturar deficiencias y recomendaciones",
+  nombramiento: "Falta registrar el nombramiento de seguimiento",
+  evaluar: "Falta registrar el seguimiento de las recomendaciones",
+  emitir: "Falta emitir el informe de seguimiento",
+  sag: "Falta cargar el informe al SAG-UDAI",
+  al_dia: "Al día",
+};
+
+export function pasoDelCai(args: {
+  tieneRecomendaciones: boolean;
+  hayActivas: boolean;
+  /** Paso del nombramiento en curso (el más antiguo sin completar) que cubre este CAI, si hay. */
+  pasoDocumento: "evaluar" | "emitir" | "sag" | null;
+}): PasoCai {
+  if (!args.tieneRecomendaciones) return "capturar";
+  if (args.pasoDocumento) return args.pasoDocumento;
+  return args.hayActivas ? "nombramiento" : "al_dia";
+}
+
+/** Etapa de una recomendación dentro de su ciclo (lo que ve el usuario junto al estado). */
+export type EtapaRecomendacion = "por_evaluar" | "evaluada" | "en_seguimiento" | "atendida";
+
+export const ETAPA_LABELS: Record<EtapaRecomendacion, string> = {
+  por_evaluar: "Por evaluar",
+  evaluada: "Evaluada · falta emitir el informe",
+  en_seguimiento: "En seguimiento este año",
+  atendida: "Atendida",
+};
+
+export const ACCION_PASO: Record<PasoCai, string> = {
+  capturar: "Capturar recomendaciones",
+  nombramiento: "Registrar nombramiento",
+  evaluar: "Registrar seguimiento",
+  emitir: "Emitir informe",
+  sag: "Registrar carga al SAG-UDAI",
+  al_dia: "Ver CAI",
+};

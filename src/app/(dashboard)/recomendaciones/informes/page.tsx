@@ -63,13 +63,13 @@ export default async function RecomendacionesPage({
       <BackLink href="/recomendaciones" label="Volver a la bandeja de recomendaciones" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Informes de auditoría</h1>
+          <h1 className="text-xl font-semibold">Todos los CAI</h1>
           <p className="text-sm text-muted-foreground">
-            Captura de cada informe con sus deficiencias y recomendaciones. El seguimiento se hace desde la bandeja
-            de recomendaciones.
+            Todos los CAI registrados, incluidos los que no tienen recomendaciones activas. Entra a uno para
+            ver y darle seguimiento.
           </p>
         </div>
-        <Button render={<Link href="/recomendaciones/informes/nuevo" />}>Nuevo informe</Button>
+        <Button render={<Link href="/recomendaciones/informes/nuevo" />}>Nuevo CAI</Button>
       </div>
 
       <div className="rounded-xl border shadow-sm">
@@ -89,7 +89,7 @@ export default async function RecomendacionesPage({
           <ul className="divide-y">
             {filas.map(({ informe, conteo }) => (
               <li key={informe.id} className="p-4">
-                <Link href={`/recomendaciones/informes/${informe.id}`} className="flex items-center justify-between gap-3">
+                <Link href={`/recomendaciones/cai/${informe.id}`} className="flex items-center justify-between gap-3">
                   <div>
                     <p className="codigo-expediente text-sm font-medium">{etiquetaCai(informe.cai) ?? informe.no_nombramiento}</p>
                     <p className="text-xs text-muted-foreground">

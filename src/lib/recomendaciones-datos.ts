@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { estaVencida, hoyGuatemala, ubicarRecomendacion } from "@/lib/recomendaciones";
+import { type EtapaRecomendacion, estaVencida, hoyGuatemala, pasoDelCai, ubicarRecomendacion, type PasoCai } from "@/lib/recomendaciones";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -28,6 +28,13 @@ export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
       .filter((s) => s.documentos_seguimiento)
       .sort((a, b) => b.numero_seguimiento - a.numero_seguimiento)[0];
     const { bucket, anio: anioBucket } = ubicarRecomendacion(r.seguimientos_recomendacion, hoy);
+    // Una "activa" con un seguimiento ya registrado en un documento sin emitir está evaluada: solo
+    // falta emitir el informe que la formaliza.
+    const evaluadaSinEmitir = r.seguimientos_recomendacion.some(
+      (s) => s.numero_seguimiento > 0 && s.documentos_seguimiento && !s.documentos_seguimiento.no_documento,
+    );
+    const etapa: EtapaRecomendacion =
+      bucket === "atendida" ? "atendida" : bucket === "en_seguimiento" ? "en_seguimiento" : evaluadaSinEmitir ? "evaluada" : "por_evaluar";
     return [
       {
         ...r,
@@ -38,6 +45,7 @@ export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
         ultimoDocumento: ultimo?.documentos_seguimiento ?? null,
         seguimientos: r.seguimientos_recomendacion.filter((s) => s.numero_seguimiento > 0).length,
         bucket,
+        etapa,
         anioBucket,
       },
     ];
@@ -156,4 +164,71 @@ export async function cargarCedulaDocumento(supabase: SupabaseServerClient, id: 
     .filter((f) => f.evaluacion || (!emitido && f.recomendacion.estado_actual !== "cumplida"));
 
   return { documento, informes, filas, emitido };
+}
+
+/**
+ * Qué falta en cada CAI (por id de informe), para mostrarlo en la bandeja: toma el nombramiento
+ * de seguimiento más antiguo sin completar que lo cubre; sin él, mira si hay recomendaciones activas.
+ */
+export async function cargarFlujoPorCai(supabase: SupabaseServerClient, filas: FilaRecomendacion[]) {
+  const documentos = await cargarDocumentosSeguimiento(supabase);
+  const flujo = new Map<string, { paso: PasoCai; documentoId: string | null }>();
+
+  const informes = new Set(filas.map((f) => f.informe.id));
+  for (const id of informes) {
+    const enCurso = documentos
+      .filter((d) => d.paso !== "completo" && d.informes.some((i) => i.id === id))
+      .sort((a, b) => (a.fecha_nombramiento ?? "").localeCompare(b.fecha_nombramiento ?? ""))[0];
+    const paso = pasoDelCai({
+      tieneRecomendaciones: true,
+      hayActivas: filas.some((f) => f.informe.id === id && f.bucket === "activa"),
+      pasoDocumento: enCurso && enCurso.paso !== "completo" ? enCurso.paso : null,
+    });
+    flujo.set(id, { paso, documentoId: enCurso?.id ?? null });
+  }
+  return flujo;
+}
+
+export type CaiResumen = Awaited<ReturnType<typeof cargarCais>>[number];
+
+/**
+ * Un resumen por CAI visible para el usuario (RLS decide cuáles), incluidos los que aún no tienen
+ * recomendaciones: sus recomendaciones, qué falta (paso) y los conteos para la vista "Por CAI".
+ */
+export async function cargarCais(supabase: SupabaseServerClient) {
+  const [{ data: informes }, filas, documentos] = await Promise.all([
+    supabase
+      .from("informes_auditoria")
+      .select(
+        "id, cai, no_nombramiento, dependencia_auditada, tipo_auditoria, departamento_id, anio_ejecucion, fecha_informe_final, departamentos(nombre)",
+      ),
+    cargarRecomendaciones(supabase),
+    cargarDocumentosSeguimiento(supabase),
+  ]);
+
+  return (informes ?? []).map((informe) => {
+    const recs = filas.filter((f) => f.informe.id === informe.id);
+    const enCurso = documentos
+      .filter((d) => d.paso !== "completo" && d.informes.some((i) => i.id === informe.id))
+      .sort((a, b) => (a.fecha_nombramiento ?? "").localeCompare(b.fecha_nombramiento ?? ""))[0];
+    const paso = pasoDelCai({
+      tieneRecomendaciones: recs.length > 0,
+      hayActivas: recs.some((f) => f.bucket === "activa"),
+      pasoDocumento: enCurso && enCurso.paso !== "completo" ? enCurso.paso : null,
+    });
+    const anio = informe.anio_ejecucion ?? (informe.fecha_informe_final ? Number(informe.fecha_informe_final.slice(0, 4)) : null);
+    return {
+      informe,
+      recomendaciones: recs,
+      paso,
+      anio,
+      vencidas: recs.filter((f) => f.vencida).length,
+      porEstado: {
+        pendiente: recs.filter((f) => f.estado_actual === "pendiente").length,
+        en_proceso: recs.filter((f) => f.estado_actual === "en_proceso").length,
+        no_cumplida: recs.filter((f) => f.estado_actual === "no_cumplida").length,
+        cumplida: recs.filter((f) => f.estado_actual === "cumplida").length,
+      },
+    };
+  });
 }

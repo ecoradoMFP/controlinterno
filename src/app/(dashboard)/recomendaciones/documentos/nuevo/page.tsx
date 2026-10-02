@@ -47,6 +47,8 @@ export default async function NuevoNombramientoSeguimientoPage({
     )
     .sort((a, b) => a.dependencia_auditada.localeCompare(b.dependencia_auditada));
 
+  const informeFijo = informesAbiertos.find((i) => i.id === informePreseleccionado);
+
   const departamentoPorDefecto =
     informesAbiertos.find((i) => i.id === informePreseleccionado)?.departamento_id ??
     (usuario?.departamento_id && gestionables.includes(usuario.departamento_id) ? usuario.departamento_id : gestionables[0]);
@@ -61,11 +63,14 @@ export default async function NuevoNombramientoSeguimientoPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/recomendaciones" label="Volver a la bandeja de recomendaciones" />
+      <BackLink
+        href={informeFijo ? `/recomendaciones/cai/${informeFijo.id}` : "/recomendaciones"}
+        label={informeFijo ? `Volver al ${etiquetaCai(informeFijo.cai) ?? "CAI"}` : "Volver a la bandeja de recomendaciones"}
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Emitir nombramiento de seguimiento</CardTitle>
+          <CardTitle>Registrar nombramiento de seguimiento</CardTitle>
           <p className="text-sm text-muted-foreground">
             Nombra a los auditores que darán seguimiento a un informe. Ellos podrán registrar el resultado de cada una de
             sus recomendaciones, incluidas las que se agreguen después; el número del informe se registra cuando se emita.
@@ -79,7 +84,35 @@ export default async function NuevoNombramientoSeguimientoPage({
               </p>
             ) : null}
 
+            {informeFijo ? (
+              <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                <p className="text-xs font-medium text-muted-foreground">CAI al que se da seguimiento</p>
+                <p className="codigo-expediente font-medium">{etiquetaCai(informeFijo.cai) ?? informeFijo.no_nombramiento}</p>
+                <p className="text-muted-foreground">{informeFijo.dependencia_auditada}</p>
+                <input type="hidden" name="informe_id" value={informeFijo.id} />
+                <input type="hidden" name="departamento_id" value={informeFijo.departamento_id} />
+              </div>
+            ) : (
+            <Campo label="Informe (CAI) al que se da seguimiento" htmlFor="informe_id" error={fieldErrors.informe_id}>
+              {informesAbiertos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay informes con recomendaciones abiertas.</p>
+              ) : (
+                <select id="informe_id" name="informe_id" defaultValue={informePreseleccionado ?? ""} className={SELECT_CLASES}>
+                  <option value="" disabled>
+                    Elige un informe…
+                  </option>
+                  {informesAbiertos.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {[etiquetaCai(i.cai), i.no_nombramiento].filter(Boolean).join(" · ")} · {i.dependencia_auditada}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Campo>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
+              {informeFijo ? null : (
               <Campo label="Departamento que nombra" htmlFor="departamento_id">
                 <select id="departamento_id" name="departamento_id" defaultValue={departamentoPorDefecto} className={SELECT_CLASES}>
                   {(departamentos ?? []).map((d) => (
@@ -89,6 +122,7 @@ export default async function NuevoNombramientoSeguimientoPage({
                   ))}
                 </select>
               </Campo>
+              )}
               <Campo label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors.no_nombramiento}>
                 <Input id="no_nombramiento" name="no_nombramiento" placeholder="DAI-DAF-SR-CAI-06-2026" />
               </Campo>
@@ -119,25 +153,8 @@ export default async function NuevoNombramientoSeguimientoPage({
               </div>
             </fieldset>
 
-            <Campo label="Informe (CAI) al que se da seguimiento" htmlFor="informe_id" error={fieldErrors.informe_id}>
-              {informesAbiertos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay informes con recomendaciones abiertas.</p>
-              ) : (
-                <select id="informe_id" name="informe_id" defaultValue={informePreseleccionado ?? ""} className={SELECT_CLASES}>
-                  <option value="" disabled>
-                    Elige un informe…
-                  </option>
-                  {informesAbiertos.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {[etiquetaCai(i.cai), i.no_nombramiento].filter(Boolean).join(" · ")} · {i.dependencia_auditada}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Campo>
-
             <Button type="submit" className="w-fit">
-              Nombramiento emitido
+              Registrar nombramiento
             </Button>
           </form>
         </CardContent>

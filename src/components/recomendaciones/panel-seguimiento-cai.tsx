@@ -144,9 +144,9 @@ function Recomendacion({ fila, children }: { fila: FilaCedula; children: React.R
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="text-sm font-medium">
+        <Link href={`/recomendaciones/${recomendacion.id}`} title="Ver la deficiencia y su historial" className="text-sm font-medium underline-offset-2 hover:underline">
           Def. {deficiencia.numero} · {deficiencia.titulo}
-        </p>
+        </Link>
         <SemaforoChip
           tono={ESTADO_RECOMENDACION_TONO[recomendacion.estado_actual]}
           label={ESTADO_RECOMENDACION_LABELS[recomendacion.estado_actual]}
@@ -160,12 +160,6 @@ function Recomendacion({ fila, children }: { fila: FilaCedula; children: React.R
         </p>
       ) : null}
       {children}
-      <Link
-        href={`/recomendaciones/${recomendacion.id}`}
-        className="w-fit text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-      >
-        Ver historial de la recomendación
-      </Link>
     </div>
   );
 }

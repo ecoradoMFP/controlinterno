@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { SemaforoChip } from "@/components/semaforo-chip";
-import { etiquetaCai, haceCuanto, hoyGuatemala } from "@/lib/recomendaciones";
+import { ACCION_PASO, ETAPA_LABELS, etiquetaCai, haceCuanto, hoyGuatemala, PASO_CAI_FALTA, type PasoCai } from "@/lib/recomendaciones";
+import { Button } from "@/components/ui/button";
 import type { FilaRecomendacion } from "@/lib/recomendaciones-datos";
 import { cn } from "@/lib/utils";
 import { ESTADO_RECOMENDACION_LABELS, ESTADO_RECOMENDACION_TONO, ESTADOS_RECOMENDACION } from "@/types/domain";
 
-type Contexto = "activa" | "en_seguimiento" | "atendida";
+const ESTADO_PLURAL = { pendiente: "pendientes", en_proceso: "en proceso", no_cumplida: "no cumplidas", cumplida: "cumplidas" } as const;
+
+type Contexto = "activa" | "en_seguimiento" | "atendida" | "auto";
+export type FlujoPorCai = Map<string, { paso: PasoCai; documentoId: string | null }>;
 
 /**
  * Los 3 paneles (bandeja principal, en seguimiento, histórico de atendidas) agrupan por CAI, que
@@ -13,7 +17,15 @@ type Contexto = "activa" | "en_seguimiento" | "atendida";
  * dentro, las recomendaciones. Respeta el orden en que llegan las filas (el primer CAI es el de
  * la primera fila). Lo único que cambia entre paneles es la columna derecha, según `contexto`.
  */
-export function ListaRecomendaciones({ filas, contexto }: { filas: FilaRecomendacion[]; contexto: Contexto }) {
+export function ListaRecomendaciones({
+  filas,
+  contexto,
+  flujo,
+}: {
+  filas: FilaRecomendacion[];
+  contexto: Contexto;
+  flujo?: FlujoPorCai;
+}) {
   if (filas.length === 0) {
     return <p className="p-4 text-sm text-muted-foreground">Ninguna recomendación coincide con los filtros.</p>;
   }
@@ -28,13 +40,29 @@ export function ListaRecomendaciones({ filas, contexto }: { filas: FilaRecomenda
   return (
     <div className="divide-y">
       {[...grupos.values()].map((grupo) => (
-        <GrupoCai key={grupo[0].informe.id} filas={grupo} contexto={contexto} abierto={grupos.size === 1} />
+        <GrupoCai
+          key={grupo[0].informe.id}
+          filas={grupo}
+          contexto={contexto}
+          abierto={grupos.size === 1}
+          paso={flujo?.get(grupo[0].informe.id)?.paso}
+        />
       ))}
     </div>
   );
 }
 
-function GrupoCai({ filas, contexto, abierto }: { filas: FilaRecomendacion[]; contexto: Contexto; abierto: boolean }) {
+function GrupoCai({
+  filas,
+  contexto,
+  abierto,
+  paso,
+}: {
+  filas: FilaRecomendacion[];
+  contexto: Contexto;
+  abierto: boolean;
+  paso?: PasoCai;
+}) {
   const { informe } = filas[0];
   const vencidas = filas.filter((f) => f.vencida).length;
   const porEstado = ESTADOS_RECOMENDACION.map((e) => [e, filas.filter((f) => f.estado_actual === e).length] as const).filter(
@@ -43,11 +71,11 @@ function GrupoCai({ filas, contexto, abierto }: { filas: FilaRecomendacion[]; co
 
   return (
     <details open={abierto} className="group">
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-1 p-4 hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+      <summary className="grid cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 p-4 hover:bg-muted/40 md:grid-cols-[auto_minmax(0,1fr)_16rem_15rem] [&::-webkit-details-marker]:hidden">
         <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-90">
           ▶
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <p className="text-base font-semibold">
             <Link
               href={`/recomendaciones/cai/${informe.id}`}
@@ -62,29 +90,55 @@ function GrupoCai({ filas, contexto, abierto }: { filas: FilaRecomendacion[]; co
             {informe.no_nombramiento ? ` · Nombramiento ${informe.no_nombramiento}` : ""}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {filas.length} {filas.length === 1 ? "recomendación" : "recomendaciones"}
-          </span>
-          {porEstado.map(([e, n]) => (
-            <span key={e}>
-              {n} {ESTADO_RECOMENDACION_LABELS[e].toLowerCase()}
+        <div className="col-start-2 flex flex-col items-start gap-1.5 text-xs text-muted-foreground md:col-start-auto">
+          <span>
+            <span className="font-medium text-foreground">
+              {filas.length} {filas.length === 1 ? "recomendación" : "recomendaciones"}
             </span>
-          ))}
-          {vencidas > 0 ? <span className="font-medium text-destructive">{vencidas} vencida(s)</span> : null}
+            {porEstado.length > 0 ? ": " : ""}
+            {porEstado.map(([e, n]) => `${n} ${n === 1 ? ESTADO_RECOMENDACION_LABELS[e].toLowerCase() : ESTADO_PLURAL[e]}`).join(" · ")}
+          </span>
+          {/* Un plazo vencido es un aviso sobre las mismas recomendaciones, no otra categoría: va
+           * aparte y dice "con plazo vencido" para que no parezca que se suma al total. */}
+          {vencidas > 0 ? (
+            <span className="rounded-full border border-destructive/30 bg-destructive/5 px-2 py-0.5 font-medium text-destructive">
+              {vencidas === 1 ? "1 con plazo vencido" : `${vencidas} con plazo vencido`}
+            </span>
+          ) : null}
         </div>
+        {/* Los pasos del CAI (nombramiento, informe, SAG-UDAI) van como acción del grupo, no como
+         * encabezado: lo que se sigue son las recomendaciones. */}
+        {paso && paso !== "al_dia" ? (
+          <div className="col-start-2 flex flex-col items-start gap-1 md:col-start-auto md:items-end md:text-right">
+            <Button size="sm" nativeButton={false} render={<Link href={`/recomendaciones/cai/${informe.id}#siguiente-paso`} />}>
+              {ACCION_PASO[paso]}
+            </Button>
+            <span className="text-xs text-muted-foreground">{PASO_CAI_FALTA[paso]}</span>
+          </div>
+        ) : null}
       </summary>
       <FilasRecomendacion filas={filas} contexto={contexto} />
     </details>
   );
 }
 
-export function FilasRecomendacion({ filas, contexto }: { filas: FilaRecomendacion[]; contexto: Contexto }) {
+export function FilasRecomendacion({
+  filas,
+  contexto: contextoGeneral,
+  mostrarCai,
+}: {
+  filas: FilaRecomendacion[];
+  contexto: Contexto;
+  /** En el desglose plano cada fila lleva su CAI y dependencia (en los grupos por CAI ya están en el encabezado). */
+  mostrarCai?: boolean;
+}) {
   const hoy = hoyGuatemala();
 
   return (
     <ul className="divide-y border-t bg-muted/20">
-      {filas.map((f) => (
+      {filas.map((f) => {
+        const contexto = contextoGeneral === "auto" ? f.bucket : contextoGeneral;
+        return (
         <li key={f.id}>
           <Link
             href={`/recomendaciones/${f.id}`}
@@ -96,12 +150,19 @@ export function FilasRecomendacion({ filas, contexto }: { filas: FilaRecomendaci
               <SemaforoChip tono={ESTADO_RECOMENDACION_TONO[f.estado_actual]} label={ESTADO_RECOMENDACION_LABELS[f.estado_actual]} />
             </div>
             <div className="min-w-0">
+              {mostrarCai ? (
+                <p className="text-xs text-muted-foreground">
+                  <span className="codigo-expediente font-medium text-foreground">{etiquetaCai(f.informe.cai) ?? f.informe.no_nombramiento}</span>{" "}
+                  · {f.informe.dependencia_auditada}
+                </p>
+              ) : null}
               <p className="text-sm font-medium">
                 Def. {f.deficiencia.numero} · {f.deficiencia.titulo}
               </p>
               <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{f.texto}</p>
             </div>
             <div className="flex flex-col gap-0.5 text-xs text-muted-foreground md:text-right">
+              <span className="font-medium text-foreground">{ETAPA_LABELS[f.etapa]}</span>
               {f.ultimoDocumento ? (
                 <>
                   <span>
@@ -139,7 +200,8 @@ export function FilasRecomendacion({ filas, contexto }: { filas: FilaRecomendaci
             </div>
           </Link>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

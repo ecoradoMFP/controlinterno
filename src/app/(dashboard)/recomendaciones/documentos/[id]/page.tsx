@@ -1,5 +1,5 @@
 import { FileDown } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { registrarCargaSagUdai, registrarDocumentoEmitido } from "@/app/(dashboard)/recomendaciones/actions";
@@ -39,6 +39,11 @@ export default async function DocumentoSeguimientoPage({
   const cedula = await cargarCedulaDocumento(supabase, id);
   if (!cedula) notFound();
   const { documento, filas, emitido } = cedula;
+
+  // Mientras el nombramiento sigue en curso (evaluar, emitir, SAG-UDAI) todo se hace en la
+  // página del CAI; esta cédula queda como consulta del seguimiento ya completo.
+  const unSoloCai = cedula.informes.length === 1 ? cedula.informes[0] : null;
+  if (unSoloCai && !(emitido && documento.fecha_carga_sag_udai)) redirect(`/recomendaciones/cai/${unSoloCai.id}`);
 
   const porEvaluar = filas.filter((f) => !f.evaluacion).length;
   const totales = Object.fromEntries(
@@ -112,7 +117,10 @@ export default async function DocumentoSeguimientoPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/recomendaciones/documentos" label="Volver a nombramientos e informes de seguimiento" />
+      <BackLink
+        href={unSoloCai ? `/recomendaciones/cai/${unSoloCai.id}` : "/recomendaciones"}
+        label={unSoloCai ? `Volver al ${etiquetaCai(unSoloCai.cai) ?? "CAI"}` : "Volver a la bandeja de recomendaciones"}
+      />
 
       <Card>
         <CardHeader className="gap-1">

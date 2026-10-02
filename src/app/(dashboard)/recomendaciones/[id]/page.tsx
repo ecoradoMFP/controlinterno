@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeDarSeguimiento } from "@/lib/auth";
 import { BackLink } from "@/components/nav/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +27,7 @@ export default async function RecomendacionDetallePage({
   const { id } = await params;
   const { error } = await searchParams;
 
-  const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
+  const supabase = await createClient();
 
   const { data: recomendacion } = await supabase
     .from("recomendaciones")
@@ -49,11 +48,6 @@ export default async function RecomendacionDetallePage({
   const seguimientos = historial.filter((s) => s.documentos_seguimiento);
   const cumplida = recomendacion.estado_actual === "cumplida";
   const vencida = estaVencida(recomendacion.estado_actual, recomendacion.fecha_implementacion);
-  const [puedeEditar, gestionables] = await Promise.all([
-    cumplida ? false : puedeDarSeguimiento(usuario, informe.id, supabase),
-    departamentosParaNombrarSeguimiento(usuario, supabase),
-  ]);
-  const puedeNombrar = !cumplida && gestionables.includes(informe.departamento_id);
 
   // Nombramientos de seguimiento que cubren este informe, todavía sin emitir (la cédula se cierra
   // al emitirse) y que no evaluaron esta recomendación: el "siguiente paso" del ciclo.
@@ -73,7 +67,10 @@ export default async function RecomendacionDetallePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/recomendaciones" label="Volver a la bandeja de recomendaciones" />
+      <div className="flex flex-wrap gap-2">
+        <BackLink href="/recomendaciones" label="Volver a las recomendaciones" />
+        <BackLink href={`/recomendaciones/cai/${informe.id}`} label={`Volver al ${etiquetaCai(informe.cai) ?? "CAI"}`} />
+      </div>
 
       <Card>
         <CardHeader className="gap-2">
@@ -145,8 +142,8 @@ export default async function RecomendacionDetallePage({
               <p className="text-xs text-muted-foreground">
                 Pendiente de registrar el resultado. Se registra junto con las demás recomendaciones del CAI, en el panel de
                 seguimiento del nombramiento.{" "}
-                <Link href={`/recomendaciones/documentos/${d.id}#panel-seguimiento`} className="font-medium text-foreground underline-offset-2 hover:underline">
-                  Ir al panel de seguimiento
+                <Link href={`/recomendaciones/cai/${informe.id}`} className="font-medium text-foreground underline-offset-2 hover:underline">
+                  Ir al CAI
                 </Link>
               </p>
             </li>
@@ -170,20 +167,9 @@ export default async function RecomendacionDetallePage({
         </p>
       ) : null}
 
-      {!cumplida && enCurso.length === 0 && (puedeEditar || puedeNombrar) ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed p-4 text-sm">
-          <p className="text-muted-foreground">
-            Para registrar el siguiente seguimiento primero debe emitirse un nombramiento de seguimiento que cubra este
-            informe.
-          </p>
-          {puedeNombrar ? (
-            <Button render={<Link href={`/recomendaciones/documentos/nuevo?informe=${informe.id}`} />}>
-              Nombramiento emitido
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-
+      <Button variant="outline" className="w-fit" render={<Link href={`/recomendaciones/cai/${informe.id}`} />}>
+        Ir al {etiquetaCai(informe.cai) ?? "CAI"} para darle seguimiento
+      </Button>
     </div>
   );
 }

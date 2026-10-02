@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
-import { deficienciaFormSchema, edicionRecomendacionSchema, recomendacionFormSchema } from "@/lib/validations/recomendacion";
+import {
+  deficienciaConRecomendacionSchema,
+  deficienciaFormSchema,
+  edicionRecomendacionSchema,
+  recomendacionFormSchema,
+} from "@/lib/validations/recomendacion";
 
 function fail(informeId: string, message: string): never {
   const params = new URLSearchParams({ error: message });
@@ -81,6 +86,54 @@ export async function agregarDeficiencia(formData: FormData) {
     creado_por_nit: usuario.nit,
   });
   if (error) fail(informeId, "No se pudo agregar la deficiencia.");
+
+  revalidatePath(`/recomendaciones/informes/${informeId}`);
+  redirect(`/recomendaciones/informes/${informeId}`);
+}
+
+// Cada deficiencia de un CAI lleva UNA recomendación: se capturan juntas, en un solo paso.
+export async function agregarDeficienciaConRecomendacion(formData: FormData) {
+  const informeId = String(formData.get("informe_id") ?? "");
+  if (!informeId) fail(informeId, "Falta identificar el informe.");
+
+  const { usuario, supabase } = await verificarAlcance(informeId);
+
+  const parsed = deficienciaConRecomendacionSchema.safeParse({
+    titulo: formData.get("titulo"),
+    descripcion: formData.get("descripcion") ?? undefined,
+    texto: formData.get("texto"),
+    responsables: formData.get("responsables") ?? undefined,
+    fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
+  });
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la deficiencia.");
+
+  const { count } = await supabase
+    .from("deficiencias")
+    .select("id", { count: "exact", head: true })
+    .eq("informe_id", informeId);
+
+  const deficienciaId = crypto.randomUUID();
+  const { error: errorDef } = await supabase.from("deficiencias").insert({
+    id: deficienciaId,
+    informe_id: informeId,
+    numero: (count ?? 0) + 1,
+    titulo: parsed.data.titulo,
+    descripcion: parsed.data.descripcion || null,
+    creado_por_nit: usuario.nit,
+  });
+  if (errorDef) fail(informeId, "No se pudo agregar la deficiencia.");
+
+  const { error: errorRec } = await supabase.from("recomendaciones").insert({
+    deficiencia_id: deficienciaId,
+    numero: 1,
+    texto: parsed.data.texto,
+    responsables: parsed.data.responsables || null,
+    fecha_implementacion: parsed.data.fecha_implementacion,
+    creado_por_nit: usuario.nit,
+  });
+  // La deficiencia no se puede borrar: si falla la recomendación queda visible con su propio
+  // formulario para volver a capturarla.
+  if (errorRec) fail(informeId, "La deficiencia se guardó, pero no su recomendación: captúrala en la deficiencia.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
   redirect(`/recomendaciones/informes/${informeId}`);

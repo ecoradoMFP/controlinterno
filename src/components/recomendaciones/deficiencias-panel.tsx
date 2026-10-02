@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  agregarDeficiencia,
+  agregarDeficienciaConRecomendacion,
   agregarRecomendacion,
   editarRecomendacion,
   eliminarRecomendacion,
@@ -120,18 +120,40 @@ export function DeficienciasPanel({
       <HistorialCambios historial={historial} />
 
       {puedeEditar ? (
-        <form action={agregarDeficiencia} className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-4">
+        <form action={agregarDeficienciaConRecomendacion} className="flex flex-col gap-4 rounded-xl border border-dashed p-4">
           <input type="hidden" name="informe_id" value={informeId} />
-          <div className="flex min-w-56 flex-1 flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Título de la nueva deficiencia</label>
-            <Input name="titulo" required />
+          <div>
+            <h3 className="font-medium">Agregar deficiencia y su recomendación</h3>
+            <p className="text-xs text-muted-foreground">
+              Cada deficiencia lleva una sola recomendación. Nace en estado Pendiente.
+            </p>
           </div>
-          <div className="flex min-w-64 flex-[2] flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Descripción (opcional)</label>
-            <Input name="descripcion" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="nueva-titulo">Deficiencia (título)</label>
+              <Input id="nueva-titulo" name="titulo" required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="nueva-descripcion">Descripción de la deficiencia (opcional)</label>
+              <Input id="nueva-descripcion" name="descripcion" />
+            </div>
           </div>
-          <Button type="submit" variant="outline">
-            Agregar deficiencia
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor="nueva-texto">Recomendación</label>
+            <Textarea id="nueva-texto" name="texto" rows={3} required />
+          </div>
+          <div className="grid gap-4 md:grid-cols-[1fr_12rem]">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="nueva-responsables">Responsables de implementarla (opcional)</label>
+              <Textarea id="nueva-responsables" name="responsables" rows={2} placeholder="Nombre y puesto de cada responsable" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="nueva-fecha">Fecha de implementación</label>
+              <Input id="nueva-fecha" name="fecha_implementacion" type="date" required />
+            </div>
+          </div>
+          <Button type="submit" className="w-fit">
+            Agregar deficiencia y recomendación
           </Button>
         </form>
       ) : null}
@@ -156,9 +178,13 @@ function RecomendacionItem({
     <div className="rounded-md border bg-muted/30 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <p className="text-sm whitespace-pre-line">
+          <Link
+            href={`/recomendaciones/${recomendacion.id}`}
+            title="Ver la deficiencia y su historial"
+            className="text-sm whitespace-pre-line underline-offset-2 hover:underline"
+          >
             {recomendacion.numero}. {recomendacion.texto}
-          </p>
+          </Link>
           {recomendacion.responsables ? (
             <p className="text-xs whitespace-pre-line text-muted-foreground">
               Responsables de implementarla: {recomendacion.responsables}
@@ -225,12 +251,9 @@ function RecomendacionItem({
           </details>
         )
       ) : null}
-      <div className="mt-2 flex items-center justify-between border-t pt-2 text-xs text-muted-foreground">
-        <span>{seguimientos === 0 ? "Sin seguimientos todavía" : `${seguimientos} seguimiento(s)`}</span>
-        <Link href={`/recomendaciones/${recomendacion.id}`} className="font-medium text-foreground underline-offset-2 hover:underline">
-          Ver seguimiento de la recomendación →
-        </Link>
-      </div>
+      <p className="mt-2 border-t pt-2 text-xs text-muted-foreground">
+        {seguimientos === 0 ? "Sin seguimientos todavía" : `${seguimientos} seguimiento(s)`}
+      </p>
     </div>
   );
 }

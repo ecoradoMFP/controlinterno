@@ -11,8 +11,9 @@ export type PasoCiclo = {
 // emitir -> SAG-UDAI. Está para que quien llega a la pantalla vea de un vistazo qué falta y cuál
 // es EL paso que sigue, sin tener que deducirlo de formularios sueltos.
 export function PasosCiclo({ pasos }: { pasos: PasoCiclo[] }) {
+  const columnas = pasos.length === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4";
   return (
-    <ol className="grid gap-3 sm:grid-cols-4" aria-label="Avance del seguimiento">
+    <ol className={cn("grid gap-3", columnas)} aria-label="Avance del seguimiento">
       {pasos.map((p, i) => (
         <li
           key={p.titulo}

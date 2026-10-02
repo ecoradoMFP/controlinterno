@@ -34,6 +34,13 @@ export const deficienciaFormSchema = z.object({
   descripcion: z.string().trim().optional(),
 });
 
+// Deficiencia y su única recomendación, capturadas en un solo paso.
+export const deficienciaConRecomendacionSchema = deficienciaFormSchema.extend({
+  texto: z.string().trim().min(1, "Escribe la recomendación"),
+  responsables: z.string().trim().optional(),
+  fecha_implementacion: z.iso.date({ error: "La fecha de implementación es obligatoria" }),
+});
+
 // Al cargar el informe toda recomendación nace "Pendiente"; los seguimientos posteriores se
 // registran en el desglose de la recomendación. La fecha de implementación es obligatoria.
 export const recomendacionFormSchema = z.object({

@@ -22,6 +22,13 @@ function fail(ruta: string, message: string, fieldErrors?: Record<string, string
   redirect(`${ruta}${sep}${params.toString()}`);
 }
 
+// Desde la página del CAI se registra todo el ciclo sin salir de ella: el formulario manda
+// `volver_a` y aquí solo se acepta esa ruta interna; si no, se regresa a la cédula del documento.
+function rutaDeRetorno(formData: FormData, documentoId: string) {
+  const volverA = String(formData.get("volver_a") ?? "");
+  return /^\/recomendaciones\/cai\/[0-9a-f-]{36}$/.test(volverA) ? volverA : `/recomendaciones/documentos/${documentoId}`;
+}
+
 function erroresPorCampo(issues: { path: PropertyKey[]; message: string }[]) {
   const fieldErrors: Record<string, string> = {};
   for (const issue of issues) {
@@ -92,14 +99,15 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     fail(`/recomendaciones/documentos/${id}`, "El nombramiento se registró, pero no se pudieron guardar todos sus auditores o el informe.");
   }
 
-  revalidatePath("/recomendaciones");
-  redirect(`/recomendaciones/documentos/${id}`);
+  revalidatePath("/recomendaciones", "layout");
+  // Se regresa a la página del CAI: ahí sigue el ciclo (registrar el seguimiento).
+  redirect(`/recomendaciones/cai/${datos.informe_id}`);
 }
 
 // Al emitirse el informe (u oficio) de seguimiento se registra su número y fecha.
 export async function registrarDocumentoEmitido(formData: FormData) {
   const documentoId = String(formData.get("documento_id") ?? "");
-  const ruta = `/recomendaciones/documentos/${documentoId}`;
+  const ruta = rutaDeRetorno(formData, documentoId);
   if (!documentoId) fail("/recomendaciones", "Falta identificar el nombramiento.");
 
   const parsed = documentoEmitidoSchema.safeParse({
@@ -122,7 +130,7 @@ export async function registrarDocumentoEmitido(formData: FormData) {
   }
   if (!data?.length) fail(ruta, "No tienes permiso para registrar el documento de este nombramiento.");
 
-  revalidatePath(ruta);
+  revalidatePath("/recomendaciones", "layout");
   redirect(ruta);
 }
 
@@ -134,9 +142,7 @@ export async function registrarDocumentoEmitido(formData: FormData) {
 export async function registrarSeguimientoCai(formData: FormData) {
   const documentoId = String(formData.get("documento_id") ?? "");
   const informeId = String(formData.get("informe_id") ?? "");
-  // Se puede regresar a la página del CAI desde donde se registró; solo rutas internas conocidas.
-  const volverA = String(formData.get("volver_a") ?? "");
-  const ruta = /^\/recomendaciones\/cai\/[0-9a-f-]{36}$/.test(volverA) ? volverA : `/recomendaciones/documentos/${documentoId}`;
+  const ruta = rutaDeRetorno(formData, documentoId);
   if (!documentoId || !informeId) fail("/recomendaciones/documentos", "Falta identificar el CAI o el nombramiento.");
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
@@ -220,7 +226,7 @@ export async function registrarSeguimientoCai(formData: FormData) {
 export async function registrarCargaSagUdai(formData: FormData) {
   const documentoId = String(formData.get("documento_id") ?? "");
   const fecha = String(formData.get("fecha_carga_sag_udai") ?? "");
-  const ruta = `/recomendaciones/documentos/${documentoId}`;
+  const ruta = rutaDeRetorno(formData, documentoId);
   if (!documentoId) fail("/recomendaciones", "Falta identificar el documento.");
 
   const usuario = await getUsuarioActual();
@@ -236,6 +242,6 @@ export async function registrarCargaSagUdai(formData: FormData) {
     .eq("id", documentoId);
   if (error) fail(ruta, "No se pudo registrar la carga al SAG-UDAI (¿ya tiene número de informe u oficio?).");
 
-  revalidatePath(ruta);
+  revalidatePath("/recomendaciones", "layout");
   redirect(ruta);
 }
