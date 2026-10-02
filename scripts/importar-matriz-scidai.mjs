@@ -1,6 +1,7 @@
-// Importa una matriz de carga de SCIDAI (la que genera scripts/generar-matriz-carga.mjs) a la base
-// LOCAL de Supabase. Es estricto: un CAI solo se carga si está COMPLETO (todo lo obligatorio, sin
-// contradicciones); los demás se reportan con la hoja, fila y columna exactas de lo que falta.
+// Importa una matriz de carga de SCIDAI (la que genera scripts/generar-matriz-carga.mjs, UNA hoja
+// por etapas) a la base LOCAL de Supabase. Es estricto: un CAI solo se carga si está COMPLETO (todo
+// lo obligatorio, sin contradicciones); los demás se reportan con la fila y columna exactas de lo
+// que falta.
 //
 // Uso:
 //   node scripts/importar-matriz-scidai.mjs "Matriz.xlsx" --simular     # solo revisa y reporta
@@ -15,7 +16,9 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import ExcelJS from "exceljs";
 import { createClient } from "@supabase/supabase-js";
-import { DEPARTAMENTOS, ESTADOS, FILA_ENCABEZADO, HOJAS, PRIMERA_FILA_DATOS, TIPOS_DOCUMENTO } from "./lib/matriz-scidai.mjs";
+import {
+  COLUMNAS, DEPARTAMENTOS, ESTADOS, FILA_ENCABEZADO, NOMBRE_HOJA, NUM_SEGUIMIENTOS, PRIMERA_FILA_DATOS, TIPOS_DOCUMENTO,
+} from "./lib/matriz-scidai.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2);
@@ -42,7 +45,7 @@ const ok = (r, que) => {
 };
 
 // ───────── lectura ─────────
-const sinTildes = (t) => String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "");
+const sinTildes = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const norm = (t) => sinTildes(t).toLowerCase().replace(/\s+/g, " ").trim();
 const tit = (n) => String(n).trim().replace(/\s+/g, " ");
 
@@ -66,137 +69,140 @@ function valor(celda, tipo) {
 
 const wb = new ExcelJS.Workbook();
 await wb.xlsx.readFile(archivo);
-const datos = {};
-for (const [id, def] of Object.entries(HOJAS)) {
-  const ws = wb.getWorksheet(def.nombre);
-  if (!ws) throw new Error(`La matriz no tiene la hoja "${def.nombre}".`);
-  const porEncabezado = new Map();
-  ws.getRow(FILA_ENCABEZADO).eachCell((c, n) => porEncabezado.set(String(c.value ?? "").replace(/\s*\*$/, "").trim(), n));
-  const filas = [];
-  ws.eachRow((fila, nFila) => {
-    if (nFila < PRIMERA_FILA_DATOS) return;
-    const o = { _fila: nFila };
-    let alguno = false;
-    for (const c of def.columnas) {
-      const n = porEncabezado.get(c.h);
-      if (!n) throw new Error(`En la hoja "${def.nombre}" falta la columna "${c.h}" (¿se usó otra versión de la matriz?).`);
-      o[c.k] = valor(fila.getCell(n), c.tipo);
-      if (c.req !== "no" && o[c.k] !== null) alguno = true;
-    }
-    if (alguno) filas.push(o);
+const ws = wb.getWorksheet(NOMBRE_HOJA);
+if (!ws) throw new Error(`La matriz no tiene la hoja "${NOMBRE_HOJA}" (¿se usó otra versión del formato?).`);
+// El formato es posicional: se verifica que los encabezados coincidan con la definición.
+COLUMNAS.forEach((c, i) => {
+  const h = String(ws.getCell(FILA_ENCABEZADO, i + 1).value ?? "").replace(/\s*\*$/, "").trim();
+  if (h !== c.h) throw new Error(`Columna ${i + 1}: se esperaba "${c.h}" y la matriz dice "${h}" (¿se usó otra versión del formato?).`);
+});
+const filas = [];
+ws.eachRow((fila, nFila) => {
+  if (nFila < PRIMERA_FILA_DATOS) return;
+  const o = { _fila: nFila };
+  let alguno = false;
+  COLUMNAS.forEach((c, i) => {
+    o[c.k] = valor(fila.getCell(i + 1), c.tipo);
+    if (c.req !== "no" && o[c.k] !== null) alguno = true;
   });
-  datos[id] = filas;
-}
+  if (alguno) filas.push(o);
+});
 
-// ───────── validación ─────────
+// ───────── armado y validación ─────────
 const errores = new Map(); // clave CAI -> [mensajes]
 const avisos = new Map();
-const err = (clave, hoja, fila, columna, msg) => {
+const err = (clave, fila, columna, msg) => {
   if (!errores.has(clave)) errores.set(clave, []);
-  errores.get(clave).push(`${hoja}, fila ${fila}${columna ? ` (${columna})` : ""}: ${msg}`);
+  errores.get(clave).push(`${fila ? `fila ${fila}` : "CAI"}${columna ? ` · ${columna}` : ""}: ${msg}`);
 };
 const aviso = (clave, msg) => {
   if (!avisos.has(clave)) avisos.set(clave, []);
   avisos.get(clave).push(msg);
 };
-const colDe = (id, k) => HOJAS[id].columnas.find((c) => c.k === k);
-function campos(id, fila, clave) {
-  for (const c of HOJAS[id].columnas) {
-    const v = fila[c.k];
-    if (v && typeof v === "object" && v.invalido !== undefined) err(clave, HOJAS[id].nombre, fila._fila, c.h, `valor no válido "${v.invalido}"`);
-    else if (c.req === "obl" && v === null) err(clave, HOJAS[id].nombre, fila._fila, c.h, "obligatorio y vacío");
-  }
-}
+const etiqueta = (c) => `${c.bloque.seg ? `Seguimiento ${c.bloque.seg}` : c.bloque.id === "id" ? "Identificación" : c.bloque.id === "cai" ? "El CAI" : c.bloque.id === "def" ? "Deficiencia" : "Notas"} · ${c.h}`;
+const col = (k) => COLUMNAS.find((c) => c.k === k);
+const vacio = (v) => v === null || v === undefined;
 
+// Filas contiguas con el mismo (año, CAI) forman un CAI.
+const grupos = [];
+for (const f of filas) {
+  if (f.cai !== null && /^\d+$/.test(f.cai)) f.cai = f.cai.padStart(5, "0");
+  const k = `${f.cai ?? "?"}|${f.anio_cai ?? ""}`;
+  const ultimo = grupos[grupos.length - 1];
+  if (ultimo && ultimo.k === k) ultimo.filas.push(f);
+  else grupos.push({ k, filas: [f] });
+}
+const vistos = new Map();
 const cais = new Map();
-for (const f of datos.CAI) {
-  const cai = f.cai !== null && /^\d+$/.test(f.cai) ? f.cai.padStart(5, "0") : f.cai;
-  f.cai = cai;
-  const clave = `${cai ?? "sin número"}-${f.anio_cai ?? "sin año"}`;
-  f._clave = clave;
-  campos("CAI", f, clave);
-  if (cais.has(clave)) err(clave, "CAI", f._fila, null, "el mismo CAI (número y año) está repetido");
-  if (f.departamento && !DEPARTAMENTOS.includes(f.departamento)) err(clave, "CAI", f._fila, "Departamento que audita", `"${f.departamento}" no es un departamento de la lista`);
-  for (const [k, h] of [["supervisor", "Supervisor"], ["coordinador", "Coordinador"], ["auditores", "Auditor(es) del equipo"], ["riesgo", "Riesgo"], ["fecha_informe_final", "Fecha del informe final"], ["periodo_inicio", "Período auditado: inicio"], ["periodo_fin", "Período auditado: fin"]]) {
-    if (f[k] === null) aviso(clave, `Falta "${h}" (recomendado).`);
-  }
-  if (f.periodo_inicio && f.periodo_fin && f.periodo_fin < f.periodo_inicio) err(clave, "CAI", f._fila, "Período auditado", "el fin es anterior al inicio");
-  cais.set(clave, { ...f, defs: new Map(), segs: [] });
-}
-// Un CAI al que le falta el año se sigue encontrando por su número, para reportarlo completo.
-const alias = new Map();
-for (const [clave, c] of cais) if (c.cai && c.anio_cai === null) { alias.set(`${c.cai}-`, clave); alias.set(c.cai, clave); }
-const buscarCai = (k) => (cais.has(k) ? k : alias.get(k) ?? null);
+for (const g of grupos) {
+  const f0 = g.filas[0];
+  const clave = `${f0.cai ?? "sin número"}-${f0.anio_cai ?? "sin año"}`;
+  if (vistos.has(g.k)) err(clave, g.filas[0]._fila, null, "las filas de este CAI no están juntas (aparece también más arriba)");
+  vistos.set(g.k, true);
+  const cai = { _clave: clave, cai: f0.cai, anio_cai: f0.anio_cai, defs: new Map(), segs: [], filas: g.filas };
+  cais.set(clave, cai);
 
-const claveDe = (f) => (f.cai_clave ?? "").trim();
-for (const f of datos.DEF) {
-  const claveCruda = claveDe(f) || "sin CAI";
-  const clave = buscarCai(claveCruda) ?? claveCruda;
-  campos("DEF", f, clave);
-  const cai = cais.get(clave);
-  if (!cai) {
-    err(clave, "Deficiencias", f._fila, "CAI", `"${clave}" no coincide con ningún CAI completo de la hoja CAI (revisa número y año)`);
-    continue;
-  }
-  if (cai.defs.has(f.no_deficiencia)) err(clave, "Deficiencias", f._fila, "No. de deficiencia", `la deficiencia ${f.no_deficiencia} está repetida (cada deficiencia lleva UNA recomendación)`);
-  if (f.descripcion === null) aviso(clave, `Deficiencia ${f.no_deficiencia}: falta la descripción (recomendado).`);
-  if (f.responsables === null) aviso(clave, `Deficiencia ${f.no_deficiencia}: faltan los responsables de implementarla (recomendado).`);
-  if (cai.fecha_informe_final && f.fecha_implementacion && f.fecha_implementacion < cai.fecha_informe_final) {
-    aviso(clave, `Deficiencia ${f.no_deficiencia}: la fecha de implementación (${f.fecha_implementacion}) es anterior al informe final (${cai.fecha_informe_final}).`);
-  }
-  cai.defs.set(f.no_deficiencia, { ...f, segs: [] });
-}
-for (const [clave, cai] of cais) {
-  if (cai.defs.size === 0) err(clave, "Deficiencias", null, null, "el CAI no tiene ninguna deficiencia");
-}
-
-for (const f of datos.SEG) {
-  const claveCruda = claveDe(f) || "sin CAI";
-  const clave = buscarCai(claveCruda) ?? claveCruda;
-  campos("SEG", f, clave);
-  const cai = cais.get(clave);
-  if (!cai) {
-    err(clave, "Seguimientos", f._fila, "CAI", `"${clave}" no coincide con ningún CAI de la hoja CAI`);
-    continue;
-  }
-  const def = cai.defs.get(f.no_deficiencia);
-  if (!def) {
-    err(clave, "Seguimientos", f._fila, "No. de deficiencia", `la deficiencia ${f.no_deficiencia} no existe en la hoja Deficiencias`);
-    continue;
-  }
-  if (f.tipo_documento && !TIPOS_DOCUMENTO.includes(f.tipo_documento)) err(clave, "Seguimientos", f._fila, "Tipo de documento", `"${f.tipo_documento}" no es de la lista`);
-  if (f.estado && !ESTADOS.includes(f.estado)) err(clave, "Seguimientos", f._fila, "Estado de la recomendación", `"${f.estado}" no es de la lista`);
-  if (f.tipo_documento === "Nombramiento e informe") {
-    if (f.no_nombramiento === null) err(clave, "Seguimientos", f._fila, "No. de nombramiento de seguimiento", "obligatorio cuando el documento es Nombramiento e informe");
-    if (f.fecha_nombramiento === null) err(clave, "Seguimientos", f._fila, "Fecha del nombramiento de seguimiento", "obligatoria cuando el documento es Nombramiento e informe");
-  }
-  def.segs.push(f);
-  cai.segs.push(f);
-}
-// Coherencia de seguimientos
-for (const [clave, cai] of cais) {
-  for (const def of cai.defs.values()) {
-    const ord = [...def.segs].sort((a, b) => a.no_seguimiento - b.no_seguimiento);
-    ord.forEach((s, i) => {
-      if (s.no_seguimiento !== i + 1) err(clave, "Seguimientos", s._fila, "No. de seguimiento", `la deficiencia ${def.no_deficiencia} debe numerar sus seguimientos 1, 2, 3… sin saltos`);
-      if (i > 0 && ord[i - 1].estado === "Cumplida") err(clave, "Seguimientos", s._fila, "Estado de la recomendación", `la deficiencia ${def.no_deficiencia} ya estaba Cumplida: no admite más seguimientos`);
-    });
-  }
-  // Un documento (CAI + No. de seguimiento) debe ser el mismo en todas sus filas.
-  const docs = new Map();
-  for (const s of cai.segs) {
-    const k = s.no_seguimiento;
-    if (!docs.has(k)) docs.set(k, []);
-    docs.get(k).push(s);
-  }
-  for (const [k, filas] of docs) {
-    for (const campo of ["tipo_documento", "no_nombramiento", "fecha_nombramiento", "no_documento", "fecha_documento", "auditores"]) {
-      const valores = new Set(filas.map((s) => JSON.stringify(s[campo])));
-      if (valores.size > 1) err(clave, "Seguimientos", filas[0]._fila, colDe("SEG", campo).h, `el seguimiento ${k} tiene valores distintos en este campo entre sus filas`);
+  // Tipos inválidos en cualquier celda del CAI
+  for (const f of g.filas) {
+    for (const c of COLUMNAS) {
+      const v = f[c.k];
+      if (v && typeof v === "object" && v.invalido !== undefined) err(clave, f._fila, etiqueta(c), `valor no válido "${v.invalido}"`);
     }
   }
-}
+  // Identificación en cada fila
+  for (const k of ["anio_cai", "cai"]) {
+    if (g.filas.every((f) => vacio(f[k]))) err(clave, g.filas[0]._fila, etiqueta(col(k)), "obligatorio y vacío (en todas las filas de este CAI)");
+    else for (const f of g.filas) if (vacio(f[k])) err(clave, f._fila, etiqueta(col(k)), "obligatorio y vacío");
+  }
+  for (const f of g.filas) if (vacio(f.no_deficiencia)) err(clave, f._fila, etiqueta(col("no_deficiencia")), "obligatorio y vacío");
+  // Datos del CAI y de cada documento: una vez; si se repiten deben coincidir
+  const unico = (k) => {
+    const valores = [...new Set(g.filas.map((f) => f[k]).filter((v) => !vacio(v) && typeof v !== "object").map(String))];
+    if (valores.length > 1) err(clave, g.filas.find((f) => !vacio(f[k]) && String(f[k]) === valores[1])._fila, etiqueta(col(k)), `tiene valores distintos en las filas del mismo CAI (${valores.join(" / ")})`);
+    return g.filas.map((f) => f[k]).find((v) => !vacio(v) && typeof v !== "object") ?? null;
+  };
+  for (const c of COLUMNAS.filter((x) => x.nivel === "cai")) {
+    cai[c.k] = unico(c.k);
+    if (vacio(cai[c.k]) && c.req === "obl") err(clave, g.filas[0]._fila, etiqueta(c), "obligatorio y vacío (se escribe en la primera fila del CAI)");
+    else if (vacio(cai[c.k]) && c.req === "rec") aviso(clave, `Falta "${c.h}" (recomendado).`);
+  }
+  if (cai.departamento && !DEPARTAMENTOS.includes(cai.departamento)) err(clave, g.filas[0]._fila, etiqueta(col("departamento")), `"${cai.departamento}" no es un departamento de la lista`);
+  if (cai.periodo_inicio && cai.periodo_fin && cai.periodo_fin < cai.periodo_inicio) err(clave, g.filas[0]._fila, "El CAI · Período auditado", "el fin es anterior al inicio");
 
+  // Deficiencias (una por fila)
+  for (const f of g.filas) {
+    const n = f.no_deficiencia;
+    for (const c of COLUMNAS.filter((x) => x.bloque.id === "def" && x.req === "obl")) if (vacio(f[c.k])) err(clave, f._fila, etiqueta(c), "obligatorio y vacío");
+    if (f.descripcion === null) aviso(clave, `Deficiencia ${n}: falta la descripción (recomendado).`);
+    if (f.responsables === null) aviso(clave, `Deficiencia ${n}: faltan los responsables de implementarla (recomendado).`);
+    if (cai.fecha_informe_final && f.fecha_implementacion && f.fecha_implementacion < cai.fecha_informe_final) {
+      aviso(clave, `Deficiencia ${n}: la fecha de implementación (${f.fecha_implementacion}) es anterior al informe final (${cai.fecha_informe_final}).`);
+    }
+    if (n === null) continue;
+    if (cai.defs.has(n)) err(clave, f._fila, etiqueta(col("no_deficiencia")), `la deficiencia ${n} está repetida (cada deficiencia lleva UNA recomendación)`);
+    cai.defs.set(n, { ...f, segs: [] });
+  }
+
+  // Seguimientos 1..N
+  let previoUsado = true;
+  for (let n = 1; n <= NUM_SEGUIMIENTOS; n++) {
+    const cols = COLUMNAS.filter((c) => c.bloque.seg === n);
+    const usado = g.filas.some((f) => cols.some((c) => !vacio(f[c.k])));
+    if (!usado) { previoUsado = false; continue; }
+    if (!previoUsado) err(clave, g.filas[0]._fila, `Seguimiento ${n}`, `está lleno pero el seguimiento ${n - 1} está vacío: los seguimientos van en orden`);
+    previoUsado = true;
+    const doc = {};
+    for (const c of cols.filter((x) => x.nivel === "doc")) doc[c.k.replace(/_\d$/, "")] = unico(c.k);
+    const esNombramiento = doc.tipo_documento === "Nombramiento e informe";
+    if (doc.tipo_documento && !TIPOS_DOCUMENTO.includes(doc.tipo_documento)) err(clave, g.filas[0]._fila, etiqueta(col(`tipo_documento_${n}`)), `"${doc.tipo_documento}" no es de la lista`);
+    for (const c of cols.filter((x) => x.nivel === "doc")) {
+      const k = c.k.replace(/_\d$/, "");
+      if (vacio(doc[k]) && c.req === "obl" && (!c.cond || esNombramiento)) err(clave, g.filas[0]._fila, etiqueta(c), "obligatorio y vacío (se escribe en la primera fila del CAI)");
+      else if (vacio(doc[k]) && c.req === "rec") aviso(clave, `Seguimiento ${n}: falta "${c.h}" (recomendado).`);
+    }
+    for (const f of g.filas) {
+      const def = cai.defs.get(f.no_deficiencia);
+      if (!def) continue;
+      const anteriorCumplida = def.segs.some((s) => s.estado === "Cumplida");
+      const tiene = [`estado_${n}`, `acciones_${n}`, `comentario_${n}`].some((k) => !vacio(f[k]));
+      if (anteriorCumplida) {
+        if (tiene) err(clave, f._fila, `Seguimiento ${n}`, `la deficiencia ${f.no_deficiencia} ya estaba Cumplida: no admite más seguimientos`);
+        continue;
+      }
+      if (!tiene) {
+        aviso(clave, `Deficiencia ${f.no_deficiencia}: no se evaluó en el seguimiento ${n} (sigue con su estado anterior).`);
+        continue;
+      }
+      for (const k of [`estado_${n}`, `comentario_${n}`]) if (vacio(f[k])) err(clave, f._fila, etiqueta(col(k)), "obligatorio y vacío");
+      if (f[`estado_${n}`] && !ESTADOS.includes(f[`estado_${n}`])) err(clave, f._fila, etiqueta(col(`estado_${n}`)), `"${f[`estado_${n}`]}" no es de la lista`);
+      const seg = { no_seguimiento: n, ...doc, estado: f[`estado_${n}`], acciones: f[`acciones_${n}`], comentario: f[`comentario_${n}`], _fila: f._fila, no_deficiencia: f.no_deficiencia };
+      def.segs.push(seg);
+      cai.segs.push(seg);
+    }
+    cai[`doc${n}`] = doc;
+  }
+  if (cai.defs.size === 0) err(clave, null, "Deficiencias", "el CAI no tiene ninguna deficiencia");
+}
 // ───────── personas ─────────
 const usuarios = ok(await sb.from("usuarios").select("nit, nombre, activo, cargo"), "usuarios");
 const tokens = (n) => norm(n).split(" ").filter((t) => t && !["de", "del", "la", "los", "y"].includes(t));
@@ -227,7 +233,7 @@ const nombresDeCelda = (v) => (v ? v.split(/\n|;/).map(tit).filter(Boolean) : []
 const personas = new Map(); // nombre tal cual -> {nit, creado}
 const aCrear = [];
 let correlativoEx = usuarios.filter((u) => u.nit.startsWith("EX-")).length;
-function persona(nombre, contexto) {
+function persona(nombre) {
   if (!nombre) return null;
   if (personas.has(nombre)) return personas.get(nombre);
   const m = buscarPersona(nombre);
@@ -245,10 +251,10 @@ function persona(nombre, contexto) {
   return r;
 }
 for (const [clave, cai] of cais) {
-  const nombres = [cai.supervisor, cai.coordinador, ...nombresDeCelda(cai.auditores), ...cai.segs.flatMap((s) => nombresDeCelda(s.auditores))];
+  const nombres = [cai.supervisor, cai.coordinador, ...nombresDeCelda(cai.auditores), ...cai.segs.flatMap((s) => [s.coordinador, ...nombresDeCelda(s.auditores)])];
   for (const n of nombres) {
     const p = persona(n);
-    if (p?.error) err(clave, "CAI/Seguimientos", null, null, p.error);
+    if (p?.error) err(clave, null, "Personas", p.error);
     else if (p?.nota) aviso(clave, p.nota);
   }
 }
@@ -328,6 +334,7 @@ for (const clave of completos) {
     ok(await sb.from("documentos_seguimiento").insert({
       id: docId, departamento_id: depId(c.departamento), tipo_documento: esOficio ? "oficio" : "informe",
       no_nombramiento: esOficio ? null : f0.no_nombramiento, fecha_nombramiento: esOficio ? null : f0.fecha_nombramiento,
+      coordinador_nit: esOficio ? null : nitDe(f0.coordinador), fecha_limite_informe: esOficio ? null : f0.fecha_limite,
       no_documento: f0.no_documento, fecha_documento: f0.fecha_documento, fecha_carga_sag_udai: f0.fecha_sag, creado_por_nit: director,
     }), `documento ${f0.no_documento}`);
     ok(await sb.from("documentos_seguimiento_informes").insert({ documento_id: docId, informe_id: informeId }), "cobertura del documento");

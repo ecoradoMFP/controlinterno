@@ -1,5 +1,6 @@
-// Definición ÚNICA de la matriz de carga de SCIDAI: la usan el generador (plantilla y matrices
-// precargadas) y el importador, para que el formato nunca se desalinee.
+// Definición ÚNICA de la matriz de carga de SCIDAI (una sola hoja ancha, por etapas): la usan el
+// generador (plantilla y matrices precargadas) y el importador, para que el formato nunca se
+// desalinee. Una fila = una deficiencia con su recomendación, y a la derecha sus seguimientos.
 
 export const TIPOS_AUDITORIA = ["Cumplimiento y Financiera", "Cumplimiento", "Financiera", "Operativa", "Administrativa", "Especial"];
 export const ESTADOS = ["Cumplida", "No cumplida", "En proceso", "Pendiente"];
@@ -9,66 +10,77 @@ export const DEPARTAMENTOS = [
   "Departamento de Auditorías Administrativas y de Procesos",
   "Departamento de Auditorías Especiales",
 ];
+export const NUM_SEGUIMIENTOS = 3;
 
 // req: "obl" (sin esto no se carga), "rec" (recomendado: se carga y se avisa), "no" (no se importa).
-// tipo: texto | fecha | entero | lista:<nombre en Listas>
-export const HOJAS = {
-  CAI: {
-    nombre: "CAI",
-    columnas: [
-      { k: "anio_cai", h: "Año del CAI", req: "obl", tipo: "entero", ancho: 10, ayuda: "El número de CAI se reinicia cada año. Ej.: 2026" },
-      { k: "cai", h: "No. de CAI", req: "obl", tipo: "texto", ancho: 11, ayuda: "Ej.: 00001" },
-      { k: "departamento", h: "Departamento que audita", req: "obl", tipo: "lista:Departamentos", ancho: 30, ayuda: "Elige de la lista" },
-      { k: "dependencia", h: "Dependencia auditada", req: "obl", tipo: "lista:Dependencias", ancho: 34, ayuda: "Elige o escribe el nombre oficial" },
-      { k: "tipo_auditoria", h: "Tipo de auditoría", req: "obl", tipo: "lista:Tipos", ancho: 24, ayuda: "Elige de la lista" },
-      { k: "no_nombramiento", h: "No. de nombramiento", req: "obl", tipo: "texto", ancho: 18, ayuda: "Ej.: NAI-001-2026" },
-      { k: "fecha_nombramiento", h: "Fecha de nombramiento", req: "obl", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "periodo_inicio", h: "Período auditado: inicio", req: "rec", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "periodo_fin", h: "Período auditado: fin", req: "rec", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "fecha_informe_final", h: "Fecha del informe final", req: "rec", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "fecha_notificacion", h: "Fecha de notificación del informe", req: "rec", tipo: "fecha", ancho: 16, ayuda: "dd/mm/aaaa" },
-      { k: "supervisor", h: "Supervisor", req: "rec", tipo: "texto", ancho: 30, ayuda: "Nombre completo" },
-      { k: "coordinador", h: "Coordinador", req: "rec", tipo: "texto", ancho: 30, ayuda: "Nombre completo" },
-      { k: "auditores", h: "Auditor(es) del equipo", req: "rec", tipo: "texto", ancho: 36, ayuda: "Nombres completos, uno por línea" },
-      { k: "riesgo", h: "Riesgo", req: "rec", tipo: "texto", ancho: 40, ayuda: "Texto completo" },
-      { k: "observaciones", h: "Notas (no se importa)", req: "no", tipo: "texto", ancho: 40, ayuda: "Para dudas o aclaraciones" },
+// nivel: quién lo escribe — "fila" (cada fila), "cai" (una vez, en la primera fila del CAI),
+//        "doc" (una vez por seguimiento, en la primera fila del CAI), "rec" (cada fila del seguimiento).
+// cond: solo obligatorio cuando el documento es "Nombramiento e informe".
+export const BLOQUES = [
+  {
+    id: "id", titulo: "IDENTIFICACIÓN — en cada fila", color: "FF1F3864", columnas: [
+      { k: "anio_cai", h: "Año del CAI", req: "obl", nivel: "fila", tipo: "entero", ancho: 9, ayuda: "El número de CAI se reinicia cada año. Ej.: 2026" },
+      { k: "cai", h: "No. de CAI", req: "obl", nivel: "fila", tipo: "texto", ancho: 10, ayuda: "Ej.: 00001" },
+      { k: "no_deficiencia", h: "No. de deficiencia", req: "obl", nivel: "fila", tipo: "entero", ancho: 11, ayuda: "1, 2, 3… dentro del CAI" },
     ],
   },
-  DEF: {
-    nombre: "Deficiencias",
-    columnas: [
-      { k: "cai_clave", h: "CAI", req: "obl", tipo: "lista:ClavesCAI", ancho: 14, ayuda: "Elige de la lista (sale de la hoja CAI)" },
-      { k: "no_deficiencia", h: "No. de deficiencia", req: "obl", tipo: "entero", ancho: 12, ayuda: "1, 2, 3…" },
-      { k: "titulo", h: "Deficiencia (título)", req: "obl", tipo: "texto", ancho: 40, ayuda: "Nombre corto de la deficiencia" },
-      { k: "descripcion", h: "Descripción de la deficiencia", req: "rec", tipo: "texto", ancho: 50, ayuda: "Condición / síntesis" },
-      { k: "recomendacion", h: "Recomendación", req: "obl", tipo: "texto", ancho: 60, ayuda: "UNA recomendación por deficiencia" },
-      { k: "responsables", h: "Responsables de implementarla", req: "rec", tipo: "texto", ancho: 36, ayuda: "Nombre y puesto" },
-      { k: "fecha_implementacion", h: "Fecha de implementación", req: "obl", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "observaciones", h: "Notas (no se importa)", req: "no", tipo: "texto", ancho: 40, ayuda: "Para dudas o aclaraciones" },
+  {
+    id: "cai", titulo: "ETAPA 1 · EL CAI (la auditoría) — se escribe UNA vez, en la primera fila de cada CAI", color: "FF2E75B6", columnas: [
+      { k: "departamento", h: "Departamento que audita", req: "obl", nivel: "cai", tipo: "lista:Departamentos", ancho: 28, ayuda: "Elige de la lista" },
+      { k: "dependencia", h: "Dependencia auditada", req: "obl", nivel: "cai", tipo: "lista:Dependencias", ancho: 30, ayuda: "Elige o escribe el nombre oficial" },
+      { k: "tipo_auditoria", h: "Tipo de auditoría", req: "obl", nivel: "cai", tipo: "lista:Tipos", ancho: 22, ayuda: "Elige de la lista" },
+      { k: "no_nombramiento", h: "No. de nombramiento", req: "obl", nivel: "cai", tipo: "texto", ancho: 17, ayuda: "Ej.: NAI-001-2026" },
+      { k: "fecha_nombramiento", h: "Fecha de nombramiento", req: "obl", nivel: "cai", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+      { k: "periodo_inicio", h: "Período auditado: inicio", req: "rec", nivel: "cai", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+      { k: "periodo_fin", h: "Período auditado: fin", req: "rec", nivel: "cai", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+      { k: "fecha_informe_final", h: "Fecha del informe final", req: "rec", nivel: "cai", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+      { k: "fecha_notificacion", h: "Fecha de notificación del informe", req: "rec", nivel: "cai", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
+      { k: "supervisor", h: "Supervisor", req: "rec", nivel: "cai", tipo: "texto", ancho: 28, ayuda: "Nombre completo" },
+      { k: "coordinador", h: "Coordinador", req: "rec", nivel: "cai", tipo: "texto", ancho: 28, ayuda: "Nombre completo" },
+      { k: "auditores", h: "Auditor(es) del equipo", req: "rec", nivel: "cai", tipo: "texto", ancho: 32, ayuda: "Nombres completos, uno por línea" },
+      { k: "riesgo", h: "Riesgo", req: "rec", nivel: "cai", tipo: "texto", ancho: 36, ayuda: "Texto completo" },
     ],
   },
-  SEG: {
-    nombre: "Seguimientos",
-    columnas: [
-      { k: "cai_clave", h: "CAI", req: "obl", tipo: "lista:ClavesCAI", ancho: 14, ayuda: "Elige de la lista" },
-      { k: "no_deficiencia", h: "No. de deficiencia", req: "obl", tipo: "entero", ancho: 12, ayuda: "La misma de la hoja Deficiencias" },
-      { k: "no_seguimiento", h: "No. de seguimiento", req: "obl", tipo: "entero", ancho: 12, ayuda: "1 = primer seguimiento, 2 = segundo…" },
-      { k: "tipo_documento", h: "Tipo de documento", req: "obl", tipo: "lista:TiposDocumento", ancho: 22, ayuda: "Elige de la lista" },
-      { k: "no_nombramiento", h: "No. de nombramiento de seguimiento", req: "cond", tipo: "texto", ancho: 24, ayuda: "Obligatorio si es Nombramiento e informe" },
-      { k: "fecha_nombramiento", h: "Fecha del nombramiento de seguimiento", req: "cond", tipo: "fecha", ancho: 16, ayuda: "Obligatorio si es Nombramiento e informe" },
-      { k: "auditores", h: "Auditor(es) nombrado(s)", req: "obl", tipo: "texto", ancho: 30, ayuda: "Nombres completos, uno por línea" },
-      { k: "no_documento", h: "No. de informe u oficio", req: "obl", tipo: "texto", ancho: 22, ayuda: "El informe u oficio emitido" },
-      { k: "fecha_documento", h: "Fecha del informe u oficio", req: "obl", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "estado", h: "Estado de la recomendación", req: "obl", tipo: "lista:Estados", ancho: 16, ayuda: "Elige de la lista" },
-      { k: "acciones", h: "Acciones de los responsables", req: "rec", tipo: "texto", ancho: 50, ayuda: "Qué hizo la dependencia" },
-      { k: "comentario", h: "Comentario de auditoría", req: "obl", tipo: "texto", ancho: 50, ayuda: "Conclusión de auditoría" },
-      { k: "fecha_sag", h: "Fecha de carga al SAG-UDAI", req: "rec", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
-      { k: "observaciones", h: "Notas (no se importa)", req: "no", tipo: "texto", ancho: 40, ayuda: "Para dudas o aclaraciones" },
+  {
+    id: "def", titulo: "ETAPA 2 · DEFICIENCIA Y RECOMENDACIÓN — una fila por deficiencia (UNA recomendación cada una)", color: "FF548235", columnas: [
+      { k: "titulo", h: "Deficiencia (título)", req: "obl", nivel: "fila", tipo: "texto", ancho: 36, ayuda: "Nombre corto" },
+      { k: "descripcion", h: "Descripción de la deficiencia", req: "rec", nivel: "fila", tipo: "texto", ancho: 44, ayuda: "Condición / síntesis" },
+      { k: "recomendacion", h: "Recomendación", req: "obl", nivel: "fila", tipo: "texto", ancho: 56, ayuda: "Texto completo" },
+      { k: "responsables", h: "Responsables de implementarla", req: "rec", nivel: "fila", tipo: "texto", ancho: 32, ayuda: "Nombre y puesto" },
+      { k: "fecha_implementacion", h: "Fecha de implementación", req: "obl", nivel: "fila", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
     ],
   },
-};
+  ...Array.from({ length: NUM_SEGUIMIENTOS }, (_, i) => {
+    const n = i + 1;
+    return {
+      id: `s${n}`, seg: n, titulo: `SEGUIMIENTO ${n} — si el CAI aún no lo tiene, déjalo en blanco (las celdas azules se escriben una vez por CAI)`,
+      color: ["FFC55A11", "FF7030A0", "FF806000"][i], columnas: [
+        { k: `tipo_documento_${n}`, h: "Tipo de documento", req: "obl", nivel: "doc", tipo: "lista:TiposDocumento", ancho: 20, ayuda: "Elige de la lista" },
+        { k: `no_nombramiento_${n}`, h: "No. de nombramiento", req: "obl", cond: true, nivel: "doc", tipo: "texto", ancho: 20, ayuda: "El del nombramiento de seguimiento" },
+        { k: `fecha_nombramiento_${n}`, h: "Fecha del nombramiento", req: "obl", cond: true, nivel: "doc", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+        { k: `coordinador_${n}`, h: "Coordina", req: "obl", cond: true, nivel: "doc", tipo: "texto", ancho: 26, ayuda: "Nombre completo" },
+        { k: `fecha_limite_${n}`, h: "Fecha límite para notificar el informe", req: "obl", cond: true, nivel: "doc", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
+        { k: `auditores_${n}`, h: "Auditor(es) nombrado(s)", req: "obl", nivel: "doc", tipo: "texto", ancho: 28, ayuda: "Nombres completos, uno por línea" },
+        { k: `no_documento_${n}`, h: "No. de informe u oficio", req: "obl", nivel: "doc", tipo: "texto", ancho: 20, ayuda: "El informe u oficio emitido" },
+        { k: `fecha_documento_${n}`, h: "Fecha del informe u oficio", req: "obl", nivel: "doc", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+        { k: `fecha_sag_${n}`, h: "Fecha de carga al SAG-UDAI", req: "rec", nivel: "doc", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
+        { k: `estado_${n}`, h: "Estado de la recomendación", req: "obl", nivel: "rec", tipo: "lista:Estados", ancho: 15, ayuda: "Elige de la lista" },
+        { k: `acciones_${n}`, h: "Acciones de los responsables", req: "rec", nivel: "rec", tipo: "texto", ancho: 44, ayuda: "Qué hizo la dependencia" },
+        { k: `comentario_${n}`, h: "Comentario de auditoría", req: "obl", nivel: "rec", tipo: "texto", ancho: 44, ayuda: "Conclusión de auditoría" },
+      ],
+    };
+  }),
+  {
+    id: "notas", titulo: "NOTAS", color: "FF7F7F7F", columnas: [
+      { k: "observaciones", h: "Notas (no se importa)", req: "no", nivel: "fila", tipo: "texto", ancho: 44, ayuda: "Dudas o aclaraciones" },
+    ],
+  },
+];
 
-export const FILA_ENCABEZADO = 1;
-export const FILA_AYUDA = 2;
-export const PRIMERA_FILA_DATOS = 3;
+export const COLUMNAS = BLOQUES.flatMap((b) => b.columnas.map((c) => ({ ...c, bloque: b })));
+export const FILA_BANDA = 1;
+export const FILA_ENCABEZADO = 2;
+export const FILA_AYUDA = 3;
+export const PRIMERA_FILA_DATOS = 4;
 export const FILAS_FORMATEADAS = 300;
+export const NOMBRE_HOJA = "Matriz";

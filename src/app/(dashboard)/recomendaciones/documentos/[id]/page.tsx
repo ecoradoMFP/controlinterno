@@ -171,6 +171,14 @@ export default async function DocumentoSeguimientoPage({
               )}
             </div>
             <div>
+              <p className="text-xs font-medium text-muted-foreground">Coordina el seguimiento</p>
+              <p>{documento.coordinador?.nombre ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Fecha límite para notificar el informe</p>
+              <p>{documento.fecha_limite_informe ?? "—"}</p>
+            </div>
+            <div>
               <p className="text-xs font-medium text-muted-foreground">CAI / informes que cubre</p>
               <p className="codigo-expediente">{cais.join(" · ") || "—"}</p>
             </div>

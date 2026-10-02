@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { FilasRecomendacion } from "@/components/recomendaciones/lista-recomendaciones";
 import { PanelSeguimientoCai } from "@/components/recomendaciones/panel-seguimiento-cai";
 import { PasosCiclo, type PasoCiclo } from "@/components/recomendaciones/pasos-ciclo";
-import { etiquetaCai, pasoDelCai, type PasoCai } from "@/lib/recomendaciones";
+import { etiquetaCai, hoyGuatemala, pasoDelCai, type PasoCai } from "@/lib/recomendaciones";
 import { cargarCedulaDocumento, cargarDocumentosSeguimiento, cargarFlujoPorCai, cargarRecomendaciones } from "@/lib/recomendaciones-datos";
 
 const SECCIONES = [
@@ -115,6 +115,22 @@ export default async function CaiPage({
       </Card>
 
       <PasosCiclo pasos={pasos} />
+
+      {documento && paso !== "al_dia" ? (
+        <p className="text-sm text-muted-foreground">
+          Nombramiento de seguimiento <span className="codigo-expediente text-foreground">{documento.no_nombramiento ?? "—"}</span>
+          {documento.coordinador?.nombre ? <> · Coordina: <span className="text-foreground">{documento.coordinador.nombre}</span></> : null}
+          {documento.fecha_limite_informe ? (
+            <>
+              {" "}· Notificar el informe antes del{" "}
+              <span className={documento.no_documento || documento.fecha_limite_informe >= hoyGuatemala() ? "text-foreground" : "font-medium text-destructive"}>
+                {documento.fecha_limite_informe}
+                {!documento.no_documento && documento.fecha_limite_informe < hoyGuatemala() ? " (vencida)" : ""}
+              </span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">

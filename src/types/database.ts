@@ -487,11 +487,13 @@ export type Database = {
       }
       documentos_seguimiento: {
         Row: {
+          coordinador_nit: string | null
           creado_por_nit: string
           created_at: string
           departamento_id: string
           fecha_carga_sag_udai: string | null
           fecha_documento: string | null
+          fecha_limite_informe: string | null
           fecha_nombramiento: string | null
           id: string
           no_documento: string | null
@@ -500,11 +502,13 @@ export type Database = {
           tipo_documento: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
         }
         Insert: {
+          coordinador_nit?: string | null
           creado_por_nit: string
           created_at?: string
           departamento_id: string
           fecha_carga_sag_udai?: string | null
           fecha_documento?: string | null
+          fecha_limite_informe?: string | null
           fecha_nombramiento?: string | null
           id?: string
           no_documento?: string | null
@@ -513,11 +517,13 @@ export type Database = {
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
         }
         Update: {
+          coordinador_nit?: string | null
           creado_por_nit?: string
           created_at?: string
           departamento_id?: string
           fecha_carga_sag_udai?: string | null
           fecha_documento?: string | null
+          fecha_limite_informe?: string | null
           fecha_nombramiento?: string | null
           id?: string
           no_documento?: string | null
@@ -526,6 +532,13 @@ export type Database = {
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_seguimiento_enum"]
         }
         Relationships: [
+          {
+            foreignKeyName: "documentos_seguimiento_coordinador_nit_fkey"
+            columns: ["coordinador_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
           {
             foreignKeyName: "documentos_seguimiento_creado_por_nit_fkey"
             columns: ["creado_por_nit"]

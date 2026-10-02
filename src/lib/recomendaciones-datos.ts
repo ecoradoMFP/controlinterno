@@ -116,7 +116,7 @@ export async function cargarCedulaDocumento(supabase: SupabaseServerClient, id: 
   const { data: documento } = await supabase
     .from("documentos_seguimiento")
     .select(
-      `*, departamentos(nombre), documentos_seguimiento_auditores(usuario_nit, usuarios(nombre, puesto, cargo)),
+      `*, departamentos(nombre), coordinador:usuarios!documentos_seguimiento_coordinador_nit_fkey(nombre), documentos_seguimiento_auditores(usuario_nit, usuarios(nombre, puesto, cargo)),
        documentos_seguimiento_informes(informes_auditoria(id, no_nombramiento, cai, anio_cai, tipo_auditoria, dependencia_auditada,
          periodo_auditado_inicio, periodo_auditado_fin, fecha_notificacion,
          deficiencias(numero, titulo, descripcion, recomendaciones(id, numero, texto, responsables, estado_actual))))`,

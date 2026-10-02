@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlarmClock, CheckCircle2, ClipboardCheck, ClipboardList, Hourglass, ListChecks } from "lucide-react";
+import { AlarmClock, CheckCircle2, ClipboardCheck, ClipboardList, FileSpreadsheet, FileText, Hourglass, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,21 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
     return `${ruta}${qs ? `?${qs}` : ""}`;
   };
 
+  const urlReporte = (formato: "xlsx" | "docx") => {
+    const params = new URLSearchParams(
+      Object.entries({
+        formato,
+        etapa: aplicados.etapa,
+        estado: aplicados.estado,
+        dependencia: aplicados.dependencia,
+        departamento: aplicados.departamento,
+        anio: aplicados.anio,
+        q: filtros.q,
+      }).filter((e): e is [string, string] => !!e[1]),
+    );
+    return `/recomendaciones/reporte?${params.toString()}`;
+  };
+
   const kpi = (clave: string, label: string, detail: string, valor: number, icon: typeof ClipboardList, tone: "amarillo" | "naranja" | "accent" | "verde") => {
     // Volver a hacer clic en la tarjeta activa regresa a lo que requiere seguimiento.
     const href = urlCon({ etapa: etapa === clave ? "" : clave });
@@ -179,7 +194,16 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
             Cada recomendación se sigue, informe tras informe, hasta que queda cumplida. Se agrupan por CAI.
           </p>
         </div>
-        {puedeEscribir(usuario) ? <Button render={<Link href="/recomendaciones/informes/nuevo" />}>Nuevo CAI</Button> : null}
+        <div className="flex flex-wrap gap-2">
+          {/* Reporte como el de SAG-UDAI, con lo que se está viendo (mismos filtros). */}
+          <Button variant="outline" nativeButton={false} render={<a href={urlReporte("xlsx")} download />}>
+            <FileSpreadsheet /> Exportar Excel
+          </Button>
+          <Button variant="outline" nativeButton={false} render={<a href={urlReporte("docx")} download />}>
+            <FileText /> Exportar Word
+          </Button>
+          {puedeEscribir(usuario) ? <Button render={<Link href="/recomendaciones/informes/nuevo" />}>Nuevo CAI</Button> : null}
+        </div>
       </div>
 
       <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-6">
