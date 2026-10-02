@@ -8,6 +8,7 @@ export const informeFormSchema = z
   .object({
     no_nombramiento: z.string().trim().min(1, "Requerido"),
     cai: z.string().trim().min(1, "Requerido"),
+    anio_cai: z.coerce.number().int().min(2000, "Año inválido").max(2100, "Año inválido"),
     departamento_id: z.string().trim().min(1, "Requerido"),
     dependencia_auditada: z.string().trim().min(1, "Requerido"),
     tipo_auditoria: z.string().trim().min(1, "Requerido"),

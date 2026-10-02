@@ -665,6 +665,7 @@ export type Database = {
       informes_auditoria: {
         Row: {
           actividad_id: string | null
+          anio_cai: number | null
           anio_ejecucion: number | null
           bloqueado_en: string | null
           bloqueado_por_nit: string | null
@@ -688,6 +689,7 @@ export type Database = {
         }
         Insert: {
           actividad_id?: string | null
+          anio_cai?: number | null
           bloqueado_en?: string | null
           bloqueado_por_nit?: string | null
           anio_ejecucion?: never
@@ -711,6 +713,7 @@ export type Database = {
         }
         Update: {
           actividad_id?: string | null
+          anio_cai?: number | null
           bloqueado_en?: string | null
           bloqueado_por_nit?: string | null
           anio_ejecucion?: never

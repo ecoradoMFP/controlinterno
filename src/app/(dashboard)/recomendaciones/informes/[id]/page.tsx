@@ -85,12 +85,12 @@ export default async function InformeDetallePage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-2">
         <BackLink href="/recomendaciones" label="Volver a las recomendaciones" />
-        <BackLink href={`/recomendaciones/cai/${id}`} label={`Volver al ${etiquetaCai(informe.cai) ?? "CAI"}`} />
+        <BackLink href={`/recomendaciones/cai/${id}`} label={`Volver al ${etiquetaCai(informe.cai, informe.anio_cai) ?? "CAI"}`} />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="codigo-expediente text-lg">{etiquetaCai(informe.cai) ?? informe.no_nombramiento}</CardTitle>
+          <CardTitle className="codigo-expediente text-lg">{etiquetaCai(informe.cai, informe.anio_cai) ?? informe.no_nombramiento}</CardTitle>
           <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:gap-10">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Dependencia auditada</p>

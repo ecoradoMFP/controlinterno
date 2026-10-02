@@ -28,10 +28,11 @@ export function haceCuanto(fecha: string, hoy: string = hoyGuatemala()): string 
   return `hace ${meses} meses`;
 }
 
-/** "00006" -> "CAI 00006"; ya prefijado se deja igual. */
-export function etiquetaCai(cai: string | null): string | null {
+/** "00006", 2026 -> "CAI 00006-2026" (el número se reinicia cada año); ya prefijado se deja igual. */
+export function etiquetaCai(cai: string | null, anio?: number | null): string | null {
   if (!cai) return null;
-  return /^cai/i.test(cai) ? cai : `CAI ${cai}`;
+  const base = /^cai/i.test(cai) ? cai : `CAI ${cai}`;
+  return anio ? `${base}-${anio}` : base;
 }
 
 export type BucketRecomendacion = "activa" | "en_seguimiento" | "atendida";

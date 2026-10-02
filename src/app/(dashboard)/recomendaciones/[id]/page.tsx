@@ -63,13 +63,13 @@ export default async function RecomendacionDetallePage({
     .filter((d) => !d.no_documento && !usados.has(d.id))
     .sort((a, b) => (a.fecha_nombramiento ?? "").localeCompare(b.fecha_nombramiento ?? ""));
 
-  const identificacion = [etiquetaCai(informe.cai), informe.no_nombramiento].filter(Boolean).join(" · ");
+  const identificacion = [etiquetaCai(informe.cai, informe.anio_cai), informe.no_nombramiento].filter(Boolean).join(" · ");
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-2">
         <BackLink href="/recomendaciones" label="Volver a las recomendaciones" />
-        <BackLink href={`/recomendaciones/cai/${informe.id}`} label={`Volver al ${etiquetaCai(informe.cai) ?? "CAI"}`} />
+        <BackLink href={`/recomendaciones/cai/${informe.id}`} label={`Volver al ${etiquetaCai(informe.cai, informe.anio_cai) ?? "CAI"}`} />
       </div>
 
       <Card>
@@ -168,7 +168,7 @@ export default async function RecomendacionDetallePage({
       ) : null}
 
       <Button variant="outline" className="w-fit" render={<Link href={`/recomendaciones/cai/${informe.id}`} />}>
-        Ir al {etiquetaCai(informe.cai) ?? "CAI"} para darle seguimiento
+        Ir al {etiquetaCai(informe.cai, informe.anio_cai) ?? "CAI"} para darle seguimiento
       </Button>
     </div>
   );

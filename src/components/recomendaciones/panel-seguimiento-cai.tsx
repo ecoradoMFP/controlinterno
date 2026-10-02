@@ -46,7 +46,7 @@ export function PanelSeguimientoCai({
         return (
           <section key={informe.id} className="flex flex-col gap-3 rounded-xl border p-4">
             <header>
-              <h3 className="codigo-expediente text-base font-semibold">{etiquetaCai(informe.cai) ?? informe.no_nombramiento}</h3>
+              <h3 className="codigo-expediente text-base font-semibold">{etiquetaCai(informe.cai, informe.anio_cai) ?? informe.no_nombramiento}</h3>
               <p className="text-sm text-muted-foreground">
                 {informe.dependencia_auditada}
                 {informe.tipo_auditoria ? ` · ${informe.tipo_auditoria}` : ""}
@@ -117,7 +117,7 @@ export function PanelSeguimientoCai({
                   })}
                   <div className="flex flex-col gap-1">
                     <Button type="submit" size="lg" className="w-fit">
-                      Registrar seguimiento de {etiquetaCai(informe.cai) ?? "este CAI"}
+                      Registrar seguimiento de {etiquetaCai(informe.cai, informe.anio_cai) ?? "este CAI"}
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       Se guardan juntas las {porEvaluar.length} recomendaciones de este CAI. Una marcada como Cumplida cierra

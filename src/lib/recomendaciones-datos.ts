@@ -6,7 +6,7 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 // Usado tanto por la bandeja principal como por los paneles de "en seguimiento" e "histórico":
 // una sola consulta, un solo cálculo de a qué panel pertenece cada recomendación.
 const CAMPOS = `id, numero, texto, fecha_implementacion, estado_actual,
-   deficiencias(numero, titulo, informes_auditoria(id, no_nombramiento, cai, dependencia_auditada, anio_ejecucion, fecha_informe_final, departamento_id, departamentos(nombre))),
+   deficiencias(numero, titulo, informes_auditoria(id, no_nombramiento, cai, anio_cai, dependencia_auditada, anio_ejecucion, fecha_informe_final, departamento_id, departamentos(nombre))),
    seguimientos_recomendacion(numero_seguimiento, estado, documentos_seguimiento(no_documento, fecha_documento, no_nombramiento, fecha_nombramiento))`;
 
 export type FilaRecomendacion = Awaited<ReturnType<typeof cargarRecomendaciones>>[number];
@@ -67,7 +67,7 @@ export async function cargarDocumentosSeguimiento(supabase: SupabaseServerClient
       .select(
         `id, no_nombramiento, fecha_nombramiento, no_documento, fecha_documento, fecha_carga_sag_udai, tipo_documento, departamentos(nombre),
          documentos_seguimiento_auditores(usuarios(nombre)),
-         documentos_seguimiento_informes(informes_auditoria(id, cai, no_nombramiento, dependencia_auditada, deficiencias(recomendaciones(id, estado_actual))))`,
+         documentos_seguimiento_informes(informes_auditoria(id, cai, anio_cai, no_nombramiento, dependencia_auditada, deficiencias(recomendaciones(id, estado_actual))))`,
       ),
     supabase.from("seguimientos_recomendacion").select("documento_id, recomendacion_id").not("documento_id", "is", null),
   ]);
@@ -117,7 +117,7 @@ export async function cargarCedulaDocumento(supabase: SupabaseServerClient, id: 
     .from("documentos_seguimiento")
     .select(
       `*, departamentos(nombre), documentos_seguimiento_auditores(usuario_nit, usuarios(nombre, puesto, cargo)),
-       documentos_seguimiento_informes(informes_auditoria(id, no_nombramiento, cai, tipo_auditoria, dependencia_auditada,
+       documentos_seguimiento_informes(informes_auditoria(id, no_nombramiento, cai, anio_cai, tipo_auditoria, dependencia_auditada,
          periodo_auditado_inicio, periodo_auditado_fin, fecha_notificacion,
          deficiencias(numero, titulo, descripcion, recomendaciones(id, numero, texto, responsables, estado_actual))))`,
     )

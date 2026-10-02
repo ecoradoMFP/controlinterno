@@ -33,7 +33,7 @@ export default async function NuevoNombramientoSeguimientoPage({
     supabase
       .from("informes_auditoria")
       .select(
-        "id, no_nombramiento, cai, dependencia_auditada, departamento_id, deficiencias(recomendaciones(estado_actual))",
+        "id, no_nombramiento, cai, anio_cai, dependencia_auditada, departamento_id, deficiencias(recomendaciones(estado_actual))",
       ),
   ]);
 
@@ -65,7 +65,7 @@ export default async function NuevoNombramientoSeguimientoPage({
     <div className="flex flex-col gap-6">
       <BackLink
         href={informeFijo ? `/recomendaciones/cai/${informeFijo.id}` : "/recomendaciones"}
-        label={informeFijo ? `Volver al ${etiquetaCai(informeFijo.cai) ?? "CAI"}` : "Volver a la bandeja de recomendaciones"}
+        label={informeFijo ? `Volver al ${etiquetaCai(informeFijo.cai, informeFijo.anio_cai) ?? "CAI"}` : "Volver a la bandeja de recomendaciones"}
       />
 
       <Card>
@@ -87,7 +87,7 @@ export default async function NuevoNombramientoSeguimientoPage({
             {informeFijo ? (
               <div className="rounded-lg border bg-muted/30 p-3 text-sm">
                 <p className="text-xs font-medium text-muted-foreground">CAI al que se da seguimiento</p>
-                <p className="codigo-expediente font-medium">{etiquetaCai(informeFijo.cai) ?? informeFijo.no_nombramiento}</p>
+                <p className="codigo-expediente font-medium">{etiquetaCai(informeFijo.cai, informeFijo.anio_cai) ?? informeFijo.no_nombramiento}</p>
                 <p className="text-muted-foreground">{informeFijo.dependencia_auditada}</p>
                 <input type="hidden" name="informe_id" value={informeFijo.id} />
                 <input type="hidden" name="departamento_id" value={informeFijo.departamento_id} />
@@ -103,7 +103,7 @@ export default async function NuevoNombramientoSeguimientoPage({
                   </option>
                   {informesAbiertos.map((i) => (
                     <option key={i.id} value={i.id}>
-                      {[etiquetaCai(i.cai), i.no_nombramiento].filter(Boolean).join(" · ")} · {i.dependencia_auditada}
+                      {[etiquetaCai(i.cai, i.anio_cai), i.no_nombramiento].filter(Boolean).join(" · ")} · {i.dependencia_auditada}
                     </option>
                   ))}
                 </select>

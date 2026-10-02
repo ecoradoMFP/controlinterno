@@ -82,7 +82,7 @@ function GrupoCai({
               title="Abrir el CAI y darle seguimiento"
               className="codigo-expediente text-primary underline-offset-4 hover:underline"
             >
-              {etiquetaCai(informe.cai) ?? informe.no_nombramiento}
+              {etiquetaCai(informe.cai, informe.anio_cai) ?? informe.no_nombramiento}
             </Link>
           </p>
           <p className="text-sm text-muted-foreground">
@@ -152,7 +152,7 @@ export function FilasRecomendacion({
             <div className="min-w-0">
               {mostrarCai ? (
                 <p className="text-xs text-muted-foreground">
-                  <span className="codigo-expediente font-medium text-foreground">{etiquetaCai(f.informe.cai) ?? f.informe.no_nombramiento}</span>{" "}
+                  <span className="codigo-expediente font-medium text-foreground">{etiquetaCai(f.informe.cai, f.informe.anio_cai) ?? f.informe.no_nombramiento}</span>{" "}
                   · {f.informe.dependencia_auditada}
                 </p>
               ) : null}

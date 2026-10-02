@@ -38,16 +38,19 @@ export function InformeForm({
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Field label="CAI" htmlFor="cai" error={fieldErrors?.cai}>
           <Input id="cai" name="cai" required placeholder="CAI 00006" />
+        </Field>
+        <Field label="Año del CAI" htmlFor="anio_cai" error={fieldErrors?.anio_cai}>
+          <Input id="anio_cai" name="anio_cai" type="number" min={2000} max={2100} required defaultValue={new Date().getFullYear()} />
         </Field>
         <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
           <Input id="no_nombramiento" name="no_nombramiento" required placeholder="NAI-001-2026" />
         </Field>
       </div>
       <p className="-mt-3 text-xs text-muted-foreground">
-        Este módulo da seguimiento a CAI, y todo CAI lleva su nombramiento: ambos datos son obligatorios.
+        El número de CAI se reinicia cada año, por eso el CAI se identifica por número y año. Todo CAI lleva su nombramiento: son obligatorios.
       </p>
 
       <h2 className="-mb-2 text-sm font-semibold">Dependencia auditada y tipo de auditoría</h2>

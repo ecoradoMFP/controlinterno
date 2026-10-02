@@ -113,13 +113,13 @@ export default async function DocumentoSeguimientoPage({
 
   const cais = documento.documentos_seguimiento_informes
     .flatMap((c) => (c.informes_auditoria ? [c.informes_auditoria] : []))
-    .map((i) => [etiquetaCai(i.cai), i.no_nombramiento].filter(Boolean).join(" · "));
+    .map((i) => [etiquetaCai(i.cai, i.anio_cai), i.no_nombramiento].filter(Boolean).join(" · "));
 
   return (
     <div className="flex flex-col gap-6">
       <BackLink
         href={unSoloCai ? `/recomendaciones/cai/${unSoloCai.id}` : "/recomendaciones"}
-        label={unSoloCai ? `Volver al ${etiquetaCai(unSoloCai.cai) ?? "CAI"}` : "Volver a la bandeja de recomendaciones"}
+        label={unSoloCai ? `Volver al ${etiquetaCai(unSoloCai.cai, unSoloCai.anio_cai) ?? "CAI"}` : "Volver a la bandeja de recomendaciones"}
       />
 
       <Card>

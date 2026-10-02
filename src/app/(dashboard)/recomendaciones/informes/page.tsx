@@ -38,7 +38,7 @@ export default async function RecomendacionesPage({
   const [{ data: informes }, { data: recomendaciones }] = await Promise.all([
     supabase
       .from("informes_auditoria")
-      .select("id, no_nombramiento, cai, dependencia_auditada, fecha_nombramiento, departamentos(nombre)")
+      .select("id, no_nombramiento, cai, anio_cai, dependencia_auditada, fecha_nombramiento, departamentos(nombre)")
       .order("created_at", { ascending: false }),
     supabase.from("recomendaciones").select("id, estado_actual, deficiencias(informe_id)"),
   ]);
@@ -91,7 +91,7 @@ export default async function RecomendacionesPage({
               <li key={informe.id} className="p-4">
                 <Link href={`/recomendaciones/cai/${informe.id}`} className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="codigo-expediente text-sm font-medium">{etiquetaCai(informe.cai) ?? informe.no_nombramiento}</p>
+                    <p className="codigo-expediente text-sm font-medium">{etiquetaCai(informe.cai, informe.anio_cai) ?? informe.no_nombramiento}</p>
                     <p className="text-xs text-muted-foreground">
                       {[informe.dependencia_auditada, informe.no_nombramiento ? `Nombramiento ${informe.no_nombramiento}` : null, informe.departamentos?.nombre].filter(Boolean).join(" · ")}
                     </p>

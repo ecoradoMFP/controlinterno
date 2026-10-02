@@ -125,7 +125,7 @@ export async function generarCedulaDocx({ documento, informes, filas }: Cedula):
                 new Paragraph({
                   children: [
                     run(
-                      `Informe de Auditoría Interna, ${etiquetaCai(f.informe.cai) ?? `Nombramiento ${f.informe.no_nombramiento}`} ${f.informe.periodo_auditado_inicio ? `Período ${periodo(f.informe.periodo_auditado_inicio, f.informe.periodo_auditado_fin)}` : ""}${notificado ? `, notificado el ${notificado}` : ""}`,
+                      `Informe de Auditoría Interna, ${etiquetaCai(f.informe.cai, f.informe.anio_cai) ?? `Nombramiento ${f.informe.no_nombramiento}`} ${f.informe.periodo_auditado_inicio ? `Período ${periodo(f.informe.periodo_auditado_inicio, f.informe.periodo_auditado_fin)}` : ""}${notificado ? `, notificado el ${notificado}` : ""}`,
                       { bold: true },
                     ),
                   ],

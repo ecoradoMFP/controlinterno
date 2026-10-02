@@ -23,6 +23,7 @@ export async function crearInforme(formData: FormData) {
   const parsed = informeFormSchema.safeParse({
     no_nombramiento: campo("no_nombramiento"),
     cai: campo("cai"),
+    anio_cai: campo("anio_cai"),
     departamento_id: formData.get("departamento_id"),
     dependencia_auditada: formData.get("dependencia_auditada"),
     tipo_auditoria: campo("tipo_auditoria"),
@@ -67,7 +68,13 @@ export async function crearInforme(formData: FormData) {
 
 
   if (error) {
-    fail("No se pudo crear el informe. Verifica los datos e intenta de nuevo.");
+    // 23505: el mismo número de CAI ya existe en ese año (el número se reinicia cada año).
+    fail(
+      error.code === "23505"
+        ? `Ya existe el CAI ${parsed.data.cai} del año ${parsed.data.anio_cai}.`
+        : "No se pudo crear el informe. Verifica los datos e intenta de nuevo.",
+      error.code === "23505" ? { cai: "Ya registrado en ese año" } : undefined,
+    );
   }
 
   revalidatePath("/recomendaciones");
