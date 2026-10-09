@@ -259,7 +259,7 @@ export default async function ReportesPage() {
       <div>
         <h1 className="text-xl font-semibold">Reportes</h1>
         <p className="text-sm text-muted-foreground">
-          Panorama general primero; el detalle por actividad y por integrante queda más abajo.
+          Panorama general primero; el detalle por auditoría y por integrante queda más abajo.
         </p>
       </div>
 
@@ -269,10 +269,10 @@ export default async function ReportesPage() {
 
         <div className="rounded-xl border shadow-sm">
           <div className="border-b p-4">
-            <h3 className="font-medium">Semáforo de actividades</h3>
+            <h3 className="font-medium">Semáforo de auditorías</h3>
             <p className="text-xs text-muted-foreground">
-              Peor caso entre los hitos y oficios abiertos de cada actividad (sección 5). Las
-              actividades sin hitos u oficios capturados todavía no tienen semáforo activo.
+              Peor caso entre los hitos y oficios abiertos de cada auditoría (sección 5). Las
+              auditorías sin hitos u oficios capturados todavía no tienen semáforo activo.
             </p>
           </div>
           <div className="flex flex-col items-center gap-6 p-4 sm:flex-row">
@@ -308,14 +308,14 @@ export default async function ReportesPage() {
       {/* ── Desglose: detalle por actividad, cuello de botella e integrante. ── */}
       <section className="flex flex-col gap-4">
         <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Desglose por actividad
+          Desglose por auditoría
         </h2>
 
         <div className="rounded-xl border shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Actividad</TableHead>
+                <TableHead>Auditoría</TableHead>
                 <TableHead>Departamento</TableHead>
                 <TableHead>Semáforo</TableHead>
               </TableRow>
@@ -346,7 +346,7 @@ export default async function ReportesPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                    No hay actividades dentro de tu alcance todavía.
+                    No hay auditorías dentro de tu alcance todavía.
                   </TableCell>
                 </TableRow>
               )}

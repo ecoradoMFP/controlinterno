@@ -71,7 +71,7 @@ export default async function OficiosPage() {
           <TableHeader>
             <TableRow>
               <TableHead>No. de oficio</TableHead>
-              <TableHead>Actividad</TableHead>
+              <TableHead>Auditoría</TableHead>
               <TableHead>Destinatario</TableHead>
               <TableHead>Asunto</TableHead>
               <TableHead>Vencimiento</TableHead>

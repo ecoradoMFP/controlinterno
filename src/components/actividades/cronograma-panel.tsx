@@ -2,6 +2,7 @@ import { agregarHito, concluirHito } from "@/app/(dashboard)/actividades/[id]/ac
 import { Button } from "@/components/ui/button";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { Input } from "@/components/ui/input";
+import { FechasHitoFields } from "@/components/actividades/fechas-hito-fields";
 import {
   Select,
   SelectContent,
@@ -116,18 +117,7 @@ export function CronogramaPanel({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Inicio esperado</label>
-            <Input name="fecha_inicio_esperada" type="date" required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Fin esperado</label>
-            <Input name="fecha_fin_esperada" type="date" required />
-          </div>
-          <div className="flex w-32 flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Días hábiles</label>
-            <Input name="dias_habiles_esperados" type="number" min={0} step={1} required />
-          </div>
+          <FechasHitoFields asuetos={[...feriados]} />
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Documento que produce (opcional)</label>
             <Select name="documento_catalogo_id" items={Object.fromEntries(catalogo.map((c) => [c.id, c.nombre]))}>

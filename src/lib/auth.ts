@@ -47,6 +47,17 @@ export function puedeCorregirHechoConsumado(usuario: Pick<Usuario, "permiso_sist
 }
 
 /**
+ * Decisiones de jefatura en una auditoría (marcar "No aplica", corregir fechas ya registradas
+ * del equipo): Subjefe, Jefe, Subdirector o Director con permiso de escritura, o control_total.
+ * Espeja las validaciones de `marcar_no_aplica` y `corregir_fecha_equipo`.
+ */
+export function esJefaturaAuditoria(usuario: Pick<Usuario, "permiso_sistema" | "cargo"> | null): boolean {
+  if (!usuario || !puedeEscribir(usuario)) return false;
+  if (usuario.permiso_sistema === "control_total") return true;
+  return usuario.cargo != null && (["subjefe", "jefe", "subdirector", "director"] as const).includes(usuario.cargo as never);
+}
+
+/**
  * Replica en la app el alcance de cargo de la política RLS `actividades_update` (jefe/subjefe
  * del mismo departamento, subdirector de la subdirección que lo agrupa, o director) — no solo
  * `permiso_sistema` como hace `puedeEscribir`. Sin esto, `puedeEditar` (basado solo en

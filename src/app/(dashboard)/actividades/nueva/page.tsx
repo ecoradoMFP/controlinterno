@@ -45,11 +45,11 @@ export default async function NuevaActividadPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/actividades" label="Volver a Actividades" />
+      <BackLink href="/actividades" label="Volver a Auditorías (CAI)" />
 
       <Card>
         <CardHeader>
-          <CardTitle>Nueva actividad</CardTitle>
+          <CardTitle>Nueva auditoría</CardTitle>
         </CardHeader>
         <CardContent>
           <ActividadForm

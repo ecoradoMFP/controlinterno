@@ -13,7 +13,7 @@ export function SemaforoDonut({ conteo }: { conteo: Record<ColorSemaforo, number
   if (total === 0) {
     return (
       <div className="flex h-40 w-40 shrink-0 items-center justify-center rounded-full border border-dashed text-center text-xs text-muted-foreground">
-        Sin actividades
+        Sin auditorías
         <br />
         con semáforo activo
       </div>
@@ -53,7 +53,7 @@ export function SemaforoDonut({ conteo }: { conteo: Record<ColorSemaforo, number
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-semibold tabular-nums">{total}</span>
-        <span className="text-[11px] text-muted-foreground">actividades</span>
+        <span className="text-[11px] text-muted-foreground">auditorías</span>
       </div>
     </div>
   );

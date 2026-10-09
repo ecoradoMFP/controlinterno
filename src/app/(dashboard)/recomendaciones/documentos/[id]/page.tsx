@@ -288,11 +288,9 @@ export default async function DocumentoSeguimientoPage({
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-medium">Seguimiento por CAI</h2>
-          {filas.length > 0 ? (
-            <Button variant="outline" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>
-              <FileDown /> Descargar cédula en Word
-            </Button>
-          ) : null}
+          <Button variant="outline" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>
+            <FileDown /> Descargar cédula en Word
+          </Button>
           {porEvaluar > 0 ? (
             <p className="text-xs text-muted-foreground">{porEvaluar} recomendación(es) por evaluar en este seguimiento</p>
           ) : null}

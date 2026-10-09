@@ -146,26 +146,20 @@ export async function generarCedulaDocx({ documento, informes, filas }: Cedula):
       ...parrafos(deficiencia.descripcion),
       titulo("RECOMENDACIÓN"),
       ...parrafos(recomendacion.texto),
-      // Historial: cada seguimiento anterior ya emitido, con el número de su informe, el estado
-      // que se registró entonces y el comentario de auditoría.
-      ...anteriores.flatMap((a) => {
-        const emitido = fechaLarga(a.documentos_seguimiento?.fecha_documento ?? null);
-        return [
-          new Paragraph({
-            spacing: { before: 120, after: 40 },
-            children: [
-              run(
-                `Seguimiento no. ${a.numero_seguimiento} · Informe de Actividad Administrativa No. ${a.documentos_seguimiento?.no_documento}${emitido ? `, emitido el ${emitido}` : ""}`,
-                { bold: true },
-              ),
-            ],
-          }),
-          new Paragraph({ spacing: { after: 40 }, children: [run(`Estado: ${ESTADO_RECOMENDACION_LABELS[a.estado]}`)] }),
-          ...(a.comentario_auditoria
-            ? [new Paragraph({ spacing: { after: 20 }, children: [run("Comentario de auditoría:", { bold: true })] }), ...parrafos(a.comentario_auditoria)]
-            : []),
-        ];
-      }),
+      // Histórico: los seguimientos anteriores ya emitidos se van acumulando debajo de la
+      // recomendación (número de su informe y el comentario de auditoría de entonces); la columna
+      // de seguimiento queda solo con el vigente.
+      ...anteriores.flatMap((a) => [
+        new Paragraph({
+          spacing: { before: 120, after: 40 },
+          children: [
+            run(`INFORME DE ACTIVIDAD ADMINISTRATIVA No. ${a.documentos_seguimiento?.no_documento}`, {
+              bold: true,
+            }),
+          ],
+        }),
+        ...(a.comentario_auditoria ? parrafos(a.comentario_auditoria) : [new Paragraph({ children: [run("Sin comentario registrado.")] })]),
+      ]),
     ];
     const derecha = [
       ...(evaluacion?.acciones_responsables ? [titulo("ACCIONES DE LOS RESPONSABLES"), ...parrafos(evaluacion.acciones_responsables)] : []),

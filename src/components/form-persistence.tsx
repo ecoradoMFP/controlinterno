@@ -13,11 +13,34 @@ export function FormPersistence() {
   const search = useSearchParams().toString();
 
   useEffect(() => {
+    // Si el error se repite, el redirect cae en la MISMA URL (`?error=` idéntico) y el efecto de
+    // abajo no vuelve a correr, pero React igual reemplaza el <form> por uno vacío. Por eso, tras
+    // cada envío se vigila el DOM y, cuando el formulario enviado desaparece, se restaura.
+    let observador: MutationObserver | undefined;
+    let limite: ReturnType<typeof setTimeout> | undefined;
+    const dejarDeVigilar = () => {
+      observador?.disconnect();
+      clearTimeout(limite);
+    };
     const alEnviar = (e: SubmitEvent) => {
-      if (e.target instanceof HTMLFormElement) guardarFormulario(e.target);
+      if (!(e.target instanceof HTMLFormElement)) return;
+      const enviado = e.target;
+      guardarFormulario(enviado);
+      dejarDeVigilar();
+      observador = new MutationObserver(() => {
+        if (enviado.isConnected) return;
+        dejarDeVigilar();
+        const entrada = leerFormularioGuardado();
+        if (entrada) [0, 150, 500].forEach((ms) => setTimeout(() => restaurarFormulario(entrada), ms));
+      });
+      observador.observe(document.body, { childList: true, subtree: true });
+      limite = setTimeout(dejarDeVigilar, 60_000);
     };
     document.addEventListener("submit", alEnviar, true);
-    return () => document.removeEventListener("submit", alEnviar, true);
+    return () => {
+      document.removeEventListener("submit", alEnviar, true);
+      dejarDeVigilar();
+    };
   }, []);
 
   useEffect(() => {

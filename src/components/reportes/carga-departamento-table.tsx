@@ -60,7 +60,7 @@ export function CargaDepartamentoTable({ filas }: { filas: FilaCargaDepartamento
         <TableHeader>
           <TableRow>
             <TableHead>Departamento</TableHead>
-            <TableHead>Actividades activas</TableHead>
+            <TableHead>Auditorías activas</TableHead>
             <TableHead>Documentos pendientes</TableHead>
             <TableHead>Oficios pendientes</TableHead>
           </TableRow>

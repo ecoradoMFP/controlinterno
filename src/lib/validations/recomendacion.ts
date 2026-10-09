@@ -60,7 +60,8 @@ export const nombramientoFormSchema = z
     informe_id: z.uuid({ error: "Elige un informe" }),
     no_nombramiento: z.string().trim().min(1, "Requerido"),
     fecha_nombramiento: z.iso.date({ error: "Requerida" }),
-    coordinador_nit: z.string().trim().min(1, "Elige quién coordina"),
+    // Opcional: no todos los departamentos designan coordinador en el nombramiento.
+    coordinador_nit: z.string().trim().optional(),
     fecha_limite_informe: z.iso.date({ error: "Requerida" }),
     no_documento: z.string().trim().optional(),
     fecha_documento: fechaOpcional,

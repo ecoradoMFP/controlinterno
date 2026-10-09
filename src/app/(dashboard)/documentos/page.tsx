@@ -45,7 +45,7 @@ export default async function DocumentosPage({
         <div>
           <h1 className="text-xl font-semibold">Documentos</h1>
           <p className="text-sm text-muted-foreground">
-            Documentos en curso (no finalizados) entre las actividades dentro de tu alcance.
+            Documentos en curso (no finalizados) entre las auditorías dentro de tu alcance.
           </p>
         </div>
         {usuario?.cargo ? (
@@ -66,7 +66,7 @@ export default async function DocumentosPage({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Actividad</TableHead>
+              <TableHead>Auditoría</TableHead>
               <TableHead>Documento</TableHead>
               <TableHead>Etapa</TableHead>
               <TableHead>Fase actual</TableHead>

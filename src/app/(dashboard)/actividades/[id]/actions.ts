@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  esJefaturaAuditoria,
   getUsuarioActual,
   puedeCerrarEtapaActividad,
   puedeCorregirHechoConsumado,
@@ -123,7 +124,7 @@ export async function agregarHito(formData: FormData) {
     documento_catalogo_id: documentoCatalogoId,
   });
 
-  if (error) fail(actividadId, "cronograma", "No se pudo agregar el hito (¿código ya usado en esta actividad?).");
+  if (error) fail(actividadId, "cronograma", "No se pudo agregar el hito (¿código ya usado en esta auditoría?).");
 
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/actividades/${actividadId}?tab=cronograma`);
@@ -212,7 +213,7 @@ export async function cerrarEtapa(formData: FormData) {
   // director, nunca Auditor) — sin este chequeo, un Auditor veía el botón habilitado y, al
   // hacer clic, el único error que le llegaba era el mensaje crudo de Postgres/RLS.
   if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
-    fail(actividadId, "documentos", "Tu cargo no tiene permiso para cerrar la etapa de esta actividad.");
+    fail(actividadId, "documentos", "Tu cargo no tiene permiso para cerrar la etapa de esta auditoría.");
   }
 
   const { data: actividad } = await supabase
@@ -220,7 +221,7 @@ export async function cerrarEtapa(formData: FormData) {
     .select("etapa_actual")
     .eq("id", actividadId)
     .maybeSingle();
-  if (!actividad) fail(actividadId, "documentos", "No se encontró la actividad.");
+  if (!actividad) fail(actividadId, "documentos", "No se encontró la auditoría.");
 
   const etapaCerrada = actividad.etapa_actual;
   const etapaSiguiente = SIGUIENTE_ETAPA[etapaCerrada];
@@ -274,6 +275,39 @@ export async function actualizarConfirmacionEquipo(formData: FormData) {
     .eq("usuario_nit", usuarioNit);
 
   if (error) fail(actividadId, "equipo", "No se pudo guardar la confirmación.");
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=equipo`);
+}
+
+/**
+ * Corrige una fecha del equipo ya registrada (recibido del nombramiento o Declaración de
+ * Independencia): decisión de jefatura con motivo obligatorio. La función SQL
+ * `corregir_fecha_equipo` valida de nuevo y deja la corrección en la bitácora del equipo.
+ */
+export async function corregirFechaEquipo(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const usuarioNit = String(formData.get("usuario_nit") ?? "");
+  const campo = String(formData.get("campo") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
+  const motivo = String(formData.get("motivo") ?? "").trim();
+
+  const usuario = await getUsuarioActual();
+  if (!esJefaturaAuditoria(usuario)) {
+    fail(actividadId, "equipo", "Corregir una fecha ya registrada es decisión de la jefatura.");
+  }
+  if ((campo !== "recibido" && campo !== "declaracion") || !fecha) fail(actividadId, "equipo", "Indica la nueva fecha.");
+  if (motivo.length < 10) fail(actividadId, "equipo", "Escribe el motivo de la corrección (al menos 10 caracteres).");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("corregir_fecha_equipo", {
+    p_actividad_id: actividadId,
+    p_usuario_nit: usuarioNit,
+    p_campo: campo,
+    p_fecha: fecha,
+    p_motivo: motivo,
+  });
+  if (error) fail(actividadId, "equipo", error.code === "P0001" ? error.message : "No se pudo corregir la fecha.");
 
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/actividades/${actividadId}?tab=equipo`);

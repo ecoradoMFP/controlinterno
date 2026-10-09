@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
+  esJefaturaAuditoria,
   getUsuarioActual,
   puedeCerrarEtapaActividad,
   puedeCorregirHechoConsumado,
@@ -60,6 +61,7 @@ export default async function ActividadDetallePage({
     { data: matrizRevision },
     { data: etapaHistorial },
     { data: informeVinculado },
+    { data: correccionesEquipo },
   ] = await Promise.all([
     supabase
       .from("actividades_equipo")
@@ -92,6 +94,11 @@ export default async function ActividadDetallePage({
       .eq("actividad_id", id)
       .order("timestamp"),
     supabase.from("informes_auditoria").select("id").eq("actividad_id", id).maybeSingle(),
+    supabase
+      .from("actividades_equipo_correcciones")
+      .select("*, registrado_por:usuarios!actividades_equipo_correcciones_registrado_por_nit_fkey(nombre)")
+      .eq("actividad_id", id)
+      .order("created_at"),
   ]);
 
   // Orden del catálogo (1-18): los documentos de una etapa se crean juntos al abrirla.
@@ -171,7 +178,7 @@ export default async function ActividadDetallePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <BackLink href="/actividades" label="Volver a Actividades" />
+      <BackLink href="/actividades" label="Volver a Auditorías (CAI)" />
 
       <Card>
         <CardHeader>
@@ -247,7 +254,9 @@ export default async function ActividadDetallePage({
             actividadId={id}
             equipo={equipo ?? []}
             candidatos={candidatosEquipo}
+            correcciones={correccionesEquipo ?? []}
             puedeEditar={puedeEditar}
+            puedeCorregir={puedeEditar && esJefaturaAuditoria(usuario)}
           />
         </TabsContent>
         <TabsContent value="cronograma">

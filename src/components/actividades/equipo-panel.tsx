@@ -1,4 +1,4 @@
-import { agregarMiembroEquipo, actualizarConfirmacionEquipo } from "@/app/(dashboard)/actividades/[id]/actions";
+import { agregarMiembroEquipo, actualizarConfirmacionEquipo, corregirFechaEquipo } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,18 +8,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { CARGO_LABELS, type ActividadEquipo, type Usuario } from "@/types/domain";
+
+export type CorreccionFechaEquipo = {
+  id: string;
+  usuario_nit: string;
+  campo: string;
+  fecha_anterior: string;
+  fecha_nueva: string;
+  motivo: string;
+  created_at: string;
+  registrado_por: { nombre: string } | null;
+};
+
+const ETIQUETA_CAMPO: Record<string, string> = {
+  recibido: "Recibido del nombramiento",
+  declaracion: "Declaración de Independencia",
+};
 
 export function EquipoPanel({
   actividadId,
   equipo,
   candidatos,
+  correcciones,
   puedeEditar,
+  puedeCorregir,
 }: {
   actividadId: string;
   equipo: (ActividadEquipo & { usuarios: Pick<Usuario, "nombre" | "cargo" | "puesto"> | null })[];
   candidatos: Usuario[];
+  correcciones: CorreccionFechaEquipo[];
   puedeEditar: boolean;
+  /** Jefatura: puede corregir una fecha ya registrada, con motivo. */
+  puedeCorregir: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -28,15 +50,18 @@ export function EquipoPanel({
           <li className="p-4 text-sm text-muted-foreground">Sin miembros de equipo asignados aún.</li>
         ) : (
           equipo.map((m) => (
-            <li key={m.usuario_nit} className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <span>
-                  {m.usuarios?.nombre ?? m.usuario_nit}
-                  {m.usuarios?.cargo ? ` · ${CARGO_LABELS[m.usuarios.cargo]}` : ""}
-                </span>
-                <span className="ml-2 text-muted-foreground">{m.rol_en_equipo ?? "—"}</span>
+            <li key={m.usuario_nit} className="flex flex-col gap-2 p-3 text-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <span>
+                    {m.usuarios?.nombre ?? m.usuario_nit}
+                    {m.usuarios?.cargo ? ` · ${CARGO_LABELS[m.usuarios.cargo]}` : ""}
+                  </span>
+                  <span className="ml-2 text-muted-foreground">{m.rol_en_equipo ?? "—"}</span>
+                </div>
+                <ConfirmacionEquipo actividadId={actividadId} miembro={m} puedeEditar={puedeEditar} puedeCorregir={puedeCorregir} />
               </div>
-              <ConfirmacionEquipo actividadId={actividadId} miembro={m} puedeEditar={puedeEditar} />
+              <HistorialCorrecciones correcciones={correcciones.filter((c) => c.usuario_nit === m.usuario_nit)} />
             </li>
           ))
         )}
@@ -92,10 +117,12 @@ function ConfirmacionEquipo({
   actividadId,
   miembro,
   puedeEditar,
+  puedeCorregir,
 }: {
   actividadId: string;
   miembro: ActividadEquipo;
   puedeEditar: boolean;
+  puedeCorregir: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-3 text-xs">
@@ -106,6 +133,7 @@ function ConfirmacionEquipo({
         etiqueta="Recibido del nombramiento"
         fecha={miembro.fecha_recibido}
         puedeEditar={puedeEditar}
+        puedeCorregir={puedeCorregir}
       />
       <ConfirmacionCampo
         actividadId={actividadId}
@@ -114,6 +142,7 @@ function ConfirmacionEquipo({
         etiqueta="Declaración de Independencia"
         fecha={miembro.fecha_declaracion_independencia}
         puedeEditar={puedeEditar}
+        puedeCorregir={puedeCorregir}
       />
     </div>
   );
@@ -126,6 +155,7 @@ function ConfirmacionCampo({
   etiqueta,
   fecha,
   puedeEditar,
+  puedeCorregir,
 }: {
   actividadId: string;
   usuarioNit: string;
@@ -133,12 +163,40 @@ function ConfirmacionCampo({
   etiqueta: string;
   fecha: string | null;
   puedeEditar: boolean;
+  puedeCorregir: boolean;
 }) {
   if (fecha) {
-    return (
+    const registrada = (
       <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
         {etiqueta}: {fecha}
       </span>
+    );
+    if (!puedeCorregir) return registrada;
+    // Una fecha ya registrada solo la corrige la jefatura y siempre con motivo; la corrección
+    // queda en el historial del integrante (ver `corregir_fecha_equipo`).
+    return (
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5">
+          {registrada}
+          <span className="text-primary underline-offset-2 group-open:hidden hover:underline">Corregir</span>
+        </summary>
+        <form action={corregirFechaEquipo} className="mt-2 flex w-72 flex-col gap-2 rounded-lg border bg-background p-3">
+          <input type="hidden" name="actividad_id" value={actividadId} />
+          <input type="hidden" name="usuario_nit" value={usuarioNit} />
+          <input type="hidden" name="campo" value={campo} />
+          <label className="flex flex-col gap-1">
+            <span className="font-medium">Nueva fecha de {etiqueta.toLowerCase()}</span>
+            <Input type="date" name="fecha" required defaultValue={fecha} className="h-8 text-xs" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="font-medium">Motivo de la corrección</span>
+            <Textarea name="motivo" required minLength={10} rows={2} className="text-xs" />
+          </label>
+          <Button type="submit" variant="outline" size="sm" className="w-fit">
+            Guardar corrección
+          </Button>
+        </form>
+      </details>
     );
   }
 
@@ -156,5 +214,19 @@ function ConfirmacionCampo({
         {etiqueta}
       </Button>
     </form>
+  );
+}
+
+function HistorialCorrecciones({ correcciones }: { correcciones: CorreccionFechaEquipo[] }) {
+  if (correcciones.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-1 border-l-2 pl-3 text-xs text-muted-foreground">
+      {correcciones.map((c) => (
+        <li key={c.id}>
+          <span className="font-medium text-foreground">{ETIQUETA_CAMPO[c.campo] ?? c.campo}</span> corregida de {c.fecha_anterior} a{" "}
+          {c.fecha_nueva} por {c.registrado_por?.nombre ?? "—"} el {c.created_at.slice(0, 10)}. Motivo: {c.motivo}
+        </li>
+      ))}
+    </ul>
   );
 }

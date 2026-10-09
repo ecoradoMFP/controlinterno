@@ -178,7 +178,7 @@ for (const g of grupos) {
     for (const c of cols.filter((x) => x.nivel === "doc")) {
       const k = c.k.replace(/_\d$/, "");
       if (vacio(doc[k]) && c.req === "obl" && (!c.cond || esNombramiento)) err(clave, g.filas[0]._fila, etiqueta(c), "obligatorio y vacío (se escribe en la primera fila del CAI)");
-      else if (vacio(doc[k]) && c.req === "rec") aviso(clave, `Seguimiento ${n}: falta "${c.h}" (recomendado).`);
+      else if (vacio(doc[k]) && c.req === "rec" && (!c.cond || esNombramiento)) aviso(clave, `Seguimiento ${n}: falta "${c.h}" (recomendado).`);
     }
     for (const f of g.filas) {
       const def = cai.defs.get(f.no_deficiencia);
@@ -251,7 +251,7 @@ function persona(nombre) {
   return r;
 }
 for (const [clave, cai] of cais) {
-  const nombres = [cai.supervisor, cai.coordinador, ...nombresDeCelda(cai.auditores), ...cai.segs.flatMap((s) => [s.coordinador, ...nombresDeCelda(s.auditores)])];
+  const nombres = [cai.supervisor, cai.coordinador, ...nombresDeCelda(cai.auditores), ...cai.segs.flatMap((s) => [s.tipo_documento === "Oficio" ? null : s.coordinador, ...nombresDeCelda(s.auditores)])];
   for (const n of nombres) {
     const p = persona(n);
     if (p?.error) err(clave, null, "Personas", p.error);

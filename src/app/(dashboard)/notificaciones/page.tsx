@@ -23,7 +23,7 @@ export default async function NotificacionesPage() {
         <div>
           <h1 className="text-xl font-semibold">Notificaciones</h1>
           <p className="text-sm text-muted-foreground">
-            Alertas de semáforo (sección 9): se generan cuando una actividad dentro de tu alcance
+            Alertas de semáforo (sección 9): se generan cuando una auditoría dentro de tu alcance
             entra o cambia a naranja/rojo, vía el job diario.
           </p>
         </div>

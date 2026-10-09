@@ -54,12 +54,12 @@ export async function agregarFeriado(formData: FormData) {
   const fecha = String(formData.get("fecha") ?? "").trim();
   const descripcion = String(formData.get("descripcion") ?? "").trim();
 
-  if (!fecha || !descripcion) fail("Indica fecha y descripción del feriado.");
+  if (!fecha || !descripcion) fail("Indica fecha y descripción del asueto.");
 
   const supabase = await createClient();
   const { error } = await supabase.from("calendario_feriados").insert({ fecha, descripcion });
 
-  if (error) fail("No se pudo agregar el feriado (¿ya existe esa fecha?).");
+  if (error) fail("No se pudo agregar el asueto (¿ya existe esa fecha?).");
 
   revalidatePath("/configuracion");
   redirect("/configuracion");
@@ -73,7 +73,7 @@ export async function eliminarFeriado(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.from("calendario_feriados").delete().eq("fecha", fecha);
 
-  if (error) fail("No se pudo eliminar el feriado.");
+  if (error) fail("No se pudo eliminar el asueto.");
 
   revalidatePath("/configuracion");
   redirect("/configuracion");

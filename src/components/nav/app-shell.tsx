@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/actividades", label: "Actividades", icon: ClipboardList },
+  { href: "/actividades", label: "Auditorías (CAI)", icon: ClipboardList },
   { href: "/documentos", label: "Documentos", icon: FileText },
   { href: "/oficios", label: "Oficios", icon: Mail },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },

@@ -41,7 +41,7 @@ export default async function ConfiguracionPage({
       <div>
         <h1 className="text-xl font-semibold">Configuración del semáforo</h1>
         <p className="text-sm text-muted-foreground">
-          Umbrales (sección 5) y calendario de feriados (sección 4.12) — exclusivo de Dirección.
+          Umbrales (sección 5) y calendario de asuetos (sección 4.12) — exclusivo de Dirección.
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export default async function ConfiguracionPage({
 
       <div className="rounded-xl border shadow-sm">
         <div className="border-b p-4">
-          <h2 className="font-medium">Calendario de feriados</h2>
+          <h2 className="font-medium">Calendario de asuetos</h2>
           <p className="text-xs text-muted-foreground">
             Excluidos del cálculo de días hábiles en todo el sistema.
           </p>
@@ -146,7 +146,7 @@ export default async function ConfiguracionPage({
             ) : (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
-                  No hay feriados registrados.
+                  No hay asuetos registrados.
                 </TableCell>
               </TableRow>
             )}
@@ -162,7 +162,7 @@ export default async function ConfiguracionPage({
             <Input name="descripcion" required />
           </div>
           <Button type="submit" variant="outline">
-            Agregar feriado
+            Agregar asueto
           </Button>
         </form>
       </div>

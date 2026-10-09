@@ -129,11 +129,9 @@ export default async function NuevoNombramientoSeguimientoPage({
               <Campo label="Fecha del nombramiento" htmlFor="fecha_nombramiento" error={fieldErrors.fecha_nombramiento}>
                 <Input id="fecha_nombramiento" name="fecha_nombramiento" type="date" />
               </Campo>
-              <Campo label="Coordina el seguimiento" htmlFor="coordinador_nit" error={fieldErrors.coordinador_nit}>
+              <Campo label="Coordina el seguimiento (opcional)" htmlFor="coordinador_nit" error={fieldErrors.coordinador_nit}>
                 <select id="coordinador_nit" name="coordinador_nit" defaultValue="" className={SELECT_CLASES}>
-                  <option value="" disabled>
-                    Elige a la persona que coordina…
-                  </option>
+                  <option value="">Sin coordinador designado</option>
                   {candidatos.map((u) => (
                     <option key={u.nit} value={u.nit}>
                       {u.nombre} — {u.puesto ?? (u.cargo ? CARGO_LABELS[u.cargo] : "Sin cargo")}

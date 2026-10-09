@@ -24,7 +24,7 @@ export function CargaTrabajoTable({ filas }: { filas: FilaCargaTrabajo[] }) {
       <div className="border-b p-4">
         <h2 className="font-medium">Carga de trabajo por integrante</h2>
         <p className="text-xs text-muted-foreground">
-          Desglose de todo el equipo (auditor, subjefe, jefe): actividades activas asignadas,
+          Desglose de todo el equipo (auditor, subjefe, jefe): auditorías activas asignadas,
           documentos pendientes en la etapa de su cargo, y oficios propios sin respuesta todavía.
         </p>
       </div>
@@ -34,7 +34,7 @@ export function CargaTrabajoTable({ filas }: { filas: FilaCargaTrabajo[] }) {
             <TableHead>Integrante</TableHead>
             <TableHead>Cargo</TableHead>
             <TableHead>Departamento</TableHead>
-            <TableHead>Actividades activas</TableHead>
+            <TableHead>Auditorías activas</TableHead>
             <TableHead>Documentos pendientes</TableHead>
             <TableHead>Oficios pendientes</TableHead>
           </TableRow>

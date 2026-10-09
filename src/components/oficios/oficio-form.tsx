@@ -42,9 +42,9 @@ export function OficioForm({
         </Field>
       </div>
 
-      <Field label="Actividad relacionada (opcional)" htmlFor="actividad_id">
+      <Field label="Auditoría relacionada (opcional)" htmlFor="actividad_id">
         {actividades.length === 0 ? (
-          <Input id="actividad_id_display" value="Sin actividades disponibles" disabled />
+          <Input id="actividad_id_display" value="Sin auditorías disponibles" disabled />
         ) : actividades.length === 1 ? (
           // Con una sola actividad candidata, el Select de Base UI puede abrir y cerrar el
           // popup en el mismo gesto sin confirmar la selección — visto en vivo: el oficio se
@@ -60,7 +60,7 @@ export function OficioForm({
             items={Object.fromEntries(actividades.map((a) => [a.id, a.no_nombramiento]))}
           >
             <SelectTrigger id="actividad_id" className="w-full">
-              <SelectValue placeholder="Sin actividad relacionada" />
+              <SelectValue placeholder="Sin auditoría relacionada" />
             </SelectTrigger>
             <SelectContent>
               {actividades.map((a) => (

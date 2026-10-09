@@ -164,6 +164,64 @@ export type Database = {
           },
         ]
       }
+      actividades_equipo_correcciones: {
+        Row: {
+          actividad_id: string
+          campo: string
+          created_at: string
+          fecha_anterior: string
+          fecha_nueva: string
+          id: string
+          motivo: string
+          registrado_por_nit: string
+          usuario_nit: string
+        }
+        Insert: {
+          actividad_id: string
+          campo: string
+          created_at?: string
+          fecha_anterior: string
+          fecha_nueva: string
+          id?: string
+          motivo: string
+          registrado_por_nit: string
+          usuario_nit: string
+        }
+        Update: {
+          actividad_id?: string
+          campo?: string
+          created_at?: string
+          fecha_anterior?: string
+          fecha_nueva?: string
+          id?: string
+          motivo?: string
+          registrado_por_nit?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actividades_equipo_correcciones_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actividades_equipo_correcciones_registrado_por_nit_fkey"
+            columns: ["registrado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "actividades_equipo_correcciones_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
       actividades_etapa_historial: {
         Row: {
           actividad_id: string
@@ -1409,6 +1467,10 @@ export type Database = {
           p_observacion?: string
           p_responsable_esperado?: Database["public"]["Enums"]["cargo_enum"]
         }
+        Returns: undefined
+      }
+      corregir_fecha_equipo: {
+        Args: { p_actividad_id: string; p_campo: string; p_fecha: string; p_motivo: string; p_usuario_nit: string }
         Returns: undefined
       }
       marcar_no_aplica: {

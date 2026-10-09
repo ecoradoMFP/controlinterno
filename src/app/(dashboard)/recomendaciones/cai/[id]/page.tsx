@@ -1,3 +1,4 @@
+import { FileDown } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -77,6 +78,9 @@ export default async function CaiPage({
   const puedeRegistrar = puedeEscribir(usuario) && puedeDar && paso === "evaluar";
   const filasPanel = cedula?.filas.filter((f) => f.informe.id === id) ?? [];
   const volverA = `/recomendaciones/cai/${id}`;
+  // La cédula se puede descargar en cualquier etapa: la del nombramiento en curso (aunque aún no se
+  // emita ni se cargue al SAG-UDAI) o, si no hay uno, la del último informe de seguimiento.
+  const cedulaId = documento?.id ?? anteriores[0]?.id ?? null;
 
   const alDia = paso === "al_dia";
   const idx = { capturar: 0, nombramiento: 1, evaluar: 2, emitir: 3, sag: 4, al_dia: 5 }[paso];
@@ -106,9 +110,9 @@ export default async function CaiPage({
           <Button variant="outline" render={<Link href={`/recomendaciones/informes/${id}`} />}>
             {informe.bloqueado_en ? "Ver el informe (captura bloqueada)" : "Ver o editar el informe"}
           </Button>
-          {documento ? (
-            <Button variant="outline" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>
-              Descargar la cédula en Word
+          {cedulaId ? (
+            <Button variant="outline" render={<a href={`/recomendaciones/documentos/${cedulaId}/cedula`} download />}>
+              <FileDown /> Descargar la cédula en Word
             </Button>
           ) : null}
         </CardContent>
@@ -233,6 +237,19 @@ export default async function CaiPage({
                 El informe {documento.no_documento} ya se emitió. Falta que el Director lo cargue al SAG-UDAI y registre la fecha.
               </p>
             )
+          ) : null}
+
+          {documento && (paso === "evaluar" || paso === "emitir" || paso === "sag") ? (
+            <div className="flex flex-col gap-1 border-t pt-4">
+              <Button variant="outline" className="w-fit" render={<a href={`/recomendaciones/documentos/${documento.id}/cedula`} download />}>
+                <FileDown /> Descargar la cédula en Word
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {documento.no_documento
+                  ? `Cédula del informe ${documento.no_documento}.`
+                  : "Sale con lo evaluado hasta ahora; puedes descargarla las veces que quieras antes de emitir el informe."}
+              </p>
+            </div>
           ) : null}
 
           {alDia ? (

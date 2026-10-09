@@ -58,7 +58,7 @@ export default async function HojaDeRutaPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between print:hidden">
-        <BackLink href={`/actividades/${id}`} label="Volver a la actividad" />
+        <BackLink href={`/actividades/${id}`} label="Volver a la auditoría" />
         <PrintButton />
       </div>
 

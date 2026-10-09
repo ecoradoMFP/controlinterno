@@ -78,7 +78,7 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     departamento_id: datos.departamento_id,
     no_nombramiento: datos.no_nombramiento,
     fecha_nombramiento: datos.fecha_nombramiento,
-    coordinador_nit: datos.coordinador_nit,
+    coordinador_nit: datos.coordinador_nit || null,
     fecha_limite_informe: datos.fecha_limite_informe,
     no_documento: datos.no_documento || null,
     fecha_documento: datos.fecha_documento || null,

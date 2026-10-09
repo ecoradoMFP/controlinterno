@@ -58,7 +58,7 @@ export default async function OficioDetallePage({
           <p className="text-sm text-muted-foreground">{oficio.asunto}</p>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
-          <Info label="Actividad relacionada" value={oficio.actividades?.no_nombramiento} />
+          <Info label="Auditoría relacionada" value={oficio.actividades?.no_nombramiento} />
           <Info label="Responsable" value={oficio.responsable?.nombre} />
           <Info label="Destinatario" value={oficio.destinatario} />
           <Info label="Puesto del destinatario" value={oficio.puesto_destinatario} />

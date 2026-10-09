@@ -1,3 +1,4 @@
+import { esJefaturaAuditoria } from "@/lib/auth";
 import {
   agregarDocumentoActividad,
   avanzarDocumento,
@@ -67,9 +68,7 @@ export function DocumentosPanel({
   const esControlTotal = usuario?.permiso_sistema === "control_total";
   const puedeVistoBueno = usuario?.cargo === "subdirector" || usuario?.cargo === "director";
   // Espeja la validación de `marcar_no_aplica`: decisión de jefatura o control_total.
-  const puedeNoAplica =
-    esControlTotal ||
-    (usuario?.cargo != null && ["subjefe", "jefe", "subdirector", "director"].includes(usuario.cargo));
+  const puedeNoAplica = esJefaturaAuditoria(usuario);
 
   return (
     <div className="flex flex-col gap-6">

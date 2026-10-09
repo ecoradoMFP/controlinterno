@@ -196,7 +196,7 @@ export function ActividadForm({
       </Field>
 
       <Button type="submit" className="w-fit">
-        Crear actividad
+        Crear auditoría
       </Button>
     </form>
   );

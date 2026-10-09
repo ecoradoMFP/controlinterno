@@ -74,7 +74,7 @@ export const SIGUIENTE_ETAPA: Record<EtapaActividadEnum, EtapaActividadEnum | nu
 export const AMBITO_SEMAFORO_LABELS: Record<AmbitoSemaforoEnum, string> = {
   hito: "Hitos de cronograma",
   oficio: "Oficios",
-  actividad: "Actividad (general)",
+  actividad: "Auditoría (general)",
 };
 
 export const ETAPA_DOCUMENTO_LABELS: Record<EtapaDocumentoEnum, string> = {

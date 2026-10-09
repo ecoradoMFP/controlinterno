@@ -58,7 +58,7 @@ export const BLOQUES = [
         { k: `tipo_documento_${n}`, h: "Tipo de documento", req: "obl", nivel: "doc", tipo: "lista:TiposDocumento", ancho: 20, ayuda: "Elige de la lista" },
         { k: `no_nombramiento_${n}`, h: "No. de nombramiento", req: "obl", cond: true, nivel: "doc", tipo: "texto", ancho: 20, ayuda: "El del nombramiento de seguimiento" },
         { k: `fecha_nombramiento_${n}`, h: "Fecha del nombramiento", req: "obl", cond: true, nivel: "doc", tipo: "fecha", ancho: 13, ayuda: "dd/mm/aaaa" },
-        { k: `coordinador_${n}`, h: "Coordina", req: "obl", cond: true, nivel: "doc", tipo: "texto", ancho: 26, ayuda: "Nombre completo" },
+        { k: `coordinador_${n}`, h: "Coordina", req: "rec", cond: true, nivel: "doc", tipo: "texto", ancho: 26, ayuda: "Nombre completo" },
         { k: `fecha_limite_${n}`, h: "Fecha límite para notificar el informe", req: "obl", cond: true, nivel: "doc", tipo: "fecha", ancho: 14, ayuda: "dd/mm/aaaa" },
         { k: `auditores_${n}`, h: "Auditor(es) nombrado(s)", req: "obl", nivel: "doc", tipo: "texto", ancho: 28, ayuda: "Nombres completos, uno por línea" },
         { k: `no_documento_${n}`, h: "No. de informe u oficio", req: "obl", nivel: "doc", tipo: "texto", ancho: 20, ayuda: "El informe u oficio emitido" },

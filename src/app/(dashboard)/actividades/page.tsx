@@ -26,14 +26,14 @@ export default async function ActividadesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Actividades</h1>
+        <h1 className="text-xl font-semibold">Auditorías (CAI)</h1>
         {puedeEscribir(usuario) ? (
-          <Button render={<Link href="/actividades/nueva" />}>Nueva actividad</Button>
+          <Button render={<Link href="/actividades/nueva" />}>Nueva auditoría</Button>
         ) : null}
       </div>
 
       {error ? (
-        <p className="text-sm text-destructive">No se pudieron cargar las actividades.</p>
+        <p className="text-sm text-destructive">No se pudieron cargar las auditorías.</p>
       ) : null}
 
       <div className="rounded-xl border shadow-sm">
@@ -73,7 +73,7 @@ export default async function ActividadesPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  No hay actividades dentro de tu alcance todavía.
+                  No hay auditorías dentro de tu alcance todavía.
                 </TableCell>
               </TableRow>
             )}
