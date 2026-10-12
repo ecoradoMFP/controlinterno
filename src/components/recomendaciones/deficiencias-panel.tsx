@@ -18,6 +18,7 @@ import {
   type Recomendacion,
   type SeguimientoRecomendacion,
 } from "@/types/domain";
+import { RotuloRecomendacion } from "@/components/recomendaciones/rotulo-recomendacion";
 
 type RecomendacionConSeguimientos = Recomendacion & { seguimientos_recomendacion: SeguimientoRecomendacion[] };
 export type CambioRecomendacion = {
@@ -30,6 +31,7 @@ export type CambioRecomendacion = {
   datos_anteriores: unknown
   datos_nuevos: unknown
   usuarios: { nombre: string } | null
+  deficienciaNumero: number | null
 };
 type DeficienciaConRecomendaciones = Deficiencia & { recomendaciones: RecomendacionConSeguimientos[] };
 
@@ -76,7 +78,7 @@ export function DeficienciasPanel({
             return (
               <div key={d.id} className="rounded-xl border p-4">
                 <p className="font-medium">
-                  {d.numero}. {d.titulo}
+                  Deficiencia {d.numero} · {d.titulo}
                 </p>
                 {d.descripcion ? <p className="mt-1 text-sm text-muted-foreground">{d.descripcion}</p> : null}
                 {puedeEditar ? <CorregirDeficiencia deficiencia={d} informeId={informeId} /> : null}
@@ -183,12 +185,13 @@ function RecomendacionItem({
     <div className="rounded-md border bg-muted/30 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
+          <RotuloRecomendacion />
           <Link
             href={`/recomendaciones/${recomendacion.id}`}
             title="Ver la deficiencia y su historial"
             className="text-sm whitespace-pre-line underline-offset-2 hover:underline"
           >
-            {recomendacion.numero}. {recomendacion.texto}
+            {recomendacion.texto}
           </Link>
           {recomendacion.responsables ? (
             <p className="text-xs whitespace-pre-line text-muted-foreground">
@@ -343,7 +346,9 @@ function HistorialCambios({ historial }: { historial: CambioRecomendacion[] }) {
                 {new Date(c.created_at).toLocaleString("es-GT", { timeZone: "America/Guatemala" })} · {c.usuarios?.nombre ?? "—"}
               </p>
               <p className="font-medium">
-                {c.accion === "anulada" ? "Eliminó" : "Corrigió"} {c.entidad === "deficiencia" ? "la deficiencia" : "la recomendación"} {antes.numero}
+                {c.accion === "anulada" ? "Eliminó" : "Corrigió"}{" "}
+                {c.entidad === "deficiencia" ? "la deficiencia" : "la recomendación de la deficiencia"}
+                {c.deficienciaNumero != null ? ` ${c.deficienciaNumero}` : ""}
               </p>
               <p className="text-xs">Motivo: {c.motivo}</p>
               {c.accion === "anulada" ? (

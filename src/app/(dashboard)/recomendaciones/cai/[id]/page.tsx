@@ -21,10 +21,10 @@ const SECCIONES = [
 ] as const;
 
 const TITULO_PASO: Record<PasoCai, string> = {
-  capturar: "Capturar las deficiencias y sus recomendaciones",
+  capturar: "Registrar las recomendaciones emitidas",
   nombramiento: "Registrar el nombramiento de seguimiento",
-  evaluar: "Registrar el seguimiento de las recomendaciones",
-  emitir: "Emitir el informe de seguimiento",
+  evaluar: "Completar la cédula de seguimiento",
+  emitir: "Emisión del informe de seguimiento",
   sag: "Cargar el informe al SAG-UDAI",
   al_dia: "Este CAI está al día",
 };
@@ -86,10 +86,10 @@ export default async function CaiPage({
   const idx = { capturar: 0, nombramiento: 1, evaluar: 2, emitir: 3, sag: 4, al_dia: 5 }[paso];
   const estado = (n: number): PasoCiclo["estado"] => (alDia || n < idx ? "hecho" : n === idx ? "actual" : "pendiente");
   const pasos: PasoCiclo[] = [
-    { titulo: "Recomendaciones capturadas", detalle: `${filas.length} recomendación(es)`, estado: estado(0) },
+    { titulo: "Recomendaciones emitidas", detalle: `${filas.length} recomendación(es)`, estado: estado(0) },
     { titulo: "Nombrar auditor", detalle: documento?.no_nombramiento ?? "Nombramiento de seguimiento", estado: estado(1) },
-    { titulo: "Evaluar recomendaciones", detalle: "Estado de cada una", estado: estado(2) },
-    { titulo: "Emitir informe", detalle: documento?.no_documento ?? "Número y fecha", estado: estado(3) },
+    { titulo: "Cédula de seguimiento", detalle: "Estado de cada una", estado: estado(2) },
+    { titulo: "Emisión del informe", detalle: documento?.no_documento ?? "Número y fecha", estado: estado(3) },
     { titulo: "Cargar al SAG-UDAI", detalle: "Lo registra el Director", estado: estado(4) },
   ];
 
@@ -150,9 +150,9 @@ export default async function CaiPage({
         <CardContent className="flex flex-col gap-4 text-sm">
           {paso === "capturar" ? (
             <>
-              <p>Este CAI todavía no tiene recomendaciones. Captura cada deficiencia junto con su recomendación.</p>
+              <p>Este CAI todavía no tiene recomendaciones. Registra cada deficiencia junto con su recomendación, como vienen en el informe.</p>
               <Button size="lg" className="w-fit" render={<Link href={`/recomendaciones/informes/${id}`} />}>
-                Capturar deficiencias y recomendaciones
+                Registrar las recomendaciones emitidas
               </Button>
             </>
           ) : null}

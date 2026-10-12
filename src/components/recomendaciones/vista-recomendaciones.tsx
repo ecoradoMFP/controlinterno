@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlarmClock, CheckCircle2, ClipboardCheck, ClipboardList, FileSpreadsheet, FileText, Hourglass, ListChecks } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, ClipboardList, FileSpreadsheet, FileText, Hourglass, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -58,8 +58,6 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
       const e = a.etapa ?? "accion";
       if (e === "accion") {
         if (f.etapa !== "por_evaluar" && f.etapa !== "evaluada") return false;
-      } else if (e === "vencidas") {
-        if (!f.vencida) return false;
       } else if (e !== "todas" && f.etapa !== e) return false;
     }
     if (q) {
@@ -107,13 +105,9 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
 
   const visibles = alcance
     .filter((f) => coincide(f, aplicados))
-    // Vencidas primero, luego por fecha de implementación más próxima; agrupar por CAI conserva
-    // el orden de la primera fila de cada CAI.
-    .sort(
-      (a, b) =>
-        Number(b.vencida) - Number(a.vencida) ||
-        (a.fecha_implementacion ?? "9999").localeCompare(b.fecha_implementacion ?? "9999"),
-    );
+    // Por fecha de implementación (solo como orden; el plazo ya no se trata como alerta); agrupar
+    // por CAI conserva el orden de la primera fila de cada CAI.
+    .sort((a, b) => (a.fecha_implementacion ?? "9999").localeCompare(b.fecha_implementacion ?? "9999"));
 
   const urlCon = (cambios: FiltrosVista) => {
     const params = new URLSearchParams(
@@ -206,10 +200,9 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
         </div>
       </div>
 
-      <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-6">
-        {kpi("por_evaluar", "Por evaluar", "Falta registrar su seguimiento", cuenta("por_evaluar"), ClipboardList, "naranja")}
-        {kpi("evaluada", "Evaluadas", "Falta emitir el informe", cuenta("evaluada"), ClipboardCheck, "amarillo")}
-        {kpi("vencidas", "Vencidas", "Plazo pasado", base.filter((f) => f.vencida).length, AlarmClock, "naranja")}
+      <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-5">
+        {kpi("por_evaluar", "Por evaluar", "Falta completar la cédula", cuenta("por_evaluar"), ClipboardList, "naranja")}
+        {kpi("evaluada", "Evaluadas", "Falta la emisión del informe", cuenta("evaluada"), ClipboardCheck, "amarillo")}
         {kpi("en_seguimiento", "En seguimiento", "Evaluadas este año", cuenta("en_seguimiento"), Hourglass, "accent")}
         {kpi("atendida", "Atendidas", "Cumplidas, histórico", cuenta("atendida"), CheckCircle2, "verde")}
         {kpi("todas", "Todas", "Sin filtro de etapa", base.length, ListChecks, "accent")}

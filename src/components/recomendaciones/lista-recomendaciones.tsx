@@ -2,8 +2,8 @@ import Link from "next/link";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { ACCION_PASO, ETAPA_LABELS, etiquetaCai, haceCuanto, hoyGuatemala, PASO_CAI_FALTA, type PasoCai } from "@/lib/recomendaciones";
 import { Button } from "@/components/ui/button";
+import { RotuloRecomendacion } from "@/components/recomendaciones/rotulo-recomendacion";
 import type { FilaRecomendacion } from "@/lib/recomendaciones-datos";
-import { cn } from "@/lib/utils";
 import { ESTADO_RECOMENDACION_LABELS, ESTADO_RECOMENDACION_TONO, ESTADOS_RECOMENDACION } from "@/types/domain";
 
 const ESTADO_PLURAL = { pendiente: "pendientes", en_proceso: "en proceso", no_cumplida: "no cumplidas", cumplida: "cumplidas" } as const;
@@ -64,7 +64,6 @@ function GrupoCai({
   paso?: PasoCai;
 }) {
   const { informe } = filas[0];
-  const vencidas = filas.filter((f) => f.vencida).length;
   const porEstado = ESTADOS_RECOMENDACION.map((e) => [e, filas.filter((f) => f.estado_actual === e).length] as const).filter(
     ([, n]) => n > 0,
   );
@@ -98,13 +97,6 @@ function GrupoCai({
             {porEstado.length > 0 ? ": " : ""}
             {porEstado.map(([e, n]) => `${n} ${n === 1 ? ESTADO_RECOMENDACION_LABELS[e].toLowerCase() : ESTADO_PLURAL[e]}`).join(" · ")}
           </span>
-          {/* Un plazo vencido es un aviso sobre las mismas recomendaciones, no otra categoría: va
-           * aparte y dice "con plazo vencido" para que no parezca que se suma al total. */}
-          {vencidas > 0 ? (
-            <span className="rounded-full border border-destructive/30 bg-destructive/5 px-2 py-0.5 font-medium text-destructive">
-              {vencidas === 1 ? "1 con plazo vencido" : `${vencidas} con plazo vencido`}
-            </span>
-          ) : null}
         </div>
         {/* Los pasos del CAI (nombramiento, informe, SAG-UDAI) van como acción del grupo, no como
          * encabezado: lo que se sigue son las recomendaciones. */}
@@ -144,8 +136,8 @@ export function FilasRecomendacion({
             href={`/recomendaciones/${f.id}`}
             className="grid gap-2 p-4 hover:bg-muted/40 md:grid-cols-[9rem_1fr_14rem] md:gap-4"
           >
-            {/* Único chip: el estado actual. "Vencida" es un plazo, no un estado — va como
-             * texto junto a la fecha de implementación. */}
+            {/* Único chip: el estado actual. La fecha de implementación queda solo como dato
+             * histórico (por decisión de la jefatura, no se alerta si ya pasó). */}
             <div>
               <SemaforoChip tono={ESTADO_RECOMENDACION_TONO[f.estado_actual]} label={ESTADO_RECOMENDACION_LABELS[f.estado_actual]} />
             </div>
@@ -157,9 +149,12 @@ export function FilasRecomendacion({
                 </p>
               ) : null}
               <p className="text-sm font-medium">
-                Def. {f.deficiencia.numero} · {f.deficiencia.titulo}
+                Deficiencia {f.deficiencia.numero} · {f.deficiencia.titulo}
               </p>
-              <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{f.texto}</p>
+              <div className="mt-1.5">
+                <RotuloRecomendacion />
+                <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{f.texto}</p>
+              </div>
             </div>
             <div className="flex flex-col gap-0.5 text-xs text-muted-foreground md:text-right">
               <span className="font-medium text-foreground">{ETAPA_LABELS[f.etapa]}</span>
@@ -187,9 +182,7 @@ export function FilasRecomendacion({
               {contexto === "activa" && f.estado_actual === "cumplida" ? (
                 <span className="font-medium text-foreground">Pasará al histórico al emitirse el documento</span>
               ) : contexto === "activa" && f.fecha_implementacion ? (
-                <span className={cn(f.vencida && "font-medium text-destructive")}>
-                  {f.vencida ? "Vencida · debía implementarse el" : "Implementar antes de:"} {f.fecha_implementacion}
-                </span>
+                <span>Fecha de implementación: {f.fecha_implementacion}</span>
               ) : null}
 
               {contexto === "en_seguimiento" && f.anioBucket ? (

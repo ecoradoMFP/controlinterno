@@ -5,7 +5,7 @@ import { BackLink } from "@/components/nav/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SemaforoChip } from "@/components/semaforo-chip";
-import { estaVencida, etiquetaCai } from "@/lib/recomendaciones";
+import { etiquetaCai } from "@/lib/recomendaciones";
 import { cn } from "@/lib/utils";
 import {
   ESTADO_RECOMENDACION_LABELS,
@@ -47,7 +47,6 @@ export default async function RecomendacionDetallePage({
   const estadoInicial = historial.find((s) => s.numero_seguimiento === 0);
   const seguimientos = historial.filter((s) => s.documentos_seguimiento);
   const cumplida = recomendacion.estado_actual === "cumplida";
-  const vencida = estaVencida(recomendacion.estado_actual, recomendacion.fecha_implementacion);
 
   // Nombramientos de seguimiento que cubren este informe, todavía sin emitir (la cédula se cierra
   // al emitirse) y que no evaluaron esta recomendación: el "siguiente paso" del ciclo.
@@ -81,7 +80,7 @@ export default async function RecomendacionDetallePage({
             />
           </div>
           <CardTitle className="text-lg">
-            Def. {deficiencia.numero} · {deficiencia.titulo}
+            Deficiencia {deficiencia.numero} · {deficiencia.titulo}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             <span className="codigo-expediente font-medium text-foreground">{identificacion}</span> ·{" "}
@@ -93,17 +92,14 @@ export default async function RecomendacionDetallePage({
         </CardHeader>
         <CardContent className="flex flex-col gap-4 text-sm">
           {deficiencia.descripcion ? <Bloque titulo="Deficiencia" texto={deficiencia.descripcion} /> : null}
-          <Bloque titulo={`Recomendación ${recomendacion.numero}`} texto={recomendacion.texto} />
+          <Bloque titulo="Recomendación" texto={recomendacion.texto} />
           <div className="grid gap-4 sm:grid-cols-2">
             {recomendacion.responsables ? (
               <Bloque titulo="Responsables de implementarla" texto={recomendacion.responsables} />
             ) : null}
             <div>
               <p className="text-xs font-medium text-muted-foreground">Fecha de implementación</p>
-              <p className={cn(vencida && "font-medium text-destructive")}>
-                {recomendacion.fecha_implementacion ?? "—"}
-                {vencida ? " · vencida" : ""}
-              </p>
+              <p>{recomendacion.fecha_implementacion ?? "—"}</p>
             </div>
           </div>
         </CardContent>

@@ -45,7 +45,7 @@ export default async function InformeDetallePage({
     supabase.from("usuarios").select("*").eq("activo", true).order("nombre"),
     supabase
       .from("recomendaciones_historial")
-      .select("id, accion, motivo, created_at, datos_anteriores, datos_nuevos, usuarios(nombre)")
+      .select("id, accion, motivo, created_at, datos_anteriores, datos_nuevos, usuarios(nombre), recomendacion_id")
       .eq("informe_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -55,10 +55,23 @@ export default async function InformeDetallePage({
       .order("created_at", { ascending: false }),
   ]);
 
+  const deficienciaDeRecomendacion = new Map(
+    (deficiencias ?? []).flatMap((d) => d.recomendaciones.map((r) => [r.id, d.numero] as const)),
+  );
+
   // Una sola bitácora, la más reciente primero: correcciones de deficiencias y de recomendaciones.
   const historial = [
-    ...(historialRecs ?? []).map((c) => ({ ...c, entidad: "recomendacion" as const })),
-    ...(historialDefs ?? []).map((c) => ({ ...c, entidad: "deficiencia" as const })),
+    // Una deficiencia = una recomendación: la recomendación se identifica por el número de su deficiencia.
+    ...(historialRecs ?? []).map(({ recomendacion_id, ...c }) => ({
+      ...c,
+      entidad: "recomendacion" as const,
+      deficienciaNumero: deficienciaDeRecomendacion.get(recomendacion_id) ?? null,
+    })),
+    ...(historialDefs ?? []).map((c) => ({
+      ...c,
+      entidad: "deficiencia" as const,
+      deficienciaNumero: (c.datos_anteriores as { numero?: number } | null)?.numero ?? null,
+    })),
   ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const nitsEnEquipo = new Set((equipo ?? []).map((m) => m.usuario_nit));

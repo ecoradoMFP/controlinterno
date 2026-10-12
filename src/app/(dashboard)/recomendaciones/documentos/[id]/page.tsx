@@ -74,12 +74,12 @@ export default async function DocumentoSeguimientoPage({
       estado: "hecho",
     },
     {
-      titulo: "Evaluar recomendaciones",
+      titulo: "Cédula de seguimiento",
       detalle: emitido ? `${evaluadas.length} evaluada(s)` : `${evaluadas.length} de ${filas.length} evaluadas`,
       estado: emitido || listoParaEmitir ? "hecho" : "actual",
     },
     {
-      titulo: "Emitir el informe",
+      titulo: "Emisión del informe",
       detalle: documento.no_documento ?? "Registrar número y fecha",
       estado: emitido ? "hecho" : listoParaEmitir ? "actual" : "pendiente",
     },

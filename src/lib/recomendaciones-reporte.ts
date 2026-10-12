@@ -28,7 +28,6 @@ export type FilaReporte = {
   responsables: string | null;
   fechaImplementacion: string | null;
   estado: EstadoRecomendacionEnum;
-  vencida: boolean;
   seguimientos: {
     numero: number;
     estado: EstadoRecomendacionEnum;
@@ -44,7 +43,6 @@ const ETAPAS_TITULO: Record<string, string> = {
   todas: "Todas las recomendaciones",
   por_evaluar: "Por evaluar",
   evaluada: "Evaluadas (falta el informe)",
-  vencidas: "Vencidas",
   en_seguimiento: "En seguimiento este año",
   atendida: "Atendidas",
 };
@@ -54,8 +52,6 @@ function aplicaFiltros(f: FilaRecomendacion, filtros: FiltrosReporte) {
   const etapa = filtros.etapa || "accion";
   if (etapa === "accion") {
     if (f.etapa !== "por_evaluar" && f.etapa !== "evaluada") return false;
-  } else if (etapa === "vencidas") {
-    if (!f.vencida) return false;
   } else if (etapa !== "todas" && f.etapa !== etapa) return false;
   if (filtros.estado && f.estado_actual !== filtros.estado) return false;
   if (filtros.dependencia && f.informe.dependencia_auditada !== filtros.dependencia) return false;
@@ -97,7 +93,6 @@ export async function cargarReporte(supabase: SupabaseServerClient, filtros: Fil
       responsables: d?.responsables ?? null,
       fechaImplementacion: f.fecha_implementacion,
       estado: f.estado_actual,
-      vencida: f.vencida,
       seguimientos: [...(d?.seguimientos_recomendacion ?? [])]
         .filter((s) => s.numero_seguimiento > 0)
         .sort((a, b) => a.numero_seguimiento - b.numero_seguimiento)
@@ -171,7 +166,7 @@ export async function generarReporteXlsx(filas: FilaReporte[], filtros: FiltrosR
   h.height = 30;
   filas.forEach((f, i) => {
     const texto = [`Recomendación inicial:\n${f.recomendacion}`, ...f.seguimientos.map(textoSeguimiento)].join("\n\n");
-    const r = ws.addRow([i + 1, f.cai, f.departamento, f.dependencia, f.tipoAuditoria, f.deficiencia, texto, f.fechaImplementacion ?? "", ESTADO_RECOMENDACION_LABELS[f.estado] + (f.vencida ? " (vencida)" : "")]);
+    const r = ws.addRow([i + 1, f.cai, f.departamento, f.dependencia, f.tipoAuditoria, f.deficiencia, texto, f.fechaImplementacion ?? "", ESTADO_RECOMENDACION_LABELS[f.estado]]);
     r.alignment = { vertical: "top", wrapText: true };
     r.getCell(1).alignment = { vertical: "top", horizontal: "center" };
     r.eachCell((c) => (c.border = { bottom: { style: "thin", color: { argb: "FFBFBFBF" } } }));
@@ -213,7 +208,7 @@ export async function generarReporteDocx(filas: FilaReporte[], filtros: FiltrosR
               ],
               ANCHOS[4],
             ),
-            celda(parrafos(ESTADO_RECOMENDACION_LABELS[f.estado] + (f.vencida ? "\n(vencida)" : "")), ANCHOS[5]),
+            celda(parrafos(ESTADO_RECOMENDACION_LABELS[f.estado]), ANCHOS[5]),
           ],
         }),
     ),

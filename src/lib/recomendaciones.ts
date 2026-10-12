@@ -5,20 +5,6 @@ export function hoyGuatemala(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guatemala" }).format(new Date());
 }
 
-/** Solo "cumplida" cierra el ciclo de una recomendación; las demás siguen abiertas. */
-export function estaAbierta(estado: EstadoRecomendacionEnum): boolean {
-  return estado !== "cumplida";
-}
-
-/** Abierta y con la fecha de implementación comprometida ya pasada. */
-export function estaVencida(
-  estado: EstadoRecomendacionEnum,
-  fechaImplementacion: string | null,
-  hoy: string = hoyGuatemala(),
-): boolean {
-  return estaAbierta(estado) && !!fechaImplementacion && fechaImplementacion < hoy;
-}
-
 /** "hace 3 meses" / "hace 12 días" a partir de una fecha YYYY-MM-DD. */
 export function haceCuanto(fecha: string, hoy: string = hoyGuatemala()): string {
   const dias = Math.round((Date.parse(hoy) - Date.parse(fecha)) / 86_400_000);
@@ -76,10 +62,10 @@ export function ubicarRecomendacion(
 export type PasoCai = "capturar" | "nombramiento" | "evaluar" | "emitir" | "sag" | "al_dia";
 
 export const PASO_CAI_FALTA: Record<PasoCai, string> = {
-  capturar: "Falta capturar deficiencias y recomendaciones",
+  capturar: "Faltan las recomendaciones emitidas",
   nombramiento: "Falta registrar el nombramiento de seguimiento",
-  evaluar: "Falta registrar el seguimiento de las recomendaciones",
-  emitir: "Falta emitir el informe de seguimiento",
+  evaluar: "Falta completar la cédula de seguimiento",
+  emitir: "Falta la emisión del informe",
   sag: "Falta cargar el informe al SAG-UDAI",
   al_dia: "Al día",
 };
@@ -100,15 +86,15 @@ export type EtapaRecomendacion = "por_evaluar" | "evaluada" | "en_seguimiento" |
 
 export const ETAPA_LABELS: Record<EtapaRecomendacion, string> = {
   por_evaluar: "Por evaluar",
-  evaluada: "Evaluada · falta emitir el informe",
+  evaluada: "Evaluada · falta la emisión del informe",
   en_seguimiento: "En seguimiento este año",
   atendida: "Atendida",
 };
 
 export const ACCION_PASO: Record<PasoCai, string> = {
-  capturar: "Capturar recomendaciones",
+  capturar: "Registrar recomendaciones emitidas",
   nombramiento: "Registrar nombramiento",
-  evaluar: "Registrar seguimiento",
+  evaluar: "Completar cédula",
   emitir: "Emitir informe",
   sag: "Registrar carga al SAG-UDAI",
   al_dia: "Ver CAI",

@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { type EtapaRecomendacion, estaVencida, hoyGuatemala, pasoDelCai, ubicarRecomendacion, type PasoCai } from "@/lib/recomendaciones";
+import { type EtapaRecomendacion, hoyGuatemala, pasoDelCai, ubicarRecomendacion, type PasoCai } from "@/lib/recomendaciones";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -14,7 +14,7 @@ export type FilaRecomendacion = Awaited<ReturnType<typeof cargarRecomendaciones>
 /**
  * Todas las recomendaciones visibles para el usuario actual (RLS decide el alcance) con los
  * campos derivados que usan los 3 paneles: a qué panel pertenece (bucket/anio, ver
- * ubicarRecomendacion), si está vencida y su último documento de seguimiento (emitido o no, para
+ * ubicarRecomendacion) y su último documento de seguimiento (emitido o no, para
  * mostrarlo en la fila aunque todavía no mueva de panel).
  */
 export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
@@ -41,7 +41,6 @@ export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
         deficiencia: r.deficiencias,
         informe,
         anio: informe.anio_ejecucion ?? (informe.fecha_informe_final ? Number(informe.fecha_informe_final.slice(0, 4)) : null),
-        vencida: estaVencida(r.estado_actual, r.fecha_implementacion, hoy),
         ultimoDocumento: ultimo?.documentos_seguimiento ?? null,
         seguimientos: r.seguimientos_recomendacion.filter((s) => s.numero_seguimiento > 0).length,
         bucket,
@@ -222,7 +221,6 @@ export async function cargarCais(supabase: SupabaseServerClient) {
       recomendaciones: recs,
       paso,
       anio,
-      vencidas: recs.filter((f) => f.vencida).length,
       porEstado: {
         pendiente: recs.filter((f) => f.estado_actual === "pendiente").length,
         en_proceso: recs.filter((f) => f.estado_actual === "en_proceso").length,

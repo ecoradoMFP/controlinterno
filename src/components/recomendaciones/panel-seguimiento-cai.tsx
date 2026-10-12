@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { etiquetaCai } from "@/lib/recomendaciones";
 import type { cargarCedulaDocumento } from "@/lib/recomendaciones-datos";
 import { ESTADO_RECOMENDACION_LABELS, ESTADO_RECOMENDACION_TONO, type EstadoRecomendacionEnum } from "@/types/domain";
+import { RotuloRecomendacion } from "@/components/recomendaciones/rotulo-recomendacion";
 
 type FilaCedula = NonNullable<Awaited<ReturnType<typeof cargarCedulaDocumento>>>["filas"][number];
 
@@ -117,7 +118,7 @@ export function PanelSeguimientoCai({
                   })}
                   <div className="flex flex-col gap-1">
                     <Button type="submit" size="lg" className="w-fit">
-                      Registrar seguimiento de {etiquetaCai(informe.cai, informe.anio_cai) ?? "este CAI"}
+                      Guardar la cédula de seguimiento de {etiquetaCai(informe.cai, informe.anio_cai) ?? "este CAI"}
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       Se guardan juntas las {porEvaluar.length} recomendaciones de este CAI. Una marcada como Cumplida cierra
@@ -145,14 +146,17 @@ function Recomendacion({ fila, children }: { fila: FilaCedula; children: React.R
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <Link href={`/recomendaciones/${recomendacion.id}`} title="Ver la deficiencia y su historial" className="text-sm font-medium underline-offset-2 hover:underline">
-          Def. {deficiencia.numero} · {deficiencia.titulo}
+          Deficiencia {deficiencia.numero} · {deficiencia.titulo}
         </Link>
         <SemaforoChip
           tono={ESTADO_RECOMENDACION_TONO[recomendacion.estado_actual]}
           label={ESTADO_RECOMENDACION_LABELS[recomendacion.estado_actual]}
         />
       </div>
-      <p className="text-sm whitespace-pre-line">{recomendacion.texto}</p>
+      <div>
+        <RotuloRecomendacion />
+        <p className="mt-0.5 text-sm whitespace-pre-line">{recomendacion.texto}</p>
+      </div>
       {ultimoAnterior ? (
         <p className="text-xs text-muted-foreground">
           Seguimiento anterior: {ESTADO_RECOMENDACION_LABELS[ultimoAnterior.estado]}
