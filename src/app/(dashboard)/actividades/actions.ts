@@ -20,7 +20,7 @@ export async function crearActividad(formData: FormData) {
   // porque esta Server Function es alcanzable por POST directo, no solo desde el formulario.
   const usuario = await getUsuarioActual();
   if (!puedeEscribir(usuario)) {
-    fail("No tienes permiso para crear auditorías.");
+    fail("No tiene permiso para crear auditorías.");
   }
 
   const parsed = actividadFormSchema.safeParse({
@@ -48,7 +48,7 @@ export async function crearActividad(formData: FormData) {
       const key = String(issue.path[0] ?? "form");
       if (!fieldErrors[key]) fieldErrors[key] = issue.message;
     }
-    fail("Revisa los campos marcados.", fieldErrors);
+    fail("Revise los campos marcados.", fieldErrors);
   }
 
   const { expedientes_relacionados, ...rest } = parsed.data;
@@ -79,7 +79,7 @@ export async function crearActividad(formData: FormData) {
   if (error) {
     // Los mensajes crudos de Postgres (constraint names, etc.) no se muestran tal cual a un
     // usuario final; RLS/CHECK ya hicieron su trabajo, aquí solo se informa que falló.
-    fail("No se pudo crear la auditoría. Verifica los datos e intenta de nuevo.");
+    fail("No se pudo crear la auditoría. Verifique los datos e intente de nuevo.");
   }
 
   // El auditor principal ya es miembro del equipo por definición: se agrega de una vez para

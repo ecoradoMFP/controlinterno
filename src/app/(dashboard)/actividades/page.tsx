@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, FolderOpen, Hand, ListChecks } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, FolderOpen, Hand, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { identificadorAuditoria } from "@/lib/auditoria";
@@ -18,19 +18,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
-import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, type CargoEnum, type EtapaActividadEnum } from "@/types/domain";
+import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, type EtapaActividadEnum } from "@/types/domain";
 
-type Filtros = { vista?: string; etapa?: string; departamento?: string; tipo?: string; anio?: string; q?: string };
+type Filtros = { vista?: string; etapa?: string; departamento?: string; q?: string };
 
 const RUTA = "/actividades";
 const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
 const SELECT_CLASES =
-  "h-8 w-auto max-w-64 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "h-10 w-auto max-w-64 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /**
- * Bandeja de auditorías: por defecto las que están en curso. Las tarjetas KPI son filtros (lo que
- * te toca, en riesgo, en curso, concluidas, todas) y los demás filtros se combinan con ellas. Cada
- * fila dice en qué etapa va, quién la tiene y, si está en riesgo, por qué.
+ * Bandeja de auditorías, pensada para leerse sin esfuerzo: pocas tarjetas que filtran (pendientes a
+ * su cargo, requieren atención, en curso, concluidas), tres filtros y, por auditoría, solo su CAI,
+ * dependencia, etapa y semáforo. El detalle completo está dentro de cada auditoría.
  */
 export default async function ActividadesPage({ searchParams }: { searchParams: Promise<Filtros> }) {
   const filtros = await searchParams;
@@ -83,9 +83,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     return {
       ...a,
       sem,
-      totalDocs: docsEtapa.length,
-      terminados: docsEtapa.length - abiertos.length,
-      abiertos: abiertos.map((d) => d.cargo_actual_responsable),
       meTocan: cargo ? abiertos.filter((d) => d.cargo_actual_responsable === cargo).length : 0,
       enRiesgo: !!sem && (sem.color === "naranja" || sem.color === "rojo"),
     };
@@ -95,16 +92,13 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
   const veDepartamentos = usuario?.cargo === "director" || usuario?.cargo === "subdirector";
   const q = sinTildes(filtros.q ?? "").trim();
 
-  type Aplicados = { vista?: string; etapa?: string; departamento?: string; tipo?: string; anio?: string };
+  type Aplicados = { vista?: string; etapa?: string; departamento?: string };
   const aplicados: Aplicados = {
     vista: filtros.vista || undefined,
     etapa: filtros.etapa || undefined,
     departamento: veDepartamentos ? filtros.departamento || undefined : undefined,
-    tipo: filtros.tipo || undefined,
-    anio: filtros.anio || undefined,
   };
-  const campoDe = (f: Fila, campo: "etapa" | "departamento" | "tipo" | "anio") =>
-    campo === "etapa" ? f.etapa_actual : campo === "departamento" ? f.departamento_id : campo === "tipo" ? f.tipo_auditoria : String(f.anio_cai ?? "");
+  const campoDe = (f: Fila, campo: "etapa" | "departamento") => (campo === "etapa" ? f.etapa_actual : f.departamento_id);
   const coincide = (f: Fila, omitir?: keyof Aplicados) => {
     if (omitir !== "vista") {
       const v = aplicados.vista ?? "en_curso";
@@ -113,7 +107,7 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
       if (v === "te_toca" && f.meTocan === 0) return false;
       if (v === "riesgo" && !f.enRiesgo) return false;
     }
-    for (const campo of ["etapa", "departamento", "tipo", "anio"] as const) {
+    for (const campo of ["etapa", "departamento"] as const) {
       if (omitir !== campo && aplicados[campo] && campoDe(f, campo) !== aplicados[campo]) return false;
     }
     if (q) {
@@ -124,7 +118,7 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     return true;
   };
   // Un filtro que ya no deja resultados con los demás se descarta (nunca una combinación vacía).
-  for (const campo of ["etapa", "departamento", "tipo", "anio"] as const) {
+  for (const campo of ["etapa", "departamento"] as const) {
     if (aplicados[campo] && !filas.some((f) => coincide(f, campo) && campoDe(f, campo) === aplicados[campo])) {
       aplicados[campo] = undefined;
     }
@@ -142,7 +136,7 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
         (a.fecha_notificacion ?? "9999").localeCompare(b.fecha_notificacion ?? "9999"),
     );
 
-  const conteos = (campo: "etapa" | "departamento" | "tipo" | "anio") => {
+  const conteos = (campo: "etapa" | "departamento") => {
     const mapa = new Map<string, number>();
     for (const f of filas) {
       const clave = campoDe(f, campo);
@@ -153,10 +147,8 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
   };
   const cEtapa = conteos("etapa");
   const cDepartamento = conteos("departamento");
-  const cTipo = conteos("tipo");
-  const cAnio = conteos("anio");
   const nombreDepartamento = new Map(filas.map((f) => [f.departamento_id, f.departamentos?.nombre ?? ""]));
-  const hayFiltros = !!(aplicados.vista || aplicados.etapa || aplicados.departamento || aplicados.tipo || aplicados.anio || q);
+  const hayFiltros = !!(aplicados.vista || aplicados.etapa || aplicados.departamento || q);
 
   const urlCon = (cambios: Filtros) => {
     const params = new URLSearchParams(
@@ -170,7 +162,7 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     label: string,
     detail: string,
     valor: number,
-    icon: typeof ListChecks,
+    icon: LucideIcon,
     tone: "accent" | "primary" | "naranja" | "verde",
   ) => (
     // Volver a hacer clic en la tarjeta activa regresa a "En curso".
@@ -189,26 +181,37 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Auditorías (CAI)</h1>
-          <p className="text-sm text-muted-foreground">En qué etapa va cada auditoría, quién la tiene y cuáles requieren atención.</p>
+          <p className="text-muted-foreground">Seleccione una auditoría para ver en qué etapa se encuentra y qué le falta.</p>
         </div>
-        {puedeEscribir(usuario) ? <Button render={<Link href="/actividades/nueva" />}>Nueva auditoría</Button> : null}
+        {puedeEscribir(usuario) ? (
+          <Button size="lg" render={<Link href="/actividades/nueva" />}>
+            Registrar nueva auditoría
+          </Button>
+        ) : null}
       </div>
 
-      {error ? <p className="text-sm text-destructive">No se pudieron cargar las auditorías.</p> : null}
+      {error ? <p className="text-destructive">No se pudieron cargar las auditorías.</p> : null}
 
-      <div className={cn("grid auto-rows-fr grid-cols-2 gap-3", cargo ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
+      <div className={cn("grid auto-rows-fr grid-cols-2 gap-3", cargo ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
         {cargo
-          ? kpi("te_toca", "Te tocan", `Con documentos en ${CARGO_LABELS[cargo]}`, base.filter((f) => f.meTocan > 0).length, Hand, "primary")
+          ? kpi("te_toca", "Pendientes a su cargo", `Documentos que esperan al ${CARGO_LABELS[cargo]}`, base.filter((f) => f.meTocan > 0).length, Hand, "primary")
           : null}
-        {kpi("riesgo", "En riesgo", "Hito u oficio por vencer o vencido", base.filter((f) => f.enRiesgo).length, AlertTriangle, "naranja")}
-        {kpi("en_curso", "En curso", "Todavía no se archivan", base.filter((f) => !f.concluida).length, FolderOpen, "accent")}
+        {kpi("riesgo", "Requieren atención", "Plazo por vencer o vencido", base.filter((f) => f.enRiesgo).length, AlertTriangle, "naranja")}
+        {kpi("en_curso", "En curso", "Auditorías sin concluir", base.filter((f) => !f.concluida).length, FolderOpen, "accent")}
         {kpi("concluidas", "Concluidas", "Entregadas al archivo", base.filter((f) => f.concluida).length, CheckCircle2, "verde")}
-        {kpi("todas", "Todas", "Sin importar el estado", base.length, ListChecks, "accent")}
       </div>
 
       <div className="rounded-xl border shadow-sm">
-        <FiltrosAutomaticos ruta={RUTA} className="flex flex-wrap items-center gap-2 border-b p-4">
+        <FiltrosAutomaticos ruta={RUTA} className="flex flex-wrap items-center gap-3 border-b p-4">
           <input type="hidden" name="vista" value={aplicados.vista ?? ""} />
+          <Input
+            name="q"
+            type="text"
+            defaultValue={filtros.q ?? ""}
+            placeholder="Buscar por CAI o dependencia"
+            aria-label="Buscar por CAI o dependencia"
+            className="h-10 min-w-64 flex-1 sm:max-w-sm"
+          />
           <select key={`etapa-${aplicados.etapa}`} name="etapa" defaultValue={aplicados.etapa ?? ""} className={SELECT_CLASES} aria-label="Etapa">
             <option value="">Todas las etapas</option>
             {ETAPAS.filter((e) => cEtapa.has(e)).map((e) => (
@@ -229,39 +232,20 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
                 ))}
             </select>
           ) : null}
-          <select key={`tipo-${aplicados.tipo}`} name="tipo" defaultValue={aplicados.tipo ?? ""} className={SELECT_CLASES} aria-label="Tipo de auditoría">
-            <option value="">Todos los tipos</option>
-            {[...cTipo.keys()].sort().map((t) => (
-              <option key={t} value={t} disabled={!cTipo.get(t)}>
-                {t} ({cTipo.get(t)})
-              </option>
-            ))}
-          </select>
-          <select key={`anio-${aplicados.anio}`} name="anio" defaultValue={aplicados.anio ?? ""} className={SELECT_CLASES} aria-label="Año del CAI">
-            <option value="">Todos los años</option>
-            {[...cAnio.keys()]
-              .sort((x, y) => Number(y) - Number(x))
-              .map((a) => (
-                <option key={a} value={a} disabled={!cAnio.get(a)}>
-                  {a} ({cAnio.get(a)})
-                </option>
-              ))}
-          </select>
-          <Input name="q" type="text" defaultValue={filtros.q ?? ""} placeholder="Buscar CAI, nombramiento, dependencia o auditor" className="h-8 min-w-56 flex-1 sm:max-w-xs" />
           {hayFiltros ? (
-            <Button variant="ghost" size="sm" className="h-8" nativeButton={false} render={<Link href={RUTA} />}>
-              Limpiar filtros
+            <Button variant="outline" nativeButton={false} render={<Link href={RUTA} />}>
+              Quitar filtros
             </Button>
           ) : null}
         </FiltrosAutomaticos>
 
         {visibles.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">
+          <p className="p-6 text-muted-foreground">
             {filas.length === 0
-              ? "No hay auditorías dentro de tu alcance todavía."
+              ? "Todavía no hay auditorías registradas que usted pueda consultar."
               : vista === "te_toca" && !q
-                ? "No tienes documentos pendientes en ninguna auditoría."
-                : "Ninguna auditoría coincide con los filtros."}
+                ? "No tiene documentos pendientes en ninguna auditoría."
+                : "Ninguna auditoría coincide con la búsqueda."}
           </p>
         ) : (
           <ul className="divide-y">
@@ -288,75 +272,40 @@ type FilaVista = {
   departamentos: { nombre: string } | null;
   auditor_principal: { nombre: string } | null;
   sem: { color: "verde" | "amarillo" | "naranja" | "rojo"; motivo: string } | null;
-  totalDocs: number;
-  terminados: number;
-  abiertos: CargoEnum[];
   meTocan: number;
   enRiesgo: boolean;
 };
 
 function FilaAuditoria({ fila: f }: { fila: FilaVista }) {
-  const indice = ETAPAS.indexOf(f.etapa_actual);
   return (
     <li>
-      <Link href={`/actividades/${f.id}`} className="flex flex-col gap-3 p-4 hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="codigo-expediente font-semibold">{identificadorAuditoria(f)}</span>
-            <span className="font-medium">{f.dependencia_auditada}</span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {f.tipo_auditoria}
-            {f.departamentos?.nombre ? ` · ${f.departamentos.nombre}` : ""}
-            {f.auditor_principal?.nombre ? ` · Auditor principal: ${f.auditor_principal.nombre}` : ""}
-            {f.cai ? ` · ${f.no_nombramiento}` : ""}
+      <Link
+        href={`/actividades/${f.id}`}
+        className="group flex flex-col gap-3 p-5 hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="codigo-expediente text-lg font-semibold">{identificadorAuditoria(f)}</span>
+            <span className="text-lg">{f.dependencia_auditada}</span>
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            {/* Las cuatro etapas en miniatura: hechas, la actual y las que faltan. */}
-            <span className="flex gap-1" aria-hidden>
-              {ETAPAS.map((e, i) => (
-                <span
-                  key={e}
-                  className={cn(
-                    "h-1.5 w-6 rounded-full",
-                    f.concluida || i < indice ? "bg-primary" : i === indice ? "bg-primary/40" : "bg-muted",
-                  )}
-                />
-              ))}
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {f.concluida ? "Concluida" : `Etapa: ${ETAPA_ACTIVIDAD_LABELS[f.etapa_actual]}`}
             </span>
-            <span>
-              {f.concluida ? "Concluida" : ETAPA_ACTIVIDAD_LABELS[f.etapa_actual]}
-              {!f.concluida && f.totalDocs > 0 ? (
-                <span className="text-muted-foreground">
-                  {" "}
-                  · {f.terminados} de {f.totalDocs} documentos
-                </span>
-              ) : null}
-            </span>
-            {!f.concluida && f.abiertos.length > 0 ? (
-              <span className="text-muted-foreground">· Lo tienen: {porCargo(f.abiertos)}</span>
-            ) : null}
-          </div>
-          {f.enRiesgo && f.sem ? <p className="text-xs text-muted-foreground">{f.sem.motivo}</p> : null}
+            {f.departamentos?.nombre ? ` · ${f.departamentos.nombre}` : ""}
+          </p>
+          {f.enRiesgo && f.sem ? <p className="text-sm text-muted-foreground">Motivo: {f.sem.motivo}.</p> : null}
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
-          {f.meTocan > 0 ? <Badge>Te toca{f.meTocan > 1 ? `: ${f.meTocan} documentos` : ""}</Badge> : null}
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
+          {f.meTocan > 0 ? <Badge className="h-7 px-3 text-sm">Pendiente a su cargo</Badge> : null}
           {f.sem ? <SemaforoChip tono={f.sem.color} label={COLOR_SEMAFORO_LABELS[f.sem.color]} /> : null}
-          {!f.concluida ? <span className="text-xs text-muted-foreground">Límite de notificación: {f.fecha_notificacion}</span> : null}
+          <span className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 font-medium text-primary group-hover:bg-background">
+            Ver auditoría <ChevronRight className="size-4" aria-hidden />
+          </span>
         </div>
       </Link>
     </li>
   );
-}
-
-/** "3 Auditor, 1 Subjefe", de mayor a menor. */
-function porCargo(cargos: CargoEnum[]) {
-  const cuenta = new Map<CargoEnum, number>();
-  for (const c of cargos) cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
-  return [...cuenta]
-    .sort((a, b) => b[1] - a[1])
-    .map(([c, n]) => `${n} ${CARGO_LABELS[c]}`)
-    .join(", ");
 }
 
 /** Para buscar sin importar mayúsculas ni tildes ("tesoreria" encuentra "Tesorería"). */

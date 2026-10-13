@@ -22,7 +22,7 @@ async function verificarAlcance(informeId: string) {
   // Sección 12.3: defensa en profundidad además de RLS (informes_auditoria_equipo/
   // deficiencias/recomendaciones/seguimientos_recomendacion insert policies).
   if (!(await puedeOperarInforme(usuario, informeId, supabase))) {
-    fail(informeId, "No tienes permiso para modificar este informe.");
+    fail(informeId, "No tiene permiso para modificar este informe.");
   }
   // Un CAI bloqueado ya no admite cambios de captura (la base de datos también lo exige).
   const { data: informe } = await supabase.from("informes_auditoria").select("bloqueado_en").eq("id", informeId).maybeSingle();
@@ -76,7 +76,7 @@ export async function editarDeficiencia(formData: FormData) {
     descripcion: formData.get("descripcion") ?? undefined,
     motivo: formData.get("motivo"),
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la deficiencia.");
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
 
   const { error } = await supabase
     .from("deficiencias")
@@ -137,7 +137,7 @@ export async function agregarDeficiencia(formData: FormData) {
     titulo: formData.get("titulo"),
     descripcion: formData.get("descripcion") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, "Revisa el título de la deficiencia.");
+  if (!parsed.success) fail(informeId, "Revise el título de la deficiencia.");
 
   const { data: ultima } = await supabase
     .from("deficiencias")
@@ -173,7 +173,7 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData) {
     responsables: formData.get("responsables") ?? undefined,
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la deficiencia.");
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
 
   // Siguiente número entre las deficiencias vigentes (las eliminadas ya no se ven ni cuentan).
   const { data: ultima } = await supabase
@@ -222,7 +222,7 @@ export async function agregarRecomendacion(formData: FormData) {
     responsables: formData.get("responsables") ?? undefined,
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa el texto de la recomendación.");
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise el texto de la recomendación.");
 
   // Cada deficiencia de un CAI lleva una sola recomendación (se cierra una a una).
   const { count: vigentes } = await supabase
@@ -268,7 +268,7 @@ export async function editarRecomendacion(formData: FormData) {
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
     motivo: formData.get("motivo"),
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revisa los campos de la recomendación.");
+  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise los campos de la recomendación.");
 
   const { error } = await supabase
     .from("recomendaciones")
@@ -327,5 +327,5 @@ export async function eliminarRecomendacion(formData: FormData) {
 // Los mensajes de las reglas de la base (motivo, seguimientos evaluados, permisos) ya están
 // redactados para el usuario; cualquier otro error se reemplaza por uno genérico.
 function mensajeDeCambio(mensaje: string, generico: string) {
-  return /motivo del cambio|seguimientos evaluados|No tienes permiso|bloqueado/.test(mensaje) ? mensaje : generico;
+  return /motivo del cambio|seguimientos evaluados|No tiene permiso|bloqueado/.test(mensaje) ? mensaje : generico;
 }

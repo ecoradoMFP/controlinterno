@@ -31,7 +31,7 @@ export function SelectDependencia({
   return (
     <Select name={name} required items={Object.fromEntries(unidades.map((u) => [u.nombre, u.nombre]))}>
       <SelectTrigger id={id} className="w-full">
-        <SelectValue placeholder="Selecciona la dependencia" />
+        <SelectValue placeholder="Seleccione la dependencia" />
       </SelectTrigger>
       <SelectContent>
         {grupos.map((g) => (

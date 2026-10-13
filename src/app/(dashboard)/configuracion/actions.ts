@@ -54,7 +54,7 @@ export async function agregarFeriado(formData: FormData) {
   const fecha = String(formData.get("fecha") ?? "").trim();
   const descripcion = String(formData.get("descripcion") ?? "").trim();
 
-  if (!fecha || !descripcion) fail("Indica fecha y descripción del asueto.");
+  if (!fecha || !descripcion) fail("Indique fecha y descripción del asueto.");
 
   const supabase = await createClient();
   const { error } = await supabase.from("calendario_feriados").insert({ fecha, descripcion });

@@ -16,7 +16,7 @@ set search_path = public
 as $$
 begin
   if nullif(btrim(coalesce(new.cai, '')), '') is null or new.anio_cai is null then
-    raise exception 'Indica el CAI de la auditoría (número y año).';
+    raise exception 'Indique el CAI de la auditoría (número y año).';
   end if;
   new.cai := btrim(new.cai);
   return new;

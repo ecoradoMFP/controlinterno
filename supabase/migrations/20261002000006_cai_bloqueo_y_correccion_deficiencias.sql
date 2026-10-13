@@ -161,7 +161,7 @@ begin
   end if;
 
   if length(btrim(coalesce(new.motivo_ultimo_cambio, ''))) < 5 then
-    raise exception 'Indica el motivo del cambio (mínimo 5 caracteres)';
+    raise exception 'Indique el motivo del cambio (mínimo 5 caracteres)';
   end if;
   if exists (
     select 1 from seguimientos_recomendacion s join recomendaciones r on r.id = s.recomendacion_id

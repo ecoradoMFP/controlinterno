@@ -240,7 +240,7 @@ export default async function DocumentoSeguimientoPage({
             puedeGestionar ? (
               <>
                 <p>
-                  Ya están evaluadas las {filas.length} recomendaciones. Escribe el número y la fecha del informe firmado.
+                  Ya están evaluadas las {filas.length} recomendaciones. Escriba el número y la fecha del informe firmado.
                 </p>
                 <ul className="list-disc pl-5 text-muted-foreground">
                   <li>La cédula se cierra: ya no se podrán agregar evaluaciones a este documento.</li>

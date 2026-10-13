@@ -46,7 +46,7 @@ export default async function DocumentosPage({
         <div>
           <h1 className="text-xl font-semibold">Documentos</h1>
           <p className="text-sm text-muted-foreground">
-            Documentos en curso (no finalizados) entre las auditorías dentro de tu alcance.
+            Documentos en curso (no finalizados) entre las auditorías dentro de su alcance.
           </p>
         </div>
         {usuario?.cargo ? (
@@ -99,8 +99,8 @@ export default async function DocumentosPage({
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
                   {soloMios
-                    ? "No tienes documentos pendientes en tu cargo por ahora."
-                    : "No hay documentos en curso dentro de tu alcance todavía."}
+                    ? "No tiene documentos pendientes en su cargo por ahora."
+                    : "No hay documentos en curso dentro de su alcance todavía."}
                 </TableCell>
               </TableRow>
             )}

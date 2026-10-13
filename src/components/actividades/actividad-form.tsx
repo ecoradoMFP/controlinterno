@@ -45,7 +45,7 @@ export function ActividadForm({
           <Input id="cai" name="cai" placeholder="00001" maxLength={20} required />
         </Field>
 
-        <Field label="Año del CAI" htmlFor="anio_cai" error={fieldErrors?.anio_cai}>
+        <Field label="Año del CAI (según el Plan Anual de Auditoría)" htmlFor="anio_cai" error={fieldErrors?.anio_cai}>
           <Input id="anio_cai" name="anio_cai" type="number" min={2000} max={2100} defaultValue={anioActual} required />
         </Field>
 
@@ -72,7 +72,7 @@ export function ActividadForm({
               items={Object.fromEntries(departamentos.map((d) => [d.id, d.nombre]))}
             >
               <SelectTrigger id="departamento_id" className="w-full">
-                <SelectValue placeholder="Selecciona un departamento" />
+                <SelectValue placeholder="Seleccione un departamento" />
               </SelectTrigger>
               <SelectContent>
                 {departamentos.map((d) => (
@@ -107,7 +107,7 @@ export function ActividadForm({
             items={Object.fromEntries(usuarios.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
           >
             <SelectTrigger id="auditor_principal_nit" className="w-full">
-              <SelectValue placeholder="Selecciona al auditor principal" />
+              <SelectValue placeholder="Seleccione al auditor principal" />
             </SelectTrigger>
             <SelectContent>
               {usuarios.map((u) => (

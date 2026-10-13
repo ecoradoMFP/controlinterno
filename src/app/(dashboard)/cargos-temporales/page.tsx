@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeRegistrarCargoTemporal } from "@/lib/auth";
+import { departamentosCargoTemporal, getUsuarioActual } from "@/lib/auth";
 import { hoyGuatemala } from "@/lib/recomendaciones";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,10 @@ const SELECT_CLASES = "h-9 w-full rounded-lg border border-input bg-background p
 export default async function CargosTemporalesPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const usuario = await getUsuarioActual();
-  if (!usuario || !puedeRegistrarCargoTemporal(usuario)) redirect("/actividades");
+  const permitidos = departamentosCargoTemporal(usuario);
+  if (!usuario || !permitidos) redirect("/actividades");
+  // La jefatura de un departamento solo registra en el suyo; nadie se registra a sí mismo.
+  const enAlcance = (departamentoId: string | null) => permitidos === "todos" || (!!departamentoId && permitidos.includes(departamentoId));
 
   const supabase = await createClient();
   const [{ data: registros }, { data: personas }, { data: departamentos }] = await Promise.all([
@@ -45,6 +48,7 @@ export default async function CargosTemporalesPage({ searchParams }: { searchPar
         <p className="text-sm text-muted-foreground">
           Ampliaciones de nombramiento: quién cubre el puesto de Subjefe o Jefe de un departamento y por cuánto
           tiempo. Mientras está vigente tiene los permisos de ese cargo; al terminar vuelve a su cargo de siempre.
+          {permitidos === "todos" ? null : " Usted puede registrarlas solo para su departamento."}
         </p>
       </div>
 
@@ -107,8 +111,8 @@ export default async function CargosTemporalesPage({ searchParams }: { searchPar
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="usuario_nit">Persona que cubre el puesto</label>
             <select id="usuario_nit" name="usuario_nit" required defaultValue="" className={SELECT_CLASES}>
-              <option value="" disabled>Selecciona</option>
-              {(personas ?? []).map((p) => (
+              <option value="" disabled>Seleccione</option>
+              {(personas ?? []).filter((p) => p.nit !== usuario.nit && enAlcance(p.departamento_id)).map((p) => (
                 <option key={p.nit} value={p.nit}>
                   {p.nombre}
                   {p.cargo ? ` (${CARGO_LABELS[p.cargo]})` : ""}
@@ -119,7 +123,7 @@ export default async function CargosTemporalesPage({ searchParams }: { searchPar
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="cargo">Cargo que cubre</label>
             <select id="cargo" name="cargo" required defaultValue="" className={SELECT_CLASES}>
-              <option value="" disabled>Selecciona</option>
+              <option value="" disabled>Seleccione</option>
               <option value="subjefe">{CARGO_LABELS.subjefe}</option>
               <option value="jefe">{CARGO_LABELS.jefe}</option>
             </select>
@@ -127,8 +131,8 @@ export default async function CargosTemporalesPage({ searchParams }: { searchPar
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="departamento_id">Departamento</label>
             <select id="departamento_id" name="departamento_id" required defaultValue="" className={SELECT_CLASES}>
-              <option value="" disabled>Selecciona</option>
-              {(departamentos ?? []).map((d) => (
+              <option value="" disabled>Seleccione</option>
+              {(departamentos ?? []).filter((d) => enAlcance(d.id)).map((d) => (
                 <option key={d.id} value={d.id}>{d.nombre}</option>
               ))}
             </select>

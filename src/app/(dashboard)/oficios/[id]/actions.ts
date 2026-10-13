@@ -20,8 +20,8 @@ export async function registrarEnvio(formData: FormData) {
   const medioEnvio = String(formData.get("medio_envio") ?? "").trim() || null;
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tienes permiso para registrar el envío.");
-  if (!fechaEnvio) fail(oficioId, "seguimiento", "Indica la fecha de envío.");
+  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tiene permiso para registrar el envío.");
+  if (!fechaEnvio) fail(oficioId, "seguimiento", "Indique la fecha de envío.");
 
   const supabase = await createClient();
 
@@ -48,8 +48,8 @@ export async function registrarRecepcion(formData: FormData) {
   const fechaRecepcion = String(formData.get("fecha_recepcion") ?? "");
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tienes permiso para registrar la recepción.");
-  if (!fechaRecepcion) fail(oficioId, "seguimiento", "Indica la fecha de recepción.");
+  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tiene permiso para registrar la recepción.");
+  if (!fechaRecepcion) fail(oficioId, "seguimiento", "Indique la fecha de recepción.");
 
   const supabase = await createClient();
 
@@ -75,8 +75,8 @@ export async function registrarRespuesta(formData: FormData) {
   const observaciones = String(formData.get("observaciones") ?? "").trim() || null;
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tienes permiso para registrar la respuesta.");
-  if (!fechaRespuesta) fail(oficioId, "seguimiento", "Indica la fecha de respuesta.");
+  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tiene permiso para registrar la respuesta.");
+  if (!fechaRespuesta) fail(oficioId, "seguimiento", "Indique la fecha de respuesta.");
 
   const supabase = await createClient();
 
@@ -103,8 +103,8 @@ export async function agregarRevisor(formData: FormData) {
   const usuarioNit = String(formData.get("usuario_nit") ?? "").trim();
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "participantes", "No tienes permiso para agregar revisores.");
-  if (!usuarioNit) fail(oficioId, "participantes", "Selecciona a un usuario.");
+  if (!puedeEscribir(usuario)) fail(oficioId, "participantes", "No tiene permiso para agregar revisores.");
+  if (!usuarioNit) fail(oficioId, "participantes", "Seleccione a un usuario.");
 
   const supabase = await createClient();
   const { error } = await supabase.from("oficios_revisores").insert({ oficio_id: oficioId, usuario_nit: usuarioNit });
@@ -119,8 +119,8 @@ export async function agregarFirmante(formData: FormData) {
   const usuarioNit = String(formData.get("usuario_nit") ?? "").trim();
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "participantes", "No tienes permiso para agregar firmantes.");
-  if (!usuarioNit) fail(oficioId, "participantes", "Selecciona a un usuario.");
+  if (!puedeEscribir(usuario)) fail(oficioId, "participantes", "No tiene permiso para agregar firmantes.");
+  if (!usuarioNit) fail(oficioId, "participantes", "Seleccione a un usuario.");
 
   const supabase = await createClient();
   const { error } = await supabase.from("oficios_firmantes").insert({ oficio_id: oficioId, usuario_nit: usuarioNit });

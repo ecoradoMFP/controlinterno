@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUsuarioActual, puedeRegistrarCargoTemporal } from "@/lib/auth";
+import { departamentosCargoTemporal, getUsuarioActual } from "@/lib/auth";
 
 const RUTA = "/cargos-temporales";
 
@@ -13,16 +13,17 @@ function fail(message: string): never {
 
 // Defensa en profundidad: RLS (`cargos_temporales_insert/update`) y el trigger
 // `cargos_temporales_validar` ya lo exigen; aquí se verifica antes para dar un mensaje claro.
-async function requiereDireccion() {
+async function requiereJefatura() {
   const usuario = await getUsuarioActual();
-  if (!usuario || !puedeRegistrarCargoTemporal(usuario)) {
-    fail("Solo el Director o el Subdirector registran cargos temporales.");
+  const departamentos = departamentosCargoTemporal(usuario);
+  if (!usuario || !departamentos) {
+    fail("Los cargos temporales los registran el Director, el Subdirector, el Jefe o el Subjefe.");
   }
-  return usuario;
+  return { usuario, departamentos };
 }
 
 export async function registrarCargoTemporal(formData: FormData) {
-  const usuario = await requiereDireccion();
+  const { usuario, departamentos } = await requiereJefatura();
 
   const usuarioNit = String(formData.get("usuario_nit") ?? "");
   const cargo = String(formData.get("cargo") ?? "");
@@ -33,11 +34,15 @@ export async function registrarCargoTemporal(formData: FormData) {
   const motivo = String(formData.get("motivo") ?? "").trim();
 
   if (!usuarioNit || !departamentoId || !fechaInicio || !fechaFin || !documento) {
-    fail("Completa la persona, el cargo, el departamento, las fechas y el documento de la ampliación.");
+    fail("Complete la persona, el cargo, el departamento, las fechas y el documento de la ampliación.");
   }
   if (cargo !== "subjefe" && cargo !== "jefe") fail("El cargo temporal debe ser Subjefe o Jefe.");
+  if (departamentos !== "todos" && !departamentos.includes(departamentoId)) {
+    fail("Solo puede registrar cargos temporales de su propio departamento.");
+  }
+  if (usuarioNit === usuario.nit) fail("No puede registrarse un cargo temporal a sí mismo.");
   if (fechaFin < fechaInicio) fail("La fecha de fin no puede ser anterior a la de inicio.");
-  if (motivo.length < 10) fail("Escribe el motivo (al menos 10 caracteres).");
+  if (motivo.length < 10) fail("Escriba el motivo (al menos 10 caracteres).");
 
   const supabase = await createClient();
   const { error } = await supabase.from("cargos_temporales").insert({
@@ -60,11 +65,11 @@ export async function registrarCargoTemporal(formData: FormData) {
 }
 
 export async function revocarCargoTemporal(formData: FormData) {
-  const usuario = await requiereDireccion();
+  const { usuario } = await requiereJefatura();
 
   const id = String(formData.get("id") ?? "");
   const motivo = String(formData.get("motivo_revocacion") ?? "").trim();
-  if (motivo.length < 10) fail("Escribe el motivo para terminarlo antes (al menos 10 caracteres).");
+  if (motivo.length < 10) fail("Escriba el motivo para terminarlo antes (al menos 10 caracteres).");
 
   const supabase = await createClient();
   const { data, error } = await supabase

@@ -11,7 +11,7 @@ export interface FilaDepartamentoCapacitacion {
 
 export function DepartamentoCapacitacionChart({ datos }: { datos: FilaDepartamentoCapacitacion[] }) {
   if (datos.length === 0) {
-    return <p className="p-4 text-sm text-muted-foreground">Todavía no hay personal dentro de tu alcance.</p>;
+    return <p className="p-4 text-sm text-muted-foreground">Todavía no hay personal dentro de su alcance.</p>;
   }
 
   const data = datos.map((d) => ({

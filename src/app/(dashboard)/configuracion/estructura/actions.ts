@@ -23,7 +23,7 @@ export async function agregarUnidad(formData: FormData) {
   await requiereControlTotal();
   const nombre = String(formData.get("nombre") ?? "").trim();
   const padre_id = String(formData.get("padre_id") ?? "") || null;
-  if (!nombre) fail("Escribe el nombre de la unidad.");
+  if (!nombre) fail("Escriba el nombre de la unidad.");
 
   const supabase = await createClient();
   const { data: hermanas } = await supabase.from("unidades_ministerio").select("orden").eq("padre_id", padre_id ?? "").order("orden", { ascending: false }).limit(1);

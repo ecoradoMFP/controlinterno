@@ -71,7 +71,7 @@ declare
   v_anterior date;
 begin
   if not coalesce(authz.puede_operar_actividad(p_actividad_id), false) then
-    raise exception 'No tienes acceso a esta auditoría.';
+    raise exception 'No tiene acceso a esta auditoría.';
   end if;
   if coalesce(authz.permiso_actual() <> 'control_total', true)
      and (v_cargo is null or v_cargo not in ('subjefe', 'jefe', 'subdirector', 'director'))
@@ -82,10 +82,10 @@ begin
     raise exception 'Campo no reconocido.';
   end if;
   if p_fecha is null then
-    raise exception 'Indica la nueva fecha.';
+    raise exception 'Indique la nueva fecha.';
   end if;
   if length(btrim(coalesce(p_motivo, ''))) < 10 then
-    raise exception 'Escribe el motivo de la corrección (al menos 10 caracteres).';
+    raise exception 'Escriba el motivo de la corrección (al menos 10 caracteres).';
   end if;
 
   select case when p_campo = 'recibido' then fecha_recibido else fecha_declaracion_independencia end

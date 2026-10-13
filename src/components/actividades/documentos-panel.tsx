@@ -146,7 +146,7 @@ export function DocumentosPanel({
                   required
                   items={Object.fromEntries(catalogoDisponible.map((c) => [c.id, c.nombre]))}
                 >
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona un documento" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione un documento" /></SelectTrigger>
                   <SelectContent>
                     {catalogoDisponible.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
@@ -212,7 +212,7 @@ function DocumentoCard({
           {cadena.length > 0 && !d.no_aplica ? <CadenaRevision cadena={cadena} documento={d} /> : null}
         </div>
         <div className="flex items-center gap-2">
-          {meToca ? <Badge>Te toca</Badge> : null}
+          {meToca ? <Badge>A su cargo</Badge> : null}
           {d.no_aplica ? (
             <Badge variant="outline">No aplica</Badge>
           ) : (
@@ -237,7 +237,7 @@ function DocumentoCard({
           <Textarea
             name="observacion"
             rows={1}
-            placeholder={enRevision ? "Observación (obligatoria si lo devuelves para corrección)" : "Observación (opcional)"}
+            placeholder={enRevision ? "Observación (obligatoria si lo devuelve para corrección)" : "Observación (opcional)"}
           />
           <div className="flex flex-wrap items-center gap-2">
             {destino ? (
@@ -258,7 +258,7 @@ function DocumentoCard({
           </div>
           {puedeDevolver ? (
             <p className="text-xs text-muted-foreground">
-              Si lo devuelves, al corregirse la revisión empieza de nuevo: Auditor → Subjefe → Jefe, según corresponda.
+              Si lo devuelve, al corregirse la revisión empieza de nuevo: Auditor → Subjefe → Jefe, según corresponda.
             </p>
           ) : null}
         </form>

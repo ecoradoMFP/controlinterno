@@ -68,7 +68,7 @@ export function MovimientoFormFields({ cargoActual }: { cargoActual: CargoEnum }
           items={TIPO_EVENTO_LABELS}
           onValueChange={(value) => setTipoEvento(String(value ?? ""))}
         >
-          <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+          <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione" /></SelectTrigger>
           <SelectContent>
             {Object.entries(TIPO_EVENTO_LABELS).map(([value, label]) => (
               <SelectItem key={value} value={value}>{label}</SelectItem>

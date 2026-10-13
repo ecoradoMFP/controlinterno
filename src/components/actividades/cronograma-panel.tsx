@@ -41,6 +41,11 @@ export function CronogramaPanel({
 }) {
   return (
     <div id="cronograma" className="flex scroll-mt-4 flex-col gap-6">
+      <p className="rounded-xl bg-muted/50 p-4 text-sm">
+        El cronograma registra las fechas planificadas de la auditoría. Cada <span className="font-medium">hito</span> es
+        una fecha compromiso dentro de una etapa (por ejemplo, terminar la Planificación). Mientras no se marque como
+        concluido, el semáforo indica si va a tiempo, y la etapa no puede cerrarse hasta concluir sus hitos.
+      </p>
       {hitos.length === 0 ? (
         <p className="text-sm text-muted-foreground">Ningún hito capturado todavía.</p>
       ) : (
@@ -97,7 +102,7 @@ export function CronogramaPanel({
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Etapa</label>
             <Select name="etapa" required items={Object.fromEntries(ETAPAS_HITO.map((e) => [e, ETAPA_ACTIVIDAD_LABELS[e]]))}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione" /></SelectTrigger>
               <SelectContent>
                 {ETAPAS_HITO.map((e) => (
                   <SelectItem key={e} value={e}>{ETAPA_ACTIVIDAD_LABELS[e]}</SelectItem>
@@ -108,7 +113,7 @@ export function CronogramaPanel({
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Responsable</label>
             <Select name="cargo_responsable" required items={Object.fromEntries(CARGOS.map((c) => [c, CARGO_LABELS[c]]))}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione" /></SelectTrigger>
               <SelectContent>
                 {CARGOS.map((c) => (
                   <SelectItem key={c} value={c}>{CARGO_LABELS[c]}</SelectItem>

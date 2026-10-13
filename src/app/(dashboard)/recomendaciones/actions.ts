@@ -59,13 +59,13 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     auditores: formData.getAll("auditores").map(String),
     informe_id: campo("informe_id"),
   });
-  if (!parsed.success) fail(ruta, "Revisa los campos marcados.", erroresPorCampo(parsed.error.issues));
+  if (!parsed.success) fail(ruta, "Revise los campos marcados.", erroresPorCampo(parsed.error.issues));
   const datos = parsed.data;
 
   // Sección 12.3: defensa en profundidad además de RLS (documentos_seguimiento_insert).
   const gestionables = await departamentosParaNombrarSeguimiento(usuario, supabase);
   if (!gestionables.includes(datos.departamento_id)) {
-    fail(ruta, "No tienes permiso para emitir nombramientos de seguimiento en ese departamento.");
+    fail(ruta, "No tiene permiso para emitir nombramientos de seguimiento en ese departamento.");
   }
 
   // En el seguimiento de CAI solo se nombra a personal del departamento que nombra (jefaturas,
@@ -77,7 +77,7 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     .in("nit", nombrados)
     .or(`departamento_id.is.null,departamento_id.neq.${datos.departamento_id}`);
   if (deOtroDepartamento?.length) {
-    fail(ruta, "Solo puedes nombrar a personal del departamento que emite el nombramiento.");
+    fail(ruta, "Solo puede nombrar a personal del departamento que emite el nombramiento.");
   }
 
   // Id generado aquí: la visibilidad del documento se decide re-consultando la tabla, así que
@@ -130,7 +130,7 @@ export async function registrarDocumentoEmitido(formData: FormData) {
     no_documento: formData.get("no_documento"),
     fecha_documento: formData.get("fecha_documento"),
   });
-  if (!parsed.success) fail(ruta, "Captura el número y la fecha del informe u oficio.", erroresPorCampo(parsed.error.issues));
+  if (!parsed.success) fail(ruta, "Capture el número y la fecha del informe u oficio.", erroresPorCampo(parsed.error.issues));
 
   const supabase = await createClient();
   // RLS (documentos_seguimiento_update -> authz.puede_gestionar_documento) decide si puede: la
@@ -144,7 +144,7 @@ export async function registrarDocumentoEmitido(formData: FormData) {
   if (error) {
     fail(ruta, error.code === "23505" ? `El número ${parsed.data.no_documento} ya está registrado.` : "No se pudo registrar el documento.");
   }
-  if (!data?.length) fail(ruta, "No tienes permiso para registrar el documento de este nombramiento.");
+  if (!data?.length) fail(ruta, "No tiene permiso para registrar el documento de este nombramiento.");
 
   revalidatePath("/recomendaciones", "layout");
   redirect(ruta);
@@ -165,7 +165,7 @@ export async function registrarSeguimientoCai(formData: FormData) {
 
   // Sección 12.3: defensa en profundidad además de RLS (seguimientos_recomendacion_insert).
   if (!(await puedeDarSeguimiento(usuario, informeId, supabase))) {
-    fail(ruta, "No tienes permiso para registrar el seguimiento de este CAI.");
+    fail(ruta, "No tiene permiso para registrar el seguimiento de este CAI.");
   }
 
   const [{ data: documento }, { data: cobertura }] = await Promise.all([
@@ -249,7 +249,7 @@ export async function registrarCargaSagUdai(formData: FormData) {
   if (!puedeEscribir(usuario) || usuario?.cargo !== "director") {
     fail(ruta, "Solo el Director puede registrar la carga al SAG-UDAI.");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) fail(ruta, "Indica la fecha de carga al SAG-UDAI.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) fail(ruta, "Indique la fecha de carga al SAG-UDAI.");
 
   const supabase = await createClient();
   const { error } = await supabase

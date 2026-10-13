@@ -65,7 +65,7 @@ export function EquipoInformePanel({
                 items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecciona un auditor" />
+                  <SelectValue placeholder="Seleccione un auditor" />
                 </SelectTrigger>
                 <SelectContent>
                   {candidatos.map((u) => (

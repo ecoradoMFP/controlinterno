@@ -42,7 +42,7 @@ export function InformeForm({
         <Field label="CAI" htmlFor="cai" error={fieldErrors?.cai}>
           <Input id="cai" name="cai" required placeholder="CAI 00006" />
         </Field>
-        <Field label="Año del CAI" htmlFor="anio_cai" error={fieldErrors?.anio_cai}>
+        <Field label="Año del CAI (según el Plan Anual de Auditoría)" htmlFor="anio_cai" error={fieldErrors?.anio_cai}>
           <Input id="anio_cai" name="anio_cai" type="number" min={2000} max={2100} required defaultValue={new Date().getFullYear()} />
         </Field>
         <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
@@ -72,7 +72,7 @@ export function InformeForm({
         <Field label="Departamento" htmlFor="departamento_id" error={fieldErrors?.departamento_id}>
           <Select name="departamento_id" required items={Object.fromEntries(departamentos.map((d) => [d.id, d.nombre]))}>
             <SelectTrigger id="departamento_id" className="w-full">
-              <SelectValue placeholder="Selecciona un departamento" />
+              <SelectValue placeholder="Seleccione un departamento" />
             </SelectTrigger>
             <SelectContent>
               {departamentos.map((d) => (

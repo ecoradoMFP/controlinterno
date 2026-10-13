@@ -103,7 +103,7 @@ export default async function OficiosPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  No hay oficios dentro de tu alcance todavía.
+                  No hay oficios dentro de su alcance todavía.
                 </TableCell>
               </TableRow>
             )}

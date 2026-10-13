@@ -130,8 +130,10 @@ function SidebarNav({
       {NAV_ITEMS.map((item) => (
         <NavRow key={item.href} item={item} active={pathname.startsWith(item.href)} onNavigate={onNavigate} />
       ))}
-      {/* Ampliaciones de nombramiento: las registra la Dirección (Director o Subdirector). */}
-      {(usuario.cargo === "director" || usuario.cargo === "subdirector") && usuario.permiso_sistema !== "consulta" ? (
+      {/* Ampliaciones de nombramiento: Director y Subdirector, y Jefe o Subjefe para su departamento
+          (por su cargo real, como `departamentosCargoTemporal`). */}
+      {["director", "subdirector", "jefe", "subjefe"].includes((usuario.cargo_temporal ? usuario.cargo_temporal.cargo_original : usuario.cargo) ?? "") &&
+      usuario.permiso_sistema !== "consulta" ? (
         <NavRow
           item={{ href: "/cargos-temporales", label: "Cargos temporales", icon: UserCog }}
           active={pathname.startsWith("/cargos-temporales")}

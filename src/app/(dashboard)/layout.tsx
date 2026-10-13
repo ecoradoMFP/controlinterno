@@ -18,10 +18,10 @@ export default async function DashboardLayout({
     // del usuario, así que se explica en vez de solo redirigir de vuelta a /login.
     return (
       <div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <h1 className="text-lg font-semibold">Tu cuenta aún no está vinculada</h1>
+        <h1 className="text-lg font-semibold">Su cuenta aún no está vinculada</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Tu acceso fue autenticado correctamente, pero todavía no existe un perfil de usuario
-          (NIT, cargo, permisos) asociado. Contacta a Dirección o al administrador del sistema
+          Su acceso fue autenticado correctamente, pero todavía no existe un perfil de usuario
+          (NIT, cargo, permisos) asociado. Comuníquese con Dirección o al administrador del sistema
           para completar el alta.
         </p>
         <form action={logout}>
@@ -39,7 +39,7 @@ export default async function DashboardLayout({
     // limbo con una sesión que ningún flujo de la app va a honrar.
     const supabase = await createClient();
     await supabase.auth.signOut();
-    redirect(`/login?error=${encodeURIComponent("Tu cuenta está desactivada.")}`);
+    redirect(`/login?error=${encodeURIComponent("Su cuenta está desactivada.")}`);
   }
 
   const supabase = await createClient();

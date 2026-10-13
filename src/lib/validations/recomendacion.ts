@@ -22,7 +22,7 @@ export const informeFormSchema = z
     riesgo: z.string().trim().optional(),
   })
   .refine((v) => !v.periodo_auditado_inicio === !v.periodo_auditado_fin, {
-    error: "Captura ambas fechas del período auditado, o ninguna",
+    error: "Capture ambas fechas del período auditado, o ninguna",
     path: ["periodo_auditado_fin"],
   })
   .refine((v) => !v.periodo_auditado_inicio || !v.periodo_auditado_fin || v.periodo_auditado_fin >= v.periodo_auditado_inicio, {
@@ -37,7 +37,7 @@ export const deficienciaFormSchema = z.object({
 
 // Deficiencia y su única recomendación, capturadas en un solo paso.
 export const deficienciaConRecomendacionSchema = deficienciaFormSchema.extend({
-  texto: z.string().trim().min(1, "Escribe la recomendación"),
+  texto: z.string().trim().min(1, "Escriba la recomendación"),
   responsables: z.string().trim().optional(),
   fecha_implementacion: z.iso.date({ error: "La fecha de implementación es obligatoria" }),
 });
@@ -57,15 +57,15 @@ export const recomendacionFormSchema = z.object({
 export const nombramientoFormSchema = z
   .object({
     departamento_id: z.string().trim().min(1, "Requerido"),
-    informe_id: z.uuid({ error: "Elige un informe" }),
+    informe_id: z.uuid({ error: "Elija un informe" }),
     no_nombramiento: z.string().trim().min(1, "Requerido"),
     fecha_nombramiento: z.iso.date({ error: "Requerida" }),
-    // Opcional: no todos los departamentos designan coordinador en el nombramiento.
-    coordinador_nit: z.string().trim().optional(),
+    // Todo nombramiento de seguimiento lleva coordinador (jefaturas, 2026-10-13).
+    coordinador_nit: z.string().trim().min(1, "Seleccione al coordinador"),
     fecha_limite_informe: z.iso.date({ error: "Requerida" }),
     no_documento: z.string().trim().optional(),
     fecha_documento: fechaOpcional,
-    auditores: z.array(z.string().trim().min(1)).min(1, "Nombra al menos a un auditor"),
+    auditores: z.array(z.string().trim().min(1)).min(1, "Nombre al menos a un auditor"),
   })
   .refine((v) => !v.no_documento || v.fecha_documento, { error: "Requerida", path: ["fecha_documento"] });
 
@@ -75,7 +75,7 @@ export const documentoEmitidoSchema = z.object({
 });
 
 export const seguimientoFormSchema = z.object({
-  documento_id: z.uuid({ error: "Elige el nombramiento de seguimiento" }),
+  documento_id: z.uuid({ error: "Elija el nombramiento de seguimiento" }),
   estado: estadoRecomendacion,
   acciones_responsables: z.string().trim().optional(),
   comentario_auditoria: z.string().trim().optional(),

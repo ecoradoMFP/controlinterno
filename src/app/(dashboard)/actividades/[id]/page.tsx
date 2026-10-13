@@ -222,13 +222,13 @@ export default async function ActividadDetallePage({
       <Card>
         <CardHeader className="gap-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <CardTitle className="codigo-expediente text-xl">{identificadorAuditoria(actividad)}</CardTitle>
-            {actividad.concluida ? <Badge>Concluida</Badge> : null}
+            <div>
+              <CardTitle className="codigo-expediente text-xl">{identificadorAuditoria(actividad)}</CardTitle>
+              <p className="text-lg">{actividad.dependencia_auditada}</p>
+            </div>
+            {actividad.concluida ? <Badge className="h-7 px-3 text-sm">Concluida</Badge> : null}
           </div>
-          <div className="grid grid-cols-1 gap-x-10 gap-y-2 pt-1 sm:grid-cols-3">
-            <Info label="Dependencia auditada" value={actividad.dependencia_auditada} />
-            <Info label="Tipo de auditoría" value={actividad.tipo_auditoria} />
-            <Info label="Nombramiento" value={actividad.no_nombramiento} mono />
+          <div className="grid grid-cols-1 gap-x-10 gap-y-2 pt-2 sm:grid-cols-3">
             <Info label="Departamento" value={actividad.departamentos?.nombre} />
             <Info label="Auditor principal" value={actividad.auditor_principal?.nombre} />
             <Info label="Límite de notificación" value={actividad.fecha_notificacion} />
@@ -316,6 +316,8 @@ export default async function ActividadDetallePage({
         <TabsContent value="expediente">
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-x-10 gap-y-2 rounded-xl border p-4 text-sm sm:grid-cols-3">
+              <Info label="No. de nombramiento" value={actividad.no_nombramiento} mono />
+              <Info label="Tipo de auditoría" value={actividad.tipo_auditoria} />
               <Info label="Período evaluado" value={`${actividad.periodo_evaluado_inicio} — ${actividad.periodo_evaluado_fin}`} />
               <Info label="Inicio de plazo" value={actividad.fecha_inicio_plazo} />
               <Info

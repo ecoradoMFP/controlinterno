@@ -150,7 +150,7 @@ export default async function CaiPage({
         <CardContent className="flex flex-col gap-4 text-sm">
           {paso === "capturar" ? (
             <>
-              <p>Este CAI todavía no tiene recomendaciones. Registra cada deficiencia junto con su recomendación, como vienen en el informe.</p>
+              <p>Este CAI todavía no tiene recomendaciones. Registre cada deficiencia junto con su recomendación, como vienen en el informe.</p>
               <Button size="lg" className="w-fit" render={<Link href={`/recomendaciones/informes/${id}`} />}>
                 Registrar las recomendaciones emitidas
               </Button>
@@ -161,7 +161,7 @@ export default async function CaiPage({
             puedeNombrar ? (
               <>
                 <p>
-                  Este CAI tiene {filas.filter((f) => f.bucket === "activa").length} recomendación(es) activa(s). Registra el
+                  Este CAI tiene {filas.filter((f) => f.bucket === "activa").length} recomendación(es) activa(s). Registre el
                   nombramiento del auditor que les dará seguimiento.
                 </p>
                 <Button size="lg" className="w-fit" render={<Link href={`/recomendaciones/documentos/nuevo?informe=${id}`} />}>
@@ -184,7 +184,7 @@ export default async function CaiPage({
           {paso === "emitir" && documento ? (
             puedeGestionar ? (
               <>
-                <p>Ya están evaluadas todas las recomendaciones. Escribe el número y la fecha del informe firmado.</p>
+                <p>Ya están evaluadas todas las recomendaciones. Escriba el número y la fecha del informe firmado.</p>
                 <p className="text-xs text-muted-foreground">
                   Al emitirlo se cierra el seguimiento: las cumplidas pasan al histórico y el resto queda en seguimiento el
                   resto del año.
@@ -217,7 +217,7 @@ export default async function CaiPage({
           {paso === "sag" && documento ? (
             esDirector ? (
               <>
-                <p>El informe {documento.no_documento} ya se emitió. Registra la fecha en que se cargó al SAG-UDAI.</p>
+                <p>El informe {documento.no_documento} ya se emitió. Registre la fecha en que se cargó al SAG-UDAI.</p>
                 <form action={registrarCargaSagUdai} className="flex flex-wrap items-end gap-3">
                   <input type="hidden" name="documento_id" value={documento.id} />
                   <input type="hidden" name="volver_a" value={volverA} />
@@ -247,7 +247,7 @@ export default async function CaiPage({
               <p className="text-xs text-muted-foreground">
                 {documento.no_documento
                   ? `Cédula del informe ${documento.no_documento}.`
-                  : "Sale con lo evaluado hasta ahora; puedes descargarla las veces que quieras antes de emitir el informe."}
+                  : "Sale con lo evaluado hasta ahora; puede descargarla las veces que necesite antes de emitir el informe."}
               </p>
             </div>
           ) : null}

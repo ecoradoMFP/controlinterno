@@ -53,7 +53,7 @@ begin
   end if;
 
   if length(btrim(coalesce(new.motivo_ultimo_cambio, ''))) < 5 then
-    raise exception 'Indica el motivo del cambio (mínimo 5 caracteres)';
+    raise exception 'Indique el motivo del cambio (mínimo 5 caracteres)';
   end if;
   if exists (
     select 1 from seguimientos_recomendacion s join recomendaciones r on r.id = s.recomendacion_id
@@ -99,7 +99,7 @@ begin
   select informe_id, numero into v_informe, v_numero from deficiencias where id = p_id and anulada_en is null;
 
   if v_informe is null or not authz.puede_operar_informe(v_informe) then
-    raise exception 'No tienes permiso para eliminar esta deficiencia';
+    raise exception 'No tiene permiso para eliminar esta deficiencia';
   end if;
 
   update recomendaciones

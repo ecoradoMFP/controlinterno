@@ -29,8 +29,8 @@ export async function agregarMiembroEquipo(formData: FormData) {
   const rolEnEquipo = String(formData.get("rol_en_equipo") ?? "").trim() || null;
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "equipo", "No tienes permiso para modificar el equipo.");
-  if (!usuarioNit) fail(actividadId, "equipo", "Selecciona a un usuario.");
+  if (!puedeEscribir(usuario)) fail(actividadId, "equipo", "No tiene permiso para modificar el equipo.");
+  if (!usuarioNit) fail(actividadId, "equipo", "Seleccione a un usuario.");
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -48,8 +48,8 @@ export async function agregarDocumentoActividad(formData: FormData) {
   const documentoCatalogoId = String(formData.get("documento_catalogo_id") ?? "");
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para agregar documentos.");
-  if (!documentoCatalogoId) fail(actividadId, "documentos", "Selecciona un documento del catálogo.");
+  if (!puedeEscribir(usuario)) fail(actividadId, "documentos", "No tiene permiso para agregar documentos.");
+  if (!documentoCatalogoId) fail(actividadId, "documentos", "Seleccione un documento del catálogo.");
 
   const supabase = await createClient();
 
@@ -103,9 +103,9 @@ export async function agregarHito(formData: FormData) {
   const documentoCatalogoId = String(formData.get("documento_catalogo_id") ?? "") || null;
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tienes permiso para agregar hitos.");
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para agregar hitos.");
   if (!codigoJerarquico || !nombre || !etapa || !cargoResponsable || !fechaInicioEsperada || !fechaFinEsperada) {
-    fail(actividadId, "cronograma", "Completa todos los campos requeridos del hito.");
+    fail(actividadId, "cronograma", "Complete todos los campos requeridos del hito.");
   }
   if (fechaFinEsperada < fechaInicioEsperada) {
     fail(actividadId, "cronograma", "La fecha de fin esperado no puede ser anterior al inicio esperado.");
@@ -136,8 +136,8 @@ export async function concluirHito(formData: FormData) {
   const fechaFinReal = String(formData.get("fecha_fin_real") ?? "");
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tienes permiso para concluir hitos.");
-  if (!fechaFinReal) fail(actividadId, "cronograma", "Indica la fecha real de conclusión.");
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para concluir hitos.");
+  if (!fechaFinReal) fail(actividadId, "cronograma", "Indique la fecha real de conclusión.");
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -171,7 +171,7 @@ export async function registrarMovimiento(formData: FormData) {
   if (!usuario || !puedeCorregirHechoConsumado(usuario)) {
     fail(actividadId, "documentos", "El registro manual de movimientos es exclusivo de control total.");
   }
-  if (!aCargo || !tipoEvento) fail(actividadId, "documentos", "Completa el cargo destino y el tipo de evento.");
+  if (!aCargo || !tipoEvento) fail(actividadId, "documentos", "Complete el cargo destino y el tipo de evento.");
   if (timestamp && (Number.isNaN(timestamp.getTime()) || timestamp.getTime() > Date.now())) {
     fail(actividadId, "documentos", "La fecha en que ocurrió no puede ser futura.");
   }
@@ -221,7 +221,7 @@ export async function cerrarEtapa(formData: FormData) {
   const actividadId = String(formData.get("actividad_id"));
 
   const usuario = await getUsuarioActual();
-  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para cerrar la etapa.");
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tiene permiso para cerrar la etapa.");
 
   const supabase = await createClient();
 
@@ -230,7 +230,7 @@ export async function cerrarEtapa(formData: FormData) {
   // director, nunca Auditor) — sin este chequeo, un Auditor veía el botón habilitado y, al
   // hacer clic, el único error que le llegaba era el mensaje crudo de Postgres/RLS.
   if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
-    fail(actividadId, "documentos", "Tu cargo no tiene permiso para cerrar la etapa de esta auditoría.");
+    fail(actividadId, "documentos", "Su cargo no tiene permiso para cerrar la etapa de esta auditoría.");
   }
 
   const { data: actividad } = await supabase
@@ -278,9 +278,9 @@ export async function actualizarConfirmacionEquipo(formData: FormData) {
   const fecha = String(formData.get("fecha") ?? "");
 
   const usuario = await getUsuarioActual();
-  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "equipo", "No tienes permiso para confirmar al equipo.");
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "equipo", "No tiene permiso para confirmar al equipo.");
   if ((campo !== "recibido" && campo !== "declaracion") || !fecha) {
-    fail(actividadId, "equipo", "Indica la fecha.");
+    fail(actividadId, "equipo", "Indique la fecha.");
   }
 
   const supabase = await createClient();
@@ -313,8 +313,8 @@ export async function corregirFechaEquipo(formData: FormData) {
   if (!esJefaturaAuditoria(usuario)) {
     fail(actividadId, "equipo", "Corregir una fecha ya registrada es decisión de la jefatura.");
   }
-  if ((campo !== "recibido" && campo !== "declaracion") || !fecha) fail(actividadId, "equipo", "Indica la nueva fecha.");
-  if (motivo.length < 10) fail(actividadId, "equipo", "Escribe el motivo de la corrección (al menos 10 caracteres).");
+  if ((campo !== "recibido" && campo !== "declaracion") || !fecha) fail(actividadId, "equipo", "Indique la nueva fecha.");
+  if (motivo.length < 10) fail(actividadId, "equipo", "Escriba el motivo de la corrección (al menos 10 caracteres).");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("corregir_fecha_equipo", {
@@ -347,12 +347,12 @@ export async function avanzarDocumento(formData: FormData) {
   const responsableEsperado = String(formData.get("responsable_esperado") ?? "") as CargoEnum;
 
   const usuario = await getUsuarioActual();
-  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para registrar pasos.");
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tiene permiso para registrar pasos.");
   if (!ACCIONES_DOCUMENTO.includes(accion as (typeof ACCIONES_DOCUMENTO)[number])) {
     fail(actividadId, "documentos", "Acción no reconocida.");
   }
   if (accion === "devolver" && !observacion) {
-    fail(actividadId, "documentos", "Indica en la observación qué debe corregirse.");
+    fail(actividadId, "documentos", "Indique en la observación qué debe corregirse.");
   }
 
   const supabase = await createClient();
@@ -384,7 +384,7 @@ export async function actualizarNombramiento(formData: FormData) {
   const usuario = await getUsuarioActual();
   const supabase = await createClient();
   if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
-    fail(actividadId, "expediente", "Tu cargo no tiene permiso para modificar el nombramiento.");
+    fail(actividadId, "expediente", "Su cargo no tiene permiso para modificar el nombramiento.");
   }
 
   const parsed = nombramientoSchema.safeParse({
@@ -394,7 +394,7 @@ export async function actualizarNombramiento(formData: FormData) {
     fecha_notificacion_dependencia: campo(formData, "fecha_notificacion_dependencia"),
     observaciones: campo(formData, "observaciones"),
   });
-  if (!parsed.success) fail(actividadId, "expediente", parsed.error.issues[0]?.message ?? "Revisa las fechas.");
+  if (!parsed.success) fail(actividadId, "expediente", parsed.error.issues[0]?.message ?? "Revise las fechas.");
 
   const { error } = await supabase
     .from("actividades")
@@ -419,7 +419,7 @@ export async function registrarCierreExpediente(formData: FormData) {
   const usuario = await getUsuarioActual();
   const supabase = await createClient();
   if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
-    fail(actividadId, "expediente", "Tu cargo no tiene permiso para registrar el cierre del expediente.");
+    fail(actividadId, "expediente", "Su cargo no tiene permiso para registrar el cierre del expediente.");
   }
 
   const parsed = cierreExpedienteSchema.safeParse({
@@ -428,7 +428,7 @@ export async function registrarCierreExpediente(formData: FormData) {
     fecha_entrega_archivo: campo(formData, "fecha_entrega_archivo"),
     observaciones: campo(formData, "observaciones"),
   });
-  if (!parsed.success) fail(actividadId, "expediente", parsed.error.issues[0]?.message ?? "Revisa las fechas.");
+  if (!parsed.success) fail(actividadId, "expediente", parsed.error.issues[0]?.message ?? "Revise las fechas.");
 
   const { error } = await supabase.from("actividades").update(parsed.data).eq("id", actividadId);
 
@@ -451,7 +451,7 @@ export async function crearInformeRecomendaciones(formData: FormData) {
 
   const usuario = await getUsuarioActual();
   if (!usuario || !puedeEscribir(usuario)) {
-    fail(actividadId, "expediente", "No tienes permiso para registrar el informe.");
+    fail(actividadId, "expediente", "No tiene permiso para registrar el informe.");
   }
 
   const supabase = await createClient();
@@ -521,8 +521,8 @@ export async function marcarNoAplica(formData: FormData) {
   const revertir = formData.get("revertir") === "1";
 
   const usuario = await getUsuarioActual();
-  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tienes permiso para esta acción.");
-  if (justificacion.length < 10) fail(actividadId, "documentos", "Escribe la justificación (al menos 10 caracteres).");
+  if (!usuario || !puedeEscribir(usuario)) fail(actividadId, "documentos", "No tiene permiso para esta acción.");
+  if (justificacion.length < 10) fail(actividadId, "documentos", "Escriba la justificación (al menos 10 caracteres).");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("marcar_no_aplica", {

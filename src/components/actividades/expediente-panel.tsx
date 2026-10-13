@@ -126,7 +126,7 @@ export function ExpedientePanel({
           <form action={crearInformeRecomendaciones} className="flex flex-col gap-2">
             <input type="hidden" name="actividad_id" value={actividad.id} />
             <p className="text-sm text-muted-foreground">
-              Crea el informe en Recomendaciones con el nombramiento, la dependencia, el período y el equipo de esta
+              Cree el informe en Recomendaciones con el nombramiento, la dependencia, el período y el equipo de esta
               auditoría; solo faltará capturar las deficiencias y recomendaciones.
             </p>
             {puedeGestionar ? (

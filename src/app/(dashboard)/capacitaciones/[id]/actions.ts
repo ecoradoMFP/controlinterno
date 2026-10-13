@@ -21,7 +21,7 @@ async function verificarAlcance(
   if (!persona) fail(personalId, "No se encontró a la persona.");
 
   if (!(await puedeGestionarCapacitacionDe(usuario, persona, supabase))) {
-    fail(personalId, "No tienes permiso para registrar capacitaciones de esta persona.");
+    fail(personalId, "No tiene permiso para registrar capacitaciones de esta persona.");
   }
 }
 
@@ -47,7 +47,7 @@ export async function registrarCapacitacion(formData: FormData) {
       const key = String(issue.path[0] ?? "form");
       if (!fieldErrors[key]) fieldErrors[key] = issue.message;
     }
-    fail(personalId, "Revisa los campos marcados.", fieldErrors);
+    fail(personalId, "Revise los campos marcados.", fieldErrors);
   }
 
   const { error } = await supabase.from("capacitaciones").insert({

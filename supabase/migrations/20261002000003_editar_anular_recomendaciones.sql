@@ -82,7 +82,7 @@ begin
   end if;
 
   if length(btrim(coalesce(new.motivo_ultimo_cambio, ''))) < 5 then
-    raise exception 'Indica el motivo del cambio (mínimo 5 caracteres)';
+    raise exception 'Indique el motivo del cambio (mínimo 5 caracteres)';
   end if;
   if exists (select 1 from seguimientos_recomendacion where recomendacion_id = old.id and numero_seguimiento > 0) then
     raise exception 'La recomendación ya tiene seguimientos evaluados: no se puede editar ni eliminar';
@@ -133,7 +133,7 @@ begin
   where r.id = p_id and r.anulada_en is null;
 
   if v_informe is null or not authz.puede_operar_informe(v_informe) then
-    raise exception 'No tienes permiso para eliminar esta recomendación';
+    raise exception 'No tiene permiso para eliminar esta recomendación';
   end if;
 
   update recomendaciones set anulada_en = now(), motivo_ultimo_cambio = p_motivo where id = p_id;

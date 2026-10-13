@@ -102,7 +102,7 @@ export default async function NuevoNombramientoSeguimientoPage({
               ) : (
                 <select id="informe_id" name="informe_id" defaultValue={informePreseleccionado ?? ""} className={SELECT_CLASES}>
                   <option value="" disabled>
-                    Elige un informe…
+                    Elija un informe…
                   </option>
                   {informesAbiertos.map((i) => (
                     <option key={i.id} value={i.id}>
@@ -132,9 +132,9 @@ export default async function NuevoNombramientoSeguimientoPage({
               <Campo label="Fecha del nombramiento" htmlFor="fecha_nombramiento" error={fieldErrors.fecha_nombramiento}>
                 <Input id="fecha_nombramiento" name="fecha_nombramiento" type="date" />
               </Campo>
-              <Campo label="Coordina el seguimiento (opcional)" htmlFor="coordinador_nit" error={fieldErrors.coordinador_nit}>
+              <Campo label="Coordinador del seguimiento" htmlFor="coordinador_nit" error={fieldErrors.coordinador_nit}>
                 <select id="coordinador_nit" name="coordinador_nit" defaultValue="" className={SELECT_CLASES}>
-                  <option value="">Sin coordinador designado</option>
+                  <option value="" disabled>Seleccione al coordinador</option>
                   {grupos.map((g) => (
                     <optgroup key={g.depId} label={g.nombre}>
                       {g.personas.map((u) => (

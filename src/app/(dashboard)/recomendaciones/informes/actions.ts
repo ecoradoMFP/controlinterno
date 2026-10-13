@@ -16,7 +16,7 @@ export async function crearInforme(formData: FormData) {
   // Sección 12.3: defensa en profundidad además de RLS (`informes_auditoria_insert`).
   const usuario = await getUsuarioActual();
   if (!puedeEscribir(usuario)) {
-    fail("No tienes permiso para crear informes de auditoría.");
+    fail("No tiene permiso para crear informes de auditoría.");
   }
 
   const campo = (nombre: string) => formData.get(nombre) ?? undefined;
@@ -44,7 +44,7 @@ export async function crearInforme(formData: FormData) {
       const key = String(issue.path[0] ?? "form");
       if (!fieldErrors[key]) fieldErrors[key] = issue.message;
     }
-    fail("Revisa los campos marcados.", fieldErrors);
+    fail("Revise los campos marcados.", fieldErrors);
   }
 
   const { departamento_id, dependencia_auditada, ...opcionales } = parsed.data;
@@ -72,7 +72,7 @@ export async function crearInforme(formData: FormData) {
     fail(
       error.code === "23505"
         ? `Ya existe el CAI ${parsed.data.cai} del año ${parsed.data.anio_cai}.`
-        : "No se pudo crear el informe. Verifica los datos e intenta de nuevo.",
+        : "No se pudo crear el informe. Verifique los datos e intente de nuevo.",
       error.code === "23505" ? { cai: "Ya registrado en ese año" } : undefined,
     );
   }

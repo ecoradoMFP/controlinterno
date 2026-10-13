@@ -89,7 +89,7 @@ export function EquipoPanel({
                 items={Object.fromEntries(candidatos.map((u) => [u.nit, `${u.nombre} — ${u.puesto ?? u.cargo}`]))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecciona un usuario" />
+                  <SelectValue placeholder="Seleccione un usuario" />
                 </SelectTrigger>
                 <SelectContent>
                   {candidatos.map((u) => (

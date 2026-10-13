@@ -138,7 +138,7 @@ export function SiguientePaso({
         ) : null}
 
         {!concluida && misDocs.length > 0 ? (
-          <Grupo titulo={`Documentos que te tocan (${misDocs.length})`}>
+          <Grupo titulo={`Documentos a su cargo (${misDocs.length})`}>
             {misDocs.map((d) => (
               <Fila key={d.id}>
                 <span className="min-w-0">
@@ -148,8 +148,8 @@ export function SiguientePaso({
                   </span>
                   <span className="block text-xs text-muted-foreground">{FASE_DOCUMENTO_LABELS[d.fase]}</span>
                 </span>
-                <Button size="sm" render={<Link href={`/actividades/${actividadId}?tab=documentos#doc-${d.id}`} />}>
-                  {d.fase === "revision" ? "Revisar" : "Abrir"}
+                <Button render={<Link href={`/actividades/${actividadId}?tab=documentos#doc-${d.id}`} />}>
+                  {d.fase === "revision" ? "Revisar documento" : "Ver documento"}
                 </Button>
               </Fila>
             ))}
@@ -157,7 +157,7 @@ export function SiguientePaso({
         ) : null}
 
         {!concluida && hitosAVer.length > 0 ? (
-          <Grupo titulo={`Hitos que requieren atención (${hitosAVer.length})`}>
+          <Grupo titulo={`Plazos del cronograma (${hitosAVer.length})`}>
             {hitosAVer.map((h) => (
               <Fila key={h.id}>
                 <span className="min-w-0">
@@ -165,7 +165,7 @@ export function SiguientePaso({
                     {h.codigo} — {h.nombre}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    Vence el {h.fechaFin} · responsable {CARGO_LABELS[h.responsable]}
+                    Vence el {h.fechaFin} · a cargo del {CARGO_LABELS[h.responsable]}
                   </span>
                 </span>
                 <span className="flex items-center gap-3">
@@ -174,7 +174,7 @@ export function SiguientePaso({
                     href={`/actividades/${actividadId}?tab=cronograma#hito-${h.id}`}
                     className="text-primary underline-offset-2 hover:underline"
                   >
-                    Abrir
+                    Ver en el cronograma
                   </Link>
                 </span>
               </Fila>
@@ -186,12 +186,12 @@ export function SiguientePaso({
           <p className="text-muted-foreground">
             {otrosDocs.length > 0 ? (
               <>
-                {misDocs.length > 0 ? "Otros documentos" : "Documentos"} en manos de otros:{" "}
+                {misDocs.length > 0 ? "Los demás documentos están" : "Los documentos pendientes están"}:{" "}
                 <span className="text-foreground">{porCargo(otrosDocs)}</span>.{" "}
               </>
             ) : null}
-            {otrosHitos > 0 ? `${otrosHitos} hito(s) más en tiempo. ` : null}
-            Los ves abajo, en{" "}
+            {otrosHitos > 0 ? `${otrosHitos === 1 ? "Otro plazo del cronograma va" : `Otros ${otrosHitos} plazos del cronograma van`} en tiempo. ` : null}
+            Puede consultarlos abajo, en las pestañas{" "}
             <Link href={`/actividades/${actividadId}?tab=documentos#documentos`} className="text-primary underline-offset-2 hover:underline">
               Documentos
             </Link>{" "}
@@ -206,7 +206,7 @@ export function SiguientePaso({
         {!concluida && pendientes === 0 && etapaSiguiente ? (
           puedeCerrarEtapa ? (
             <>
-              <p>Todo lo de {etapaLabel} está terminado. Ya puedes cerrar la etapa.</p>
+              <p>Todos los pendientes de {etapaLabel} están terminados. Ya puede cerrar la etapa.</p>
               <form action={cerrarEtapa}>
                 <input type="hidden" name="actividad_id" value={actividadId} />
                 <Button type="submit" size="lg">
@@ -216,7 +216,7 @@ export function SiguientePaso({
             </>
           ) : (
             <p className="text-muted-foreground">
-              Todo lo de {etapaLabel} está terminado. Falta que la jefatura (Subjefe o Jefe) cierre la etapa.
+              Todos los pendientes de {etapaLabel} están terminados. Falta que la jefatura (Subjefe o Jefe) cierre la etapa.
             </p>
           )
         ) : null}
@@ -239,11 +239,11 @@ export function SiguientePaso({
 
         {!concluida && (etapa === "comunicacion_resultados" || etapa === "expediente_cierre") && !informeId ? (
           <p className="border-t pt-4 text-muted-foreground">
-            Cuando tengas el informe, pásalo a Recomendaciones desde la pestaña{" "}
+            Cuando cuente con el informe, regístrelo en Recomendaciones desde la pestaña{" "}
             <Link href={`/actividades/${actividadId}?tab=expediente#recomendaciones`} className="text-primary underline-offset-2 hover:underline">
               Nombramiento y cierre
             </Link>
-            . No bloquea el cierre de la etapa.
+            . Este paso no impide cerrar la etapa.
           </p>
         ) : null}
       </CardContent>
@@ -269,7 +269,7 @@ function Fila({ children }: { children: React.ReactNode }) {
 function resumenPendientes(docs: number, hitos: number, equipo: number) {
   const partes = [
     docs ? `${docs} documento${docs === 1 ? "" : "s"}` : null,
-    hitos ? `${hitos} hito${hitos === 1 ? "" : "s"}` : null,
+    hitos ? `${hitos} plazo${hitos === 1 ? "" : "s"} del cronograma` : null,
     equipo ? `${equipo} pendiente${equipo === 1 ? "" : "s"} del equipo` : null,
   ].filter(Boolean);
   return partes.length > 1 ? `${partes.slice(0, -1).join(", ")} y ${partes.at(-1)}` : partes[0];

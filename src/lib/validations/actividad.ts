@@ -21,8 +21,8 @@ export const actividadFormSchema = z
       .min(1, "Requerido")
       .max(LARGO_MAXIMO_NUMERO, `Máximo ${LARGO_MAXIMO_NUMERO} caracteres`)
       .refine(formatoNombramientoValido, { error: mensajeFormatoNombramiento }),
-    departamento_id: z.uuid("Selecciona un departamento"),
-    auditor_principal_nit: z.string().trim().min(1, "Selecciona al auditor principal"),
+    departamento_id: z.uuid("Seleccione un departamento"),
+    auditor_principal_nit: z.string().trim().min(1, "Seleccione al auditor principal"),
     dependencia_auditada: z.string().trim().min(1, "Requerido"),
     tipo_auditoria: z.string().trim().min(1, "Requerido"),
     area: textoOpcional,
@@ -90,7 +90,7 @@ export const cierreExpedienteSchema = z
     observaciones: textoOpcional,
   })
   .refine((d) => !d.fecha_notificacion_cgc || !!d.fecha_notificacion_informe, {
-    error: "Registra primero la notificación del informe",
+    error: "Registre primero la notificación del informe",
   })
   .refine((d) => !d.fecha_entrega_archivo || !!d.fecha_notificacion_informe, {
     error: "La entrega al archivo requiere la fecha de notificación del informe",

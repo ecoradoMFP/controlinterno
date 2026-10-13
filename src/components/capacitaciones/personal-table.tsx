@@ -58,7 +58,7 @@ export function PersonalCapacitacionTable({ filas }: { filas: FilaPersonalCapaci
           ) : (
             <TableRow>
               <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                No hay personal dentro de tu alcance.
+                No hay personal dentro de su alcance.
               </TableCell>
             </TableRow>
           )}

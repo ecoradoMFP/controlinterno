@@ -159,7 +159,7 @@ declare
 begin
   select da.* into v_doc from documentos_actividad da where da.id = p_documento_id for update;
   if not found then
-    raise exception 'No se encontró el documento o no tienes acceso a él.';
+    raise exception 'No se encontró el documento o no tiene acceso a él.';
   end if;
 
   if (p_fase_esperada is not null and p_fase_esperada <> v_doc.fase_actual)
@@ -238,7 +238,7 @@ begin
         raise exception 'Solo % puede devolver el documento en este paso.', v_doc.cargo_actual_responsable;
       end if;
       if v_obs is null then
-        raise exception 'Indica en la observación qué debe corregirse.';
+        raise exception 'Indique en la observación qué debe corregirse.';
       end if;
       v_tipo := 'devolucion_correccion';
       v_destino := v_cadena[1];

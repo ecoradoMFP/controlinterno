@@ -396,7 +396,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
               {cargaDepartamento.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    No hay auditorías dentro de tu alcance todavía.
+                    No hay auditorías dentro de su alcance todavía.
                   </TableCell>
                 </TableRow>
               ) : (

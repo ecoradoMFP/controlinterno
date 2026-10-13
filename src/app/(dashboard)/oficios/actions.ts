@@ -16,7 +16,7 @@ export async function crearOficio(formData: FormData) {
   // Sección 12.3: defensa en profundidad además de RLS, alcanzable por POST directo.
   const usuario = await getUsuarioActual();
   if (!puedeEscribir(usuario)) {
-    fail("No tienes permiso para crear oficios.");
+    fail("No tiene permiso para crear oficios.");
   }
 
   const parsed = oficioFormSchema.safeParse({
@@ -39,7 +39,7 @@ export async function crearOficio(formData: FormData) {
       const key = String(issue.path[0] ?? "form");
       if (!fieldErrors[key]) fieldErrors[key] = issue.message;
     }
-    fail("Revisa los campos marcados.", fieldErrors);
+    fail("Revise los campos marcados.", fieldErrors);
   }
 
   const { actividad_id, fecha_vencimiento, ...rest } = parsed.data;
@@ -60,7 +60,7 @@ export async function crearOficio(formData: FormData) {
   });
 
   if (error) {
-    fail("No se pudo crear el oficio. Verifica los datos e intenta de nuevo.");
+    fail("No se pudo crear el oficio. Verifique los datos e intente de nuevo.");
   }
 
   revalidatePath("/oficios");

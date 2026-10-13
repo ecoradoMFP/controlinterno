@@ -10,7 +10,13 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
  */
 export type UsuarioActual = Usuario & {
   /** Ampliación de nombramiento vigente hoy: mientras dura, `cargo` y `departamento_id` son los de ella. */
-  cargo_temporal: { cargo: CargoEnum; cargo_original: CargoEnum | null; fecha_fin: string; documento_respaldo: string } | null;
+  cargo_temporal: {
+    cargo: CargoEnum;
+    cargo_original: CargoEnum | null;
+    departamento_original: string | null;
+    fecha_fin: string;
+    documento_respaldo: string;
+  } | null;
 };
 
 export async function getUsuarioActual(): Promise<UsuarioActual | null> {
@@ -43,6 +49,7 @@ export async function getUsuarioActual(): Promise<UsuarioActual | null> {
     cargo_temporal: {
       cargo: vigente.cargo,
       cargo_original: data.cargo,
+      departamento_original: data.departamento_id,
       fecha_fin: vigente.fecha_fin,
       documento_respaldo: vigente.documento_respaldo,
     },
@@ -283,8 +290,15 @@ export async function puedeDarSeguimiento(
 
 /**
  * Espeja `authz.puede_registrar_cargo_temporal`: las ampliaciones de nombramiento (cargo temporal
- * de Subjefe o Jefe) las registra la Dirección — Director o Subdirector, con escritura.
+ * de Subjefe o Jefe) las registran el Director y el Subdirector para cualquier departamento, y el
+ * Jefe y el Subjefe solo para el suyo. Cuenta el cargo REAL, no el de un cargo temporal vigente.
+ * Devuelve los departamentos permitidos: `"todos"`, una lista, o `null` si no puede registrar.
  */
-export function puedeRegistrarCargoTemporal(usuario: Pick<Usuario, "cargo" | "permiso_sistema"> | null): boolean {
-  return !!usuario && puedeEscribir(usuario) && (usuario.cargo === "director" || usuario.cargo === "subdirector");
+export function departamentosCargoTemporal(usuario: UsuarioActual | null): "todos" | string[] | null {
+  if (!usuario || !puedeEscribir(usuario)) return null;
+  const cargo = usuario.cargo_temporal ? usuario.cargo_temporal.cargo_original : usuario.cargo;
+  const departamento = usuario.cargo_temporal ? usuario.cargo_temporal.departamento_original : usuario.departamento_id;
+  if (cargo === "director" || cargo === "subdirector") return "todos";
+  if ((cargo === "jefe" || cargo === "subjefe") && departamento) return [departamento];
+  return null;
 }
