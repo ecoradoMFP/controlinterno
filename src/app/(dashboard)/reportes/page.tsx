@@ -1,18 +1,16 @@
 import Link from "next/link";
+import { AlertTriangle, CheckCircle2, ClipboardList, FileClock, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { SemaforoBadge, SemaforoChip } from "@/components/semaforo-chip";
+import { identificadorAuditoria } from "@/lib/auditoria";
+import { hoyGuatemala } from "@/lib/recomendaciones";
+import { SemaforoBadge } from "@/components/semaforo-chip";
+import { StatCard } from "@/components/ui/stat-card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FiltrosAutomaticos } from "@/components/recomendaciones/filtros-automaticos";
+import { BarraSemaforo, BarrasHorizontales, Medidor, PlanContraReal } from "@/components/reportes/graficas";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  calcularColorPorActividad,
+  calcularSemaforo,
   UMBRAL_POR_DEFECTO,
-  COLOR_SEMAFORO_LABELS,
   type ColorSemaforo,
   type UmbralSemaforo,
 } from "@/lib/semaforo";
@@ -20,34 +18,36 @@ import {
   calcularCumplimiento,
   calcularPlanVsReal,
   calcularSegmentosPermanencia,
+  formatearHoras,
   promediarPorClave,
+  sinCorregidos,
 } from "@/lib/bi";
 import { construirMapaOrganizacional, responsablesPorCargo } from "@/lib/organizacion";
-import { RankingTable } from "@/components/reportes/ranking-table";
-import { CargaTrabajoTable, type FilaCargaTrabajo } from "@/components/reportes/carga-trabajo-table";
-import { CargaDepartamentoTable, type FilaCargaDepartamento } from "@/components/reportes/carga-departamento-table";
-import { CumplimientoCards } from "@/components/reportes/cumplimiento-cards";
-import { PlanVsRealChart } from "@/components/reportes/plan-vs-real-chart";
-import { SemaforoDonut } from "@/components/reportes/semaforo-donut";
-import { CARGO_LABELS, type CargoEnum } from "@/types/domain";
+import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, ETAPA_DOCUMENTO_LABELS, type CargoEnum, type EtapaActividadEnum } from "@/types/domain";
 
-const COLORES: ColorSemaforo[] = ["verde", "amarillo", "naranja", "rojo"];
+const SELECT_CLASES = "h-9 rounded-lg border border-input bg-background px-3 text-sm";
+const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
+const SEVERIDAD: Record<ColorSemaforo, number> = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
 
-export default async function ReportesPage() {
+/**
+ * Tablero de Reportes. Responde, en este orden, lo que Dirección y jefaturas preguntan: ¿cómo
+ * vamos? (indicadores), ¿qué hay que atender? (auditorías en riesgo con su motivo), ¿cumplimos los
+ * plazos?, ¿dónde se detiene el trabajo? y ¿cómo está repartida la carga? RLS ya limita todo al
+ * alcance de quien consulta; el filtro de departamento solo acota dentro de ese alcance.
+ */
+export default async function ReportesPage({ searchParams }: { searchParams: Promise<{ dep?: string }> }) {
+  const { dep } = await searchParams;
   const supabase = await createClient();
 
-  // Sin filtro explícito en ninguna de las 3 consultas: RLS (actividades_select, hitos_select,
-  // oficios_select) ya devuelve solo lo que está dentro del alcance del usuario actual, igual
-  // que en /documentos.
   const [
-    { data: actividades },
-    { data: hitosAbiertos },
-    { data: oficiosAbiertos },
+    { data: actividadesTodas },
+    { data: hitosAbiertosTodos },
+    { data: oficiosAbiertosTodos },
     { data: parametros },
     { data: feriadosRows },
-    { data: documentosConMovimientos },
-    { data: hitosConcluidos },
-    { data: oficiosConcluidos },
+    { data: documentosTodos },
+    { data: hitosConcluidosTodos },
+    { data: oficiosConcluidosTodos },
     { data: equipos },
     { data: usuariosEquipo },
     { data: departamentos },
@@ -55,38 +55,31 @@ export default async function ReportesPage() {
   ] = await Promise.all([
     supabase
       .from("actividades")
-      .select(
-        "id, no_nombramiento, dependencia_auditada, auditor_principal_nit, etapa_actual, departamento_id, departamentos(nombre)",
-      )
-      .order("no_nombramiento"),
-    supabase
-      .from("hitos_cronograma")
-      .select("actividad_id, fecha_inicio_esperada, fecha_fin_esperada")
-      .is("fecha_fin_real", null),
+      .select("id, cai, anio_cai, no_nombramiento, dependencia_auditada, auditor_principal_nit, etapa_actual, concluida, departamento_id, departamentos(nombre)")
+      .order("created_at", { ascending: false }),
+    supabase.from("hitos_cronograma").select("actividad_id, nombre, fecha_inicio_esperada, fecha_fin_esperada").is("fecha_fin_real", null),
     supabase
       .from("oficios")
-      .select("actividad_id, fecha_emision, fecha_vencimiento, responsable_elaboracion_nit")
+      .select("actividad_id, no_oficio, fecha_emision, fecha_vencimiento, responsable_elaboracion_nit")
       .is("fecha_respuesta", null)
-      .not("fecha_vencimiento", "is", null)
-      .not("actividad_id", "is", null),
+      .not("fecha_vencimiento", "is", null),
     supabase.from("parametros_semaforo").select("*"),
     supabase.from("calendario_feriados").select("fecha"),
-    // Sección 7: cuellos de botella / carga de trabajo — reconstruidos a partir de la bitácora
-    // (movimientos), no de columnas agregadas: es la única fuente confiable de "quién tuvo esto
-    // y cuánto tiempo" (sección 4.8).
+    // Cuellos de botella y carga: se reconstruyen desde la bitácora (movimientos), la única fuente
+    // confiable de "quién tuvo esto y cuánto tiempo".
     supabase
       .from("documentos_actividad")
       .select(
-        "id, created_at, fase_actual, cargo_actual_responsable, actividad_id, actividades(departamentos(nombre)), documentos_catalogo(nombre), movimientos(de_cargo, a_cargo, timestamp)",
+        "id, created_at, fase_actual, cargo_actual_responsable, actividad_id, documentos_catalogo(nombre), movimientos(id, corrige_movimiento_id, de_cargo, a_cargo, timestamp)",
       ),
     supabase
       .from("hitos_cronograma")
-      .select("etapa, dias_habiles_esperados, fecha_inicio_esperada, fecha_fin_esperada, fecha_fin_real")
+      .select("actividad_id, etapa, dias_habiles_esperados, fecha_inicio_esperada, fecha_fin_esperada, fecha_fin_real")
       .eq("estado", "concluido")
       .not("fecha_fin_real", "is", null),
     supabase
       .from("oficios")
-      .select("fecha_vencimiento, fecha_respuesta")
+      .select("actividad_id, fecha_vencimiento, fecha_respuesta")
       .not("fecha_respuesta", "is", null)
       .not("fecha_vencimiento", "is", null),
     supabase.from("actividades_equipo").select("actividad_id, usuario_nit"),
@@ -95,301 +88,375 @@ export default async function ReportesPage() {
       .select("nit, nombre, cargo, departamento_id, departamentos(nombre)")
       .in("cargo", ["auditor", "subjefe", "jefe"])
       .eq("activo", true),
-    supabase.from("departamentos").select("id, nombre, subdireccion_id"),
+    supabase.from("departamentos").select("id, nombre, subdireccion_id").order("nombre"),
     supabase.from("subdirecciones").select("id, subdirector_nit"),
   ]);
+
+  // ── Alcance: departamento elegido (si lo hay) ──
+  const departamentosConDatos = (departamentos ?? []).filter((d) => (actividadesTodas ?? []).some((a) => a.departamento_id === d.id));
+  const depFiltro = dep && departamentosConDatos.some((d) => d.id === dep) ? dep : null;
+  const actividades = (actividadesTodas ?? []).filter((a) => !depFiltro || a.departamento_id === depFiltro);
+  const actividadPorId = new Map(actividades.map((a) => [a.id, a]));
+  const enAlcance = (actividadId: string | null) => (actividadId ? actividadPorId.has(actividadId) : !depFiltro);
+  const hitosAbiertos = (hitosAbiertosTodos ?? []).filter((h) => enAlcance(h.actividad_id));
+  const oficiosAbiertos = (oficiosAbiertosTodos ?? []).filter((o) => enAlcance(o.actividad_id));
+  const documentos = (documentosTodos ?? []).filter((d) => enAlcance(d.actividad_id));
+  const hitosConcluidos = (hitosConcluidosTodos ?? []).filter((h) => enAlcance(h.actividad_id));
+  const oficiosConcluidos = (oficiosConcluidosTodos ?? []).filter((o) => enAlcance(o.actividad_id));
 
   const feriados = new Set((feriadosRows ?? []).map((f) => f.fecha));
   const umbralPorAmbito = new Map((parametros ?? []).map((p) => [p.ambito, p as UmbralSemaforo]));
   const umbralHito = umbralPorAmbito.get("hito") ?? UMBRAL_POR_DEFECTO;
   const umbralOficio = umbralPorAmbito.get("oficio") ?? UMBRAL_POR_DEFECTO;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyGuatemala();
 
-  const colorPorActividad = calcularColorPorActividad(
-    hitosAbiertos ?? [],
-    oficiosAbiertos ?? [],
-    hoy,
-    feriados,
-    umbralHito,
-    umbralOficio,
-  );
-
+  // ── Semáforo por auditoría, con el motivo (el hito u oficio que la pone en ese color) ──
+  const peorPorActividad = new Map<string, { color: ColorSemaforo; motivo: string; fecha: string }>();
+  const considerar = (actividadId: string | null, color: ColorSemaforo, motivo: string, fecha: string) => {
+    if (!actividadId || !actividadPorId.has(actividadId)) return;
+    const actual = peorPorActividad.get(actividadId);
+    if (!actual || SEVERIDAD[color] > SEVERIDAD[actual.color] || (color === actual.color && fecha < actual.fecha)) {
+      peorPorActividad.set(actividadId, { color, motivo, fecha });
+    }
+  };
+  for (const h of hitosAbiertos) {
+    const color = calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriados, umbralHito);
+    considerar(h.actividad_id, color, `Hito "${h.nombre}" ${h.fecha_fin_esperada < hoy ? "venció" : "vence"} el ${h.fecha_fin_esperada}`, h.fecha_fin_esperada);
+  }
+  for (const o of oficiosAbiertos) {
+    const color = calcularSemaforo(o.fecha_emision, o.fecha_vencimiento!, hoy, feriados, umbralOficio);
+    considerar(o.actividad_id, color, `Oficio ${o.no_oficio} sin respuesta; ${o.fecha_vencimiento! < hoy ? "venció" : "vence"} el ${o.fecha_vencimiento}`, o.fecha_vencimiento!);
+  }
   const conteo: Record<ColorSemaforo, number> = { verde: 0, amarillo: 0, naranja: 0, rojo: 0 };
-  for (const color of colorPorActividad.values()) conteo[color]++;
-  const totalConDato = colorPorActividad.size;
+  for (const { color } of peorPorActividad.values()) conteo[color]++;
+  const enRiesgo = [...peorPorActividad.entries()]
+    .filter(([, p]) => p.color === "rojo" || p.color === "naranja")
+    .sort(([, a], [, b]) => SEVERIDAD[b.color] - SEVERIDAD[a.color] || a.fecha.localeCompare(b.fecha));
 
-  // Cuellos de botella: tramos de permanencia por cargo, reconstruidos desde la bitácora.
-  const segmentos = calcularSegmentosPermanencia(
-    (documentosConMovimientos ?? []).map((d) => ({
-      created_at: d.created_at,
-      departamentoNombre: d.actividades?.departamentos?.nombre ?? null,
-      documentoNombre: d.documentos_catalogo?.nombre ?? null,
-      movimientos: d.movimientos,
-    })),
-  );
-  const rankingPorCargo = promediarPorClave(segmentos, (s) => s.cargo);
-  const rankingPorDepartamento = promediarPorClave(segmentos, (s) => s.departamentoNombre);
-  const rankingPorDocumento = promediarPorClave(segmentos, (s) => s.documentoNombre);
+  // ── Indicadores ──
+  const enCurso = actividades.filter((a) => !a.concluida);
+  const concluidas = actividades.length - enCurso.length;
+  const oficiosVencidos = oficiosAbiertos.filter((o) => o.fecha_vencimiento! < hoy).length;
+  const cumplimientoHitos = calcularCumplimiento(hitosConcluidos.map((h) => ({ esperada: h.fecha_fin_esperada, real: h.fecha_fin_real! })));
+  const cumplimientoOficios = calcularCumplimiento(oficiosConcluidos.map((o) => ({ esperada: o.fecha_vencimiento!, real: o.fecha_respuesta! })));
+  const enRevision = documentos.filter((d) => d.fase_actual === "revision").length;
 
-  // Carga de trabajo — por integrante (todo el equipo: auditor/subjefe/jefe, no solo auditores)
-  // y por departamento. Un documento pendiente se atribuye a quien realmente responde por ese
-  // cargo: al equipo de la actividad puntual si es un Auditor (cargo_actual_responsable es un
-  // rol, no una persona — con más de un auditor en el equipo no hay forma de saber cuál de ellos
-  // lo tiene sin un dato adicional), o a la jefatura/subdirección/dirección del departamento si
-  // es un cargo departamental (mismo mapa organizacional que usa el job de alertas).
-  const mapaOrg = construirMapaOrganizacional(
-    (usuariosEquipo ?? []).map((u) => ({ nit: u.nit, cargo: u.cargo, departamento_id: u.departamento_id })),
-    departamentos ?? [],
-    subdirecciones ?? [],
-  );
-  const actividadPorId = new Map((actividades ?? []).map((a) => [a.id, a]));
+  // ── Por etapa ──
+  const porEtapa = ETAPAS.map((e) => ({
+    clave: e,
+    etiqueta: ETAPA_ACTIVIDAD_LABELS[e],
+    valor: enCurso.filter((a) => a.etapa_actual === e).length,
+  })).map((f) => ({ ...f, texto: String(f.valor) }));
 
-  const actividadesActivasPorNit = new Map<string, Set<string>>();
-  function agregarActividadActiva(nit: string | null, actividadId: string) {
-    const actividad = actividadPorId.get(actividadId);
-    if (!nit || !actividad || actividad.etapa_actual === "expediente_cierre") return;
-    const set = actividadesActivasPorNit.get(nit) ?? new Set<string>();
-    set.add(actividadId);
-    actividadesActivasPorNit.set(nit, set);
-  }
-  for (const a of actividades ?? []) agregarActividadActiva(a.auditor_principal_nit, a.id);
-  for (const eq of equipos ?? []) agregarActividadActiva(eq.usuario_nit, eq.actividad_id);
-
-  const equipoPorActividad = new Map<string, Set<string>>();
-  for (const eq of equipos ?? []) {
-    const set = equipoPorActividad.get(eq.actividad_id) ?? new Set<string>();
-    set.add(eq.usuario_nit);
-    equipoPorActividad.set(eq.actividad_id, set);
-  }
-  for (const a of actividades ?? []) {
-    const set = equipoPorActividad.get(a.id) ?? new Set<string>();
-    set.add(a.auditor_principal_nit);
-    equipoPorActividad.set(a.id, set);
-  }
-
-  const documentosPendientesPorNit = new Map<string, number>();
-  const documentosPendientesPorDepartamento = new Map<string, number>();
-  for (const d of documentosConMovimientos ?? []) {
-    if (d.fase_actual === "finalizado") continue;
-    const actividad = actividadPorId.get(d.actividad_id);
-    if (!actividad) continue;
-
-    documentosPendientesPorDepartamento.set(
-      actividad.departamento_id,
-      (documentosPendientesPorDepartamento.get(actividad.departamento_id) ?? 0) + 1,
-    );
-
-    const nits =
-      d.cargo_actual_responsable === "auditor"
-        ? [...(equipoPorActividad.get(d.actividad_id) ?? [])]
-        : responsablesPorCargo(mapaOrg, d.cargo_actual_responsable, actividad.departamento_id);
-    for (const nit of nits) {
-      documentosPendientesPorNit.set(nit, (documentosPendientesPorNit.get(nit) ?? 0) + 1);
-    }
-  }
-
-  const oficiosPendientesPorNit = new Map<string, number>();
-  const oficiosPendientesPorDepartamento = new Map<string, number>();
-  for (const o of oficiosAbiertos ?? []) {
-    oficiosPendientesPorNit.set(
-      o.responsable_elaboracion_nit,
-      (oficiosPendientesPorNit.get(o.responsable_elaboracion_nit) ?? 0) + 1,
-    );
-    // o.actividad_id siempre existe aquí: la consulta de oficiosAbiertos ya filtra
-    // `not("actividad_id", "is", null)" — un oficio sin actividad no tiene departamento propio.
-    const actividad = actividadPorId.get(o.actividad_id!);
-    if (actividad) {
-      oficiosPendientesPorDepartamento.set(
-        actividad.departamento_id,
-        (oficiosPendientesPorDepartamento.get(actividad.departamento_id) ?? 0) + 1,
-      );
-    }
-  }
-
-  const cargaTrabajo: FilaCargaTrabajo[] = (usuariosEquipo ?? []).map((u) => ({
-    nit: u.nit,
-    nombre: u.nombre,
-    cargo: u.cargo!,
-    departamentoNombre: u.departamentos?.nombre ?? null,
-    actividadesActivas: actividadesActivasPorNit.get(u.nit)?.size ?? 0,
-    documentosPendientes: documentosPendientesPorNit.get(u.nit) ?? 0,
-    oficiosPendientes: oficiosPendientesPorNit.get(u.nit) ?? 0,
-  }));
-
-  const actividadesActivasPorDepartamento = new Map<string, number>();
-  for (const a of actividades ?? []) {
-    if (a.etapa_actual === "expediente_cierre") continue;
-    actividadesActivasPorDepartamento.set(
-      a.departamento_id,
-      (actividadesActivasPorDepartamento.get(a.departamento_id) ?? 0) + 1,
-    );
-  }
-  const cargaDepartamento: FilaCargaDepartamento[] = (departamentos ?? [])
-    .map((d) => ({
-      departamentoNombre: d.nombre,
-      actividadesActivas: actividadesActivasPorDepartamento.get(d.id) ?? 0,
-      documentosPendientes: documentosPendientesPorDepartamento.get(d.id) ?? 0,
-      oficiosPendientes: oficiosPendientesPorDepartamento.get(d.id) ?? 0,
-    }))
-    // RLS ya limita `departamentos` a lo que el usuario puede ver, pero un departamento sin
-    // ninguna actividad visible en este alcance no aporta nada a la tabla.
-    .filter((f) => f.actividadesActivas + f.documentosPendientes + f.oficiosPendientes > 0);
-
-  // Cumplimiento histórico de plazos.
-  const cumplimientoHitos = calcularCumplimiento(
-    (hitosConcluidos ?? []).map((h) => ({ esperada: h.fecha_fin_esperada!, real: h.fecha_fin_real! })),
-  );
-  const cumplimientoOficios = calcularCumplimiento(
-    (oficiosConcluidos ?? []).map((o) => ({ esperada: o.fecha_vencimiento!, real: o.fecha_respuesta! })),
-  );
-
-  // Plan vs. real por etapa.
+  // ── Plazos: plan contra real por etapa ──
   const planVsReal = calcularPlanVsReal(
-    (hitosConcluidos ?? []).map((h) => ({
+    hitosConcluidos.map((h) => ({
       etapa: h.etapa,
       dias_habiles_esperados: h.dias_habiles_esperados,
       fecha_inicio_esperada: h.fecha_inicio_esperada,
       fecha_fin_real: h.fecha_fin_real!,
     })),
     feriados,
+  ).map((p) => ({ etapa: ETAPA_DOCUMENTO_LABELS[p.etapa], plan: p.planPromedio, real: p.realPromedio, n: p.n }));
+
+  // ── Cuellos de botella: cuánto tiempo pasa un documento con cada cargo antes de avanzar ──
+  const departamentoDeActividad = new Map(actividades.map((a) => [a.id, a.departamentos?.nombre ?? null]));
+  const segmentos = calcularSegmentosPermanencia(
+    documentos.map((d) => ({
+      created_at: d.created_at,
+      departamentoNombre: departamentoDeActividad.get(d.actividad_id) ?? null,
+      documentoNombre: d.documentos_catalogo?.nombre ?? null,
+      movimientos: sinCorregidos(d.movimientos),
+    })),
   );
+  const porCargo = promediarPorClave(segmentos, (s) => s.cargo).map((r) => ({
+    clave: r.clave,
+    etiqueta: CARGO_LABELS[r.clave as CargoEnum] ?? r.clave,
+    valor: r.horasPromedio,
+    texto: formatearHoras(r.horasPromedio),
+    detalle: `Promedio de ${r.n} paso(s) con ${CARGO_LABELS[r.clave as CargoEnum] ?? r.clave}`,
+  }));
+  const documentosLentos = promediarPorClave(segmentos, (s) => s.documentoNombre)
+    .slice(0, 5)
+    .map((r) => ({ clave: r.clave, etiqueta: r.clave, valor: r.horasPromedio, texto: formatearHoras(r.horasPromedio), detalle: `Promedio de ${r.n} paso(s)` }));
+  const tiempoPorDepartamento = new Map(promediarPorClave(segmentos, (s) => s.departamentoNombre).map((r) => [r.clave, r.horasPromedio]));
+
+  // ── Carga: por departamento y por persona ──
+  // Un documento pendiente se atribuye a quien responde por su cargo: al equipo de la auditoría si
+  // está con el Auditor, o a la jefatura del departamento si está con un cargo de jefatura.
+  const mapaOrg = construirMapaOrganizacional(
+    (usuariosEquipo ?? []).map((u) => ({ nit: u.nit, cargo: u.cargo, departamento_id: u.departamento_id })),
+    departamentos ?? [],
+    subdirecciones ?? [],
+  );
+  const equipoPorActividad = new Map<string, Set<string>>();
+  for (const a of actividades) equipoPorActividad.set(a.id, new Set([a.auditor_principal_nit]));
+  for (const eq of equipos ?? []) equipoPorActividad.get(eq.actividad_id)?.add(eq.usuario_nit);
+
+  const sumar = (mapa: Map<string, number>, clave: string) => mapa.set(clave, (mapa.get(clave) ?? 0) + 1);
+  const auditoriasPorNit = new Map<string, number>();
+  for (const a of enCurso) for (const nit of equipoPorActividad.get(a.id) ?? []) sumar(auditoriasPorNit, nit);
+  const docsPorNit = new Map<string, number>();
+  const docsPorDep = new Map<string, number>();
+  for (const d of documentos) {
+    if (d.fase_actual === "finalizado") continue;
+    const a = actividadPorId.get(d.actividad_id);
+    if (!a || a.concluida) continue;
+    sumar(docsPorDep, a.departamento_id);
+    const nits =
+      d.cargo_actual_responsable === "auditor"
+        ? [...(equipoPorActividad.get(d.actividad_id) ?? [])]
+        : responsablesPorCargo(mapaOrg, d.cargo_actual_responsable, a.departamento_id);
+    for (const nit of nits) sumar(docsPorNit, nit);
+  }
+  const oficiosPorNit = new Map<string, number>();
+  const oficiosPorDep = new Map<string, number>();
+  for (const o of oficiosAbiertos) {
+    sumar(oficiosPorNit, o.responsable_elaboracion_nit);
+    const a = o.actividad_id ? actividadPorId.get(o.actividad_id) : null;
+    if (a) sumar(oficiosPorDep, a.departamento_id);
+  }
+
+  const cargaDepartamento = departamentosConDatos
+    .filter((d) => !depFiltro || d.id === depFiltro)
+    .map((d) => ({
+      id: d.id,
+      nombre: d.nombre,
+      enCurso: enCurso.filter((a) => a.departamento_id === d.id).length,
+      enRiesgo: enRiesgo.filter(([id]) => actividadPorId.get(id)?.departamento_id === d.id).length,
+      documentos: docsPorDep.get(d.id) ?? 0,
+      oficios: oficiosPorDep.get(d.id) ?? 0,
+      tiempo: tiempoPorDepartamento.get(d.nombre) ?? null,
+    }));
+
+  const cargaPersonas = (usuariosEquipo ?? [])
+    .filter((u) => !depFiltro || u.departamento_id === depFiltro)
+    .map((u) => ({
+      nit: u.nit,
+      nombre: u.nombre,
+      cargo: u.cargo!,
+      departamento: u.departamentos?.nombre ?? null,
+      auditorias: auditoriasPorNit.get(u.nit) ?? 0,
+      documentos: docsPorNit.get(u.nit) ?? 0,
+      oficios: oficiosPorNit.get(u.nit) ?? 0,
+    }))
+    .filter((p) => p.auditorias + p.documentos + p.oficios > 0)
+    .sort((a, b) => b.documentos + b.oficios - (a.documentos + a.oficios) || b.auditorias - a.auditorias);
+
+  const cargoMasLento = porCargo[0];
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-xl font-semibold">Reportes</h1>
-        <p className="text-sm text-muted-foreground">
-          Panorama general primero; el detalle por auditoría y por integrante queda más abajo.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Reportes</h1>
+          <p className="text-sm text-muted-foreground">Cómo van las auditorías, qué requiere atención y dónde se detiene el trabajo.</p>
+        </div>
+        {departamentosConDatos.length > 1 ? (
+          <FiltrosAutomaticos ruta="/reportes" className="flex items-center gap-2">
+            <label htmlFor="dep" className="text-sm text-muted-foreground">
+              Departamento
+            </label>
+            <select id="dep" name="dep" defaultValue={depFiltro ?? ""} className={SELECT_CLASES}>
+              <option value="">Todos</option>
+              {departamentosConDatos.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.nombre}
+                </option>
+              ))}
+            </select>
+          </FiltrosAutomaticos>
+        ) : null}
       </div>
 
-      {/* ── Resumen: indicadores y gráficas, para una lectura rápida del estado general. ── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Resumen</h2>
+      {/* ── Indicadores ── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatCard icon={ClipboardList} label="Auditorías en curso" value={enCurso.length} detail={`${concluidas} concluida(s)`} />
+        <StatCard
+          icon={AlertTriangle}
+          tone="rojo"
+          label="En riesgo"
+          value={enRiesgo.length}
+          detail={`de ${peorPorActividad.size} con plazos abiertos`}
+        />
+        <StatCard icon={Mail} tone="naranja" label="Oficios vencidos" value={oficiosVencidos} detail={`${oficiosAbiertos.length} esperando respuesta`} />
+        <StatCard
+          icon={CheckCircle2}
+          tone="verde"
+          label="Hitos a tiempo"
+          value={cumplimientoHitos.pct === null ? "—" : `${Math.round(cumplimientoHitos.pct)}%`}
+          detail={`${cumplimientoHitos.aTiempo} de ${cumplimientoHitos.aTiempo + cumplimientoHitos.tarde} concluidos`}
+        />
+        <StatCard
+          icon={FileClock}
+          label="Documentos en revisión"
+          value={enRevision}
+          detail={cargoMasLento ? `Más tiempo con: ${cargoMasLento.etiqueta}` : "Sin historial todavía"}
+          className="col-span-2 lg:col-span-1"
+        />
+      </div>
 
-        <div className="rounded-xl border shadow-sm">
-          <div className="border-b p-4">
-            <h3 className="font-medium">Semáforo de auditorías</h3>
-            <p className="text-xs text-muted-foreground">
-              Peor caso entre los hitos y oficios abiertos de cada auditoría (sección 5). Las
-              auditorías sin hitos u oficios capturados todavía no tienen semáforo activo.
-            </p>
+      {/* ── ¿Cómo van? ── */}
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="flex flex-col gap-5 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
+          <div>
+            <h2 className="font-semibold">Semáforo de auditorías</h2>
+            <p className="text-sm text-muted-foreground">Cada auditoría toma el color de su hito u oficio más atrasado.</p>
           </div>
-          <div className="flex flex-col items-center gap-6 p-4 sm:flex-row">
-            <SemaforoDonut conteo={conteo} />
-            <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
-              {COLORES.map((color) => (
-                <div key={color} className="rounded-xl border p-4">
-                  <p className="text-xs text-muted-foreground">{COLOR_SEMAFORO_LABELS[color]}</p>
-                  <p className="text-2xl font-semibold">{conteo[color]}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {totalConDato > 0 ? `${Math.round((conteo[color] / totalConDato) * 100)}%` : "—"}
-                  </p>
-                </div>
-              ))}
-            </div>
+          <BarraSemaforo conteo={conteo} />
+          <div className="flex flex-col gap-2 border-t pt-4">
+            <h3 className="text-sm font-semibold">Requieren atención ({enRiesgo.length})</h3>
+            {enRiesgo.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ninguna auditoría en riesgo moderado o grave.</p>
+            ) : (
+              <ul className="divide-y">
+                {enRiesgo.map(([id, p]) => {
+                  const a = actividadPorId.get(id)!;
+                  return (
+                    <li key={id} className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                      <div className="min-w-0">
+                        <Link href={`/actividades/${id}`} className="codigo-expediente font-medium text-primary hover:underline">
+                          {identificadorAuditoria(a)}
+                        </Link>
+                        <span className="text-sm text-muted-foreground"> · {a.dependencia_auditada}</span>
+                        <p className="text-sm">{p.motivo}</p>
+                      </div>
+                      <div className="shrink-0 sm:pt-0.5">
+                        <SemaforoBadge color={p.color} />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </div>
 
-        <CumplimientoCards hitos={cumplimientoHitos} oficios={cumplimientoOficios} />
-
-        <div className="rounded-xl border shadow-sm">
-          <div className="border-b p-4">
-            <h3 className="font-medium">Comparación plan vs. real por etapa</h3>
-            <p className="text-xs text-muted-foreground">
-              Días hábiles proyectados en el cronograma vs. días hábiles reales, promediados por
-              etapa, entre los hitos ya concluidos dentro de tu alcance.
-            </p>
+        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
+          <div>
+            <h2 className="font-semibold">Auditorías en curso por etapa</h2>
+            <p className="text-sm text-muted-foreground">{enCurso.length} en total.</p>
           </div>
-          <PlanVsRealChart datos={planVsReal} />
+          <BarrasHorizontales filas={porEtapa} vacio="No hay auditorías en curso." />
         </div>
       </section>
 
-      {/* ── Desglose: detalle por actividad, cuello de botella e integrante. ── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Desglose por auditoría
-        </h2>
+      {/* ── ¿Cumplimos los plazos? ── */}
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="flex flex-col gap-5 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
+          <div>
+            <h2 className="font-semibold">Cumplimiento de plazos</h2>
+            <p className="text-sm text-muted-foreground">De lo ya cerrado, cuánto se cerró a tiempo.</p>
+          </div>
+          <Medidor titulo="Hitos del cronograma" aTiempo={cumplimientoHitos.aTiempo} tarde={cumplimientoHitos.tarde} />
+          <Medidor titulo="Oficios respondidos" aTiempo={cumplimientoOficios.aTiempo} tarde={cumplimientoOficios.tarde} />
+        </div>
+        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
+          <div>
+            <h2 className="font-semibold">Planeado contra real, por etapa</h2>
+            <p className="text-sm text-muted-foreground">Días hábiles promedio de las etapas ya concluidas.</p>
+          </div>
+          <PlanContraReal filas={planVsReal} />
+        </div>
+      </section>
 
-        <div className="rounded-xl border shadow-sm">
+      {/* ── ¿Dónde se detiene el trabajo? ── */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
+          <div>
+            <h2 className="font-semibold">¿Con quién se detienen los documentos?</h2>
+            <p className="text-sm text-muted-foreground">
+              {cargoMasLento
+                ? `En promedio, un documento pasa ${cargoMasLento.texto} con el ${cargoMasLento.etiqueta} antes de avanzar.`
+                : "Tiempo promedio que un documento pasa con cada cargo antes de avanzar."}
+            </p>
+          </div>
+          <BarrasHorizontales filas={porCargo} resaltar vacio="Todavía no hay documentos que hayan cambiado de manos." />
+        </div>
+        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
+          <div>
+            <h2 className="font-semibold">Documentos que más tardan</h2>
+            <p className="text-sm text-muted-foreground">Tiempo promedio en cada paso de la revisión.</p>
+          </div>
+          <BarrasHorizontales filas={documentosLentos} resaltar vacio="Todavía no hay documentos que hayan cambiado de manos." />
+        </div>
+      </section>
+
+      {/* ── Carga ── */}
+      <section className="flex flex-col gap-4">
+        <div className="rounded-2xl border bg-card shadow-sm">
+          <div className="border-b p-5">
+            <h2 className="font-semibold">Carga por departamento</h2>
+            <p className="text-sm text-muted-foreground">Lo que tiene abierto cada departamento hoy.</p>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Auditoría</TableHead>
                 <TableHead>Departamento</TableHead>
-                <TableHead>Semáforo</TableHead>
+                <TableHead className="text-right">En curso</TableHead>
+                <TableHead className="text-right">En riesgo</TableHead>
+                <TableHead className="text-right">Documentos pendientes</TableHead>
+                <TableHead className="text-right">Oficios sin respuesta</TableHead>
+                <TableHead className="text-right">Tiempo por paso</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {actividades && actividades.length > 0 ? (
-                actividades.map((a) => {
-                  const color = colorPorActividad.get(a.id);
-                  return (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <Link href={`/actividades/${a.id}`} className="codigo-expediente hover:underline">
-                          {a.no_nombramiento}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">{a.dependencia_auditada}</p>
-                      </TableCell>
-                      <TableCell>{a.departamentos?.nombre ?? "—"}</TableCell>
-                      <TableCell>
-                        {color ? (
-                          <SemaforoBadge color={color} />
-                        ) : (
-                          <SemaforoChip tono="neutral" label="Sin datos" />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
+              {cargaDepartamento.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                     No hay auditorías dentro de tu alcance todavía.
                   </TableCell>
                 </TableRow>
+              ) : (
+                cargaDepartamento.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium whitespace-normal">{d.nombre}</TableCell>
+                    <TableCell className="text-right tabular-nums">{d.enCurso}</TableCell>
+                    <TableCell className={d.enRiesgo > 0 ? "text-right font-semibold text-[var(--status-rojo)] tabular-nums" : "text-right tabular-nums"}>
+                      {d.enRiesgo}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{d.documentos}</TableCell>
+                    <TableCell className="text-right tabular-nums">{d.oficios}</TableCell>
+                    <TableCell className="text-right tabular-nums">{d.tiempo === null ? "—" : formatearHoras(d.tiempo)}</TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
         </div>
 
-        <CargaDepartamentoTable filas={cargaDepartamento} />
-
-        <CargaTrabajoTable filas={cargaTrabajo} />
-
-        <div>
-          <h3 className="text-base font-medium">Cuellos de botella</h3>
-          <p className="text-sm text-muted-foreground">
-            Tiempo real (horas de reloj, no días calendario) que un documento permanece en manos de
-            un mismo responsable antes de pasar al siguiente — así una corrección que va y vuelve el
-            mismo día no se pierde como &ldquo;0 días&rdquo;. Solo tramos ya cerrados; no el documento que
-            alguien tiene abierto ahora mismo.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <RankingTable
-            titulo="Por cargo"
-            descripcion="Independiente de departamento o tipo de documento."
-            filas={rankingPorCargo}
-            columnaClave="Cargo"
-            etiquetaClave={(c) => CARGO_LABELS[c as CargoEnum] ?? c}
-          />
-          <RankingTable
-            titulo="Por departamento"
-            descripcion="Suma los tres cargos dentro de cada departamento."
-            filas={rankingPorDepartamento}
-            columnaClave="Departamento"
-            etiquetaClave={(c) => c}
-          />
-          <RankingTable
-            titulo="Por tipo de documento"
-            descripcion="Del catálogo de 18 documentos (sección 4.5.1)."
-            filas={rankingPorDocumento}
-            columnaClave="Documento"
-            etiquetaClave={(c) => c}
-          />
-        </div>
+        <details className="rounded-2xl border bg-card shadow-sm">
+          <summary className="cursor-pointer p-5 font-semibold">
+            Carga por persona ({cargaPersonas.length} con trabajo asignado)
+            <span className="block text-sm font-normal text-muted-foreground">
+              Solo quienes tienen auditorías, documentos u oficios abiertos; los que más pendientes tienen, primero.
+            </span>
+          </summary>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Persona</TableHead>
+                <TableHead>Cargo</TableHead>
+                <TableHead>Departamento</TableHead>
+                <TableHead className="text-right">Auditorías</TableHead>
+                <TableHead className="text-right">Documentos</TableHead>
+                <TableHead className="text-right">Oficios</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cargaPersonas.map((p) => (
+                <TableRow key={p.nit}>
+                  <TableCell className="font-medium whitespace-normal">{p.nombre}</TableCell>
+                  <TableCell>{CARGO_LABELS[p.cargo]}</TableCell>
+                  <TableCell className="whitespace-normal text-muted-foreground">{p.departamento ?? "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{p.auditorias}</TableCell>
+                  <TableCell className="text-right tabular-nums">{p.documentos}</TableCell>
+                  <TableCell className="text-right tabular-nums">{p.oficios}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </details>
       </section>
     </div>
   );
