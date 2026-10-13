@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
@@ -23,8 +24,8 @@ export default async function NuevoOficioPage({
   // RLS (`actividades_select`) ya acota esto al alcance real de quien elabora el oficio.
   const { data: actividades } = await supabase
     .from("actividades")
-    .select("id, no_nombramiento")
-    .order("no_nombramiento");
+    .select("id, cai, anio_cai, no_nombramiento")
+    .order("created_at", { ascending: false });
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,7 +37,7 @@ export default async function NuevoOficioPage({
         </CardHeader>
         <CardContent>
           <OficioForm
-            actividades={actividades ?? []}
+            actividades={(actividades ?? []).map((a) => ({ id: a.id, etiqueta: identificadorAuditoria(a) }))}
             responsable={usuario}
             error={error}
             fieldErrors={fieldErrors}

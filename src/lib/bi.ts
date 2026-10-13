@@ -6,6 +6,16 @@ import type { CargoEnum, EtapaDocumentoEnum } from "@/types/domain";
 
 const MS_POR_HORA = 1000 * 60 * 60;
 
+/**
+ * Quita de la bitácora los movimientos que la Dirección corrigió (`corrige_movimiento_id`): siguen
+ * a la vista en la hoja de ruta, marcados, pero no cuentan para tiempos ni flujos — los reemplaza
+ * la corrección.
+ */
+export function sinCorregidos<T extends { id: string; corrige_movimiento_id: string | null }>(movimientos: T[]): T[] {
+  const corregidos = new Set(movimientos.map((m) => m.corrige_movimiento_id).filter(Boolean));
+  return movimientos.filter((m) => !corregidos.has(m.id));
+}
+
 export interface DocumentoParaPermanencia {
   created_at: string;
   departamentoNombre: string | null;

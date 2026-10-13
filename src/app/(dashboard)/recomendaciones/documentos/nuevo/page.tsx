@@ -53,13 +53,16 @@ export default async function NuevoNombramientoSeguimientoPage({
     informesAbiertos.find((i) => i.id === informePreseleccionado)?.departamento_id ??
     (usuario?.departamento_id && gestionables.includes(usuario.departamento_id) ? usuario.departamento_id : gestionables[0]);
 
-  // Auditores del departamento que nombra primero; el resto después, por si se nombra a alguien
-  // de otro departamento.
-  const candidatos = [...(usuarios ?? [])].sort(
-    (a, b) =>
-      Number(b.departamento_id === departamentoPorDefecto) - Number(a.departamento_id === departamentoPorDefecto) ||
-      a.nombre.localeCompare(b.nombre),
-  );
+  // En el seguimiento de CAI solo se nombra a personal del departamento que nombra (jefaturas,
+  // 2026-10-12). Con el CAI fijo, ese es su departamento; si no, los departamentos que el usuario
+  // puede gestionar, agrupados (la acción y la base rechazan una mezcla).
+  const departamentosCandidatos = informeFijo ? [informeFijo.departamento_id] : gestionables;
+  const grupos = departamentosCandidatos.map((depId) => ({
+    depId,
+    nombre: (departamentos ?? []).find((d) => d.id === depId)?.nombre ?? "Departamento",
+    personas: (usuarios ?? []).filter((u) => u.departamento_id === depId),
+  }));
+  const candidatos = grupos.flatMap((g) => g.personas);
 
   return (
     <div className="flex flex-col gap-6">
@@ -132,10 +135,14 @@ export default async function NuevoNombramientoSeguimientoPage({
               <Campo label="Coordina el seguimiento (opcional)" htmlFor="coordinador_nit" error={fieldErrors.coordinador_nit}>
                 <select id="coordinador_nit" name="coordinador_nit" defaultValue="" className={SELECT_CLASES}>
                   <option value="">Sin coordinador designado</option>
-                  {candidatos.map((u) => (
-                    <option key={u.nit} value={u.nit}>
-                      {u.nombre} — {u.puesto ?? (u.cargo ? CARGO_LABELS[u.cargo] : "Sin cargo")}
-                    </option>
+                  {grupos.map((g) => (
+                    <optgroup key={g.depId} label={g.nombre}>
+                      {g.personas.map((u) => (
+                        <option key={u.nit} value={u.nit}>
+                          {u.nombre} — {u.puesto ?? (u.cargo ? CARGO_LABELS[u.cargo] : "Sin cargo")}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </Campo>
@@ -150,20 +157,33 @@ export default async function NuevoNombramientoSeguimientoPage({
 
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1 text-sm font-medium">Auditor(es) nombrado(s)</legend>
+              <p className="text-xs text-muted-foreground">Solo personal del departamento que emite el nombramiento.</p>
               {fieldErrors.auditores ? <p className="text-xs text-destructive">{fieldErrors.auditores}</p> : null}
-              <div className="grid max-h-72 gap-1 overflow-y-auto rounded-lg border p-2 sm:grid-cols-2">
-                {candidatos.map((u) => (
-                  <label key={u.nit} className="flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm hover:bg-muted/50 has-checked:bg-primary/5">
-                    <input type="checkbox" name="auditores" value={u.nit} className="mt-0.5 accent-primary" />
-                    <span>
-                      {u.nombre}
-                      <span className="block text-xs text-muted-foreground">
-                        {u.puesto ?? (u.cargo ? CARGO_LABELS[u.cargo] : "Sin cargo")}
-                      </span>
-                    </span>
-                  </label>
+              {candidatos.length === 0 ? (
+                <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                  Ese departamento todavía no tiene personal asignado en SCIDAI.
+                </p>
+              ) : null}
+              {grupos
+                .filter((g) => g.personas.length > 0)
+                .map((g) => (
+                  <div key={g.depId} className="flex flex-col gap-1">
+                    {grupos.length > 1 ? <p className="text-xs font-medium text-muted-foreground">{g.nombre}</p> : null}
+                    <div className="grid max-h-72 gap-1 overflow-y-auto rounded-lg border p-2 sm:grid-cols-2">
+                      {g.personas.map((u) => (
+                        <label key={u.nit} className="flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm hover:bg-muted/50 has-checked:bg-primary/5">
+                          <input type="checkbox" name="auditores" value={u.nit} className="mt-0.5 accent-primary" />
+                          <span>
+                            {u.nombre}
+                            <span className="block text-xs text-muted-foreground">
+                              {u.puesto ?? (u.cargo ? CARGO_LABELS[u.cargo] : "Sin cargo")}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </div>
             </fieldset>
 
             <Button type="submit" className="w-fit">

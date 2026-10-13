@@ -24,6 +24,8 @@ export async function crearActividad(formData: FormData) {
   }
 
   const parsed = actividadFormSchema.safeParse({
+    cai: formData.get("cai"),
+    anio_cai: formData.get("anio_cai"),
     no_nombramiento: formData.get("no_nombramiento"),
     departamento_id: formData.get("departamento_id"),
     auditor_principal_nit: formData.get("auditor_principal_nit"),
@@ -69,6 +71,9 @@ export async function crearActividad(formData: FormData) {
   });
 
   if (error?.code === "23505") {
+    if (error.message.includes("actividades_cai_anio_idx")) {
+      fail(`Ya existe una auditoría con el CAI ${rest.cai}-${rest.anio_cai}.`, { cai: "CAI ya registrado en ese año" });
+    }
     fail("Ya existe una auditoría con ese número de nombramiento.", { no_nombramiento: "Número ya registrado" });
   }
   if (error) {

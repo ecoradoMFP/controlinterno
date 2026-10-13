@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -184,8 +185,11 @@ export default async function ActividadDetallePage({
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="codigo-expediente text-lg">{actividad.no_nombramiento}</CardTitle>
-              <p className="text-sm text-muted-foreground">{actividad.dependencia_auditada}</p>
+              <CardTitle className="codigo-expediente text-lg">{identificadorAuditoria(actividad)}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {actividad.cai ? `Nombramiento ${actividad.no_nombramiento} · ` : ""}
+                {actividad.dependencia_auditada}
+              </p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex gap-2">

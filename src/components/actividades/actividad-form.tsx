@@ -1,3 +1,4 @@
+import { hoyGuatemala } from "@/lib/recomendaciones";
 import { crearActividad } from "@/app/(dashboard)/actividades/actions";
 import { SelectDependencia, type UnidadMinisterio } from "@/components/select-dependencia";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,9 @@ export function ActividadForm({
   error?: string;
   fieldErrors?: Record<string, string>;
 }) {
+  // El número de CAI se reinicia cada año; por defecto, el año en curso (Guatemala).
+  const anioActual = Number(hoyGuatemala().slice(0, 4));
+
   return (
     <form action={crearActividad} className="flex max-w-2xl flex-col gap-5">
       {error ? (
@@ -37,6 +41,14 @@ export function ActividadForm({
       ) : null}
 
       <div className="grid grid-cols-2 gap-4">
+        <Field label="CAI (número)" htmlFor="cai" error={fieldErrors?.cai}>
+          <Input id="cai" name="cai" placeholder="00001" maxLength={20} required />
+        </Field>
+
+        <Field label="Año del CAI" htmlFor="anio_cai" error={fieldErrors?.anio_cai}>
+          <Input id="anio_cai" name="anio_cai" type="number" min={2000} max={2100} defaultValue={anioActual} required />
+        </Field>
+
         <Field label="No. de nombramiento" htmlFor="no_nombramiento" error={fieldErrors?.no_nombramiento}>
           <Input
             id="no_nombramiento"

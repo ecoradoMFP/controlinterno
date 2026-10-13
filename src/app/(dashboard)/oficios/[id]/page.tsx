@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeCorregirHechoConsumado, puedeEscribir } from "@/lib/auth";
@@ -27,7 +28,7 @@ export default async function OficioDetallePage({
   const { data: oficio } = await supabase
     .from("oficios")
     .select(
-      "*, actividades(no_nombramiento), responsable:usuarios!oficios_responsable_elaboracion_nit_fkey(nombre, puesto)",
+      "*, actividades(cai, anio_cai, no_nombramiento), responsable:usuarios!oficios_responsable_elaboracion_nit_fkey(nombre, puesto)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -58,7 +59,7 @@ export default async function OficioDetallePage({
           <p className="text-sm text-muted-foreground">{oficio.asunto}</p>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
-          <Info label="Auditoría relacionada" value={oficio.actividades?.no_nombramiento} />
+          <Info label="Auditoría relacionada" value={oficio.actividades ? identificadorAuditoria(oficio.actividades) : null} />
           <Info label="Responsable" value={oficio.responsable?.nombre} />
           <Info label="Destinatario" value={oficio.destinatario} />
           <Info label="Puesto del destinatario" value={oficio.puesto_destinatario} />

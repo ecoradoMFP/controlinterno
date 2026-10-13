@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual } from "@/lib/auth";
@@ -28,7 +29,7 @@ export default async function DocumentosPage({
   let query = supabase
     .from("documentos_actividad")
     .select(
-      "id, fase_actual, cargo_actual_responsable, actividad_id, actividades(no_nombramiento, dependencia_auditada, etapa_actual), documentos_catalogo(nombre, etapa)",
+      "id, fase_actual, cargo_actual_responsable, actividad_id, actividades(cai, anio_cai, no_nombramiento, dependencia_auditada, etapa_actual), documentos_catalogo(nombre, etapa)",
     )
     .neq("fase_actual", "finalizado")
     .order("created_at");
@@ -82,7 +83,7 @@ export default async function DocumentosPage({
                       href={`/actividades/${d.actividad_id}?tab=documentos`}
                       className="font-medium hover:underline"
                     >
-                      {d.actividades?.no_nombramiento ?? "—"}
+                      {d.actividades ? identificadorAuditoria(d.actividades) : "—"}
                     </Link>
                     <p className="text-xs text-muted-foreground">{d.actividades?.dependencia_auditada}</p>
                   </TableCell>

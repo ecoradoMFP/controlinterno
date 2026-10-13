@@ -183,9 +183,9 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Seguimiento a recomendaciones</h1>
+          <h1 className="text-xl font-semibold">Seguimiento a recomendaciones (CAI)</h1>
           <p className="text-sm text-muted-foreground">
-            Cada recomendación se sigue, informe tras informe, hasta que queda cumplida. Se agrupan por CAI.
+            Cada recomendación se sigue, informe tras informe, hasta que queda cumplida.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

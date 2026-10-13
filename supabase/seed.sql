@@ -29,7 +29,7 @@ insert into documentos_catalogo (etapa, orden, nombre, observaciones) values
   ('planificacion', 4, 'Elaboración de Matriz de Evaluación de Riesgos y Controles', null),
   ('planificacion', 5, 'Cuestionario de Control Interno', null),
   ('planificacion', 6, 'Ponderación de la Matriz de Evaluación', null),
-  ('planificacion', 7, 'Gestión de Áreas (Muestreo y Asignación de Áreas)', null),
+  ('planificacion', 7, 'Gestión de Áreas (Muestreo y Asignación de Áreas, Métodos a utilizar)', null),
   ('planificacion', 8, 'Programa de Auditoría', null),
   ('planificacion', 9, 'Memorando de Planificación y Cronograma', null),
   ('ejecucion', 10, 'Requerimiento de Documentos a verificar en la Muestra', null),
@@ -44,9 +44,8 @@ insert into documentos_catalogo (etapa, orden, nombre, observaciones) values
   ('comunicacion_resultados', 18, 'Elaboración y Conclusión final (Informe de Auditoría)',
     'Numerado 19 en el archivo fuente DOCUMENTOS_QUE_SE_GENERAN_EN_EL_CAI, saltando el 17; renumerado secuencialmente aquí (sección 4.5.1).');
 
--- Pasos que no generan un documento como tal (mismo dato que la migración
--- 20261002000002_documentos_no_aplica.sql; se repite por el orden migraciones → seed).
-update documentos_catalogo set genera_documento = false where orden in (2, 7);
+-- Los pasos 2 y 7 se manejan como documentos (jefaturas, 2026-10-12): genera_documento queda en
+-- su valor por defecto (true).
 
 -- ── 3. Matriz de revisión (documento × departamento × cargo) ──
 -- Misma importación que la migración 20260918000001_matriz_revision_documentos.sql (Excel

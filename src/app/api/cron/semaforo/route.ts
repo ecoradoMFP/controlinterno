@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
     { data: usuarios },
     { data: notificacionesPrevias },
   ] = await Promise.all([
-    sb.from("actividades").select("id, no_nombramiento, departamento_id, auditor_principal_nit"),
+    sb.from("actividades").select("id, cai, anio_cai, no_nombramiento, departamento_id, auditor_principal_nit"),
     sb.from("actividades_equipo").select("actividad_id, usuario_nit"),
     sb.from("hitos_cronograma").select("actividad_id, fecha_inicio_esperada, fecha_fin_esperada").is("fecha_fin_real", null),
     sb
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
       ...responsablesPorCargo(mapaOrg, "director", actividad.departamento_id),
     ]);
 
-    const mensaje = `${actividad.no_nombramiento} pasó a "${COLOR_SEMAFORO_LABELS[color]}" en el semáforo.`;
+    const mensaje = `${identificadorAuditoria(actividad)} pasó a "${COLOR_SEMAFORO_LABELS[color]}" en el semáforo.`;
     for (const nit of destinatarios) {
       if (yaNotificado.has(`${actividad.id}|${color}|${nit}`)) continue;
       filasNotificacion.push({ usuario_nit: nit, actividad_id: actividad.id, color, mensaje });

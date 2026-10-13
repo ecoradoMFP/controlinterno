@@ -36,8 +36,10 @@ export type Database = {
     Tables: {
       actividades: {
         Row: {
+          anio_cai: number | null
           area: string | null
           auditor_principal_nit: string
+          cai: string | null
           concluida: boolean
           created_at: string
           departamento_id: string
@@ -61,8 +63,10 @@ export type Database = {
           tipo_auditoria: string
         }
         Insert: {
+          anio_cai?: number | null
           area?: string | null
           auditor_principal_nit: string
+          cai?: string | null
           created_at?: string
           departamento_id: string
           dependencia_auditada: string
@@ -85,8 +89,10 @@ export type Database = {
           tipo_auditoria: string
         }
         Update: {
+          anio_cai?: number | null
           area?: string | null
           auditor_principal_nit?: string
+          cai?: string | null
           created_at?: string
           departamento_id?: string
           dependencia_auditada?: string
@@ -278,6 +284,83 @@ export type Database = {
           fecha?: string
         }
         Relationships: []
+      }
+      cargos_temporales: {
+        Row: {
+          cargo: Database["public"]["Enums"]["cargo_enum"]
+          created_at: string
+          departamento_id: string
+          documento_respaldo: string
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          motivo: string
+          motivo_revocacion: string | null
+          registrado_por_nit: string
+          revocado_en: string | null
+          revocado_por_nit: string | null
+          usuario_nit: string
+        }
+        Insert: {
+          cargo: Database["public"]["Enums"]["cargo_enum"]
+          created_at?: string
+          departamento_id: string
+          documento_respaldo: string
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          motivo: string
+          motivo_revocacion?: string | null
+          registrado_por_nit: string
+          revocado_en?: string | null
+          revocado_por_nit?: string | null
+          usuario_nit: string
+        }
+        Update: {
+          cargo?: Database["public"]["Enums"]["cargo_enum"]
+          created_at?: string
+          departamento_id?: string
+          documento_respaldo?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          motivo?: string
+          motivo_revocacion?: string | null
+          registrado_por_nit?: string
+          revocado_en?: string | null
+          revocado_por_nit?: string | null
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargos_temporales_departamento_id_fkey"
+            columns: ["departamento_id"]
+            isOneToOne: false
+            referencedRelation: "departamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_temporales_registrado_por_nit_fkey"
+            columns: ["registrado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "cargos_temporales_revocado_por_nit_fkey"
+            columns: ["revocado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "cargos_temporales_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
       }
       capacitaciones: {
         Row: {
@@ -877,38 +960,51 @@ export type Database = {
       movimientos: {
         Row: {
           a_cargo: Database["public"]["Enums"]["cargo_enum"]
+          corrige_movimiento_id: string | null
           de_cargo: Database["public"]["Enums"]["cargo_enum"] | null
           documento_actividad_id: string
           es_correccion_direccion: boolean
           id: string
           observacion: string | null
+          registrado_en: string
           registrado_por_nit: string
           timestamp: string
           tipo_evento: Database["public"]["Enums"]["tipo_evento_movimiento_enum"]
         }
         Insert: {
           a_cargo: Database["public"]["Enums"]["cargo_enum"]
+          corrige_movimiento_id?: string | null
           de_cargo?: Database["public"]["Enums"]["cargo_enum"] | null
           documento_actividad_id: string
           es_correccion_direccion?: boolean
           id?: string
           observacion?: string | null
+          registrado_en?: string
           registrado_por_nit: string
           timestamp?: string
           tipo_evento: Database["public"]["Enums"]["tipo_evento_movimiento_enum"]
         }
         Update: {
           a_cargo?: Database["public"]["Enums"]["cargo_enum"]
+          corrige_movimiento_id?: string | null
           de_cargo?: Database["public"]["Enums"]["cargo_enum"] | null
           documento_actividad_id?: string
           es_correccion_direccion?: boolean
           id?: string
           observacion?: string | null
+          registrado_en?: string
           registrado_por_nit?: string
           timestamp?: string
           tipo_evento?: Database["public"]["Enums"]["tipo_evento_movimiento_enum"]
         }
         Relationships: [
+          {
+            foreignKeyName: "movimientos_corrige_movimiento_id_fkey"
+            columns: ["corrige_movimiento_id"]
+            isOneToOne: true
+            referencedRelation: "movimientos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "movimientos_documento_actividad_id_fkey"
             columns: ["documento_actividad_id"]
@@ -1476,6 +1572,15 @@ export type Database = {
       marcar_no_aplica: {
         Args: { p_documento_id: string; p_justificacion: string; p_revertir?: boolean }
         Returns: undefined
+      }
+      mi_cargo_temporal: {
+        Args: never
+        Returns: {
+          cargo: Database["public"]["Enums"]["cargo_enum"]
+          departamento_id: string
+          documento_respaldo: string
+          fecha_fin: string
+        }[]
       }
       ruta_expediente_valida: { Args: { p_ruta: string }; Returns: boolean }
     }

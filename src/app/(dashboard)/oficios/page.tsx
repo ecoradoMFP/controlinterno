@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
@@ -44,7 +45,7 @@ export default async function OficiosPage() {
     supabase
       .from("oficios")
       .select(
-        "id, no_oficio, destinatario, asunto, fecha_emision, fecha_vencimiento, fecha_respuesta, actividades(no_nombramiento)",
+        "id, no_oficio, destinatario, asunto, fecha_emision, fecha_vencimiento, fecha_respuesta, actividades(cai, anio_cai, no_nombramiento)",
       )
       .order("created_at", { ascending: false }),
     supabase.from("parametros_semaforo").select("*").eq("ambito", "oficio").maybeSingle(),
@@ -89,7 +90,7 @@ export default async function OficiosPage() {
                         {o.no_oficio}
                       </Link>
                     </TableCell>
-                    <TableCell>{o.actividades?.no_nombramiento ?? "—"}</TableCell>
+                    <TableCell>{o.actividades ? identificadorAuditoria(o.actividades) : "—"}</TableCell>
                     <TableCell>{o.destinatario}</TableCell>
                     <TableCell className="max-w-xs truncate">{o.asunto}</TableCell>
                     <TableCell>{o.fecha_vencimiento ?? "—"}</TableCell>

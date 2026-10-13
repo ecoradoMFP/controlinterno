@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { BackLink } from "@/components/nav/back-link";
 import { PrintButton } from "@/components/actividades/print-button";
 import { FlujogramaDocumento } from "@/components/actividades/flujograma-documento";
+import { MarcasMovimiento } from "@/components/actividades/bitacora-panel";
+import { sinCorregidos } from "@/lib/bi";
 import {
   CARGO_LABELS,
   ETAPA_ACTIVIDAD_LABELS,
@@ -74,8 +77,11 @@ export default async function HojaDeRutaPage({
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="codigo-expediente text-lg">{actividad.no_nombramiento}</CardTitle>
-              <p className="text-sm text-muted-foreground">{actividad.dependencia_auditada}</p>
+              <CardTitle className="codigo-expediente text-lg">{identificadorAuditoria(actividad)}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {actividad.cai ? `Nombramiento ${actividad.no_nombramiento} · ` : ""}
+                {actividad.dependencia_auditada}
+              </p>
             </div>
             <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>
           </div>
@@ -96,6 +102,7 @@ export default async function HojaDeRutaPage({
             const movimientos = (d.movimientos as unknown as MovimientoConAutor[])
               .slice()
               .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            const correccionDe = new Map(movimientos.filter((m) => m.corrige_movimiento_id).map((m) => [m.corrige_movimiento_id!, m]));
 
             return (
               <div key={d.id} className="break-inside-avoid rounded-xl border shadow-sm p-4">
@@ -110,7 +117,7 @@ export default async function HojaDeRutaPage({
                   <p className="text-sm text-muted-foreground">Sin movimientos registrados.</p>
                 ) : (
                   <>
-                    <FlujogramaDocumento movimientos={movimientos} />
+                    <FlujogramaDocumento movimientos={sinCorregidos(movimientos)} />
                     <ol className="mt-3 flex flex-col gap-3 border-l pl-4">
                     {movimientos.map((m) => (
                       <li key={m.id} className="text-sm">
@@ -126,11 +133,7 @@ export default async function HojaDeRutaPage({
                           {m.registrado_por?.nombre ?? m.registrado_por_nit}
                         </p>
                         {m.observacion ? <p className="mt-1 italic">&ldquo;{m.observacion}&rdquo;</p> : null}
-                        {m.es_correccion_direccion ? (
-                          <Badge variant="destructive" className="mt-2">
-                            Corrección de Dirección
-                          </Badge>
-                        ) : null}
+                        <MarcasMovimiento movimiento={m} corregidoPor={correccionDe.get(m.id)} />
                       </li>
                     ))}
                     </ol>

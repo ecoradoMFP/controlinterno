@@ -18,7 +18,8 @@ export function OficioForm({
   error,
   fieldErrors,
 }: {
-  actividades: { id: string; no_nombramiento: string }[];
+  /** `etiqueta`: el identificador visible de la auditoría (su CAI). */
+  actividades: { id: string; etiqueta: string }[];
   responsable: Usuario;
   error?: string;
   fieldErrors?: Record<string, string>;
@@ -51,13 +52,13 @@ export function OficioForm({
           // guardaba con actividad_id=null aunque la actividad se veía "seleccionada" en
           // pantalla. Con una sola opción no hay nada que elegir, así que se fija directo.
           <>
-            <Input id="actividad_id_display" value={actividades[0].no_nombramiento} disabled />
+            <Input id="actividad_id_display" value={actividades[0].etiqueta} disabled />
             <input type="hidden" name="actividad_id" value={actividades[0].id} />
           </>
         ) : (
           <Select
             name="actividad_id"
-            items={Object.fromEntries(actividades.map((a) => [a.id, a.no_nombramiento]))}
+            items={Object.fromEntries(actividades.map((a) => [a.id, a.etiqueta]))}
           >
             <SelectTrigger id="actividad_id" className="w-full">
               <SelectValue placeholder="Sin auditoría relacionada" />
@@ -65,7 +66,7 @@ export function OficioForm({
             <SelectContent>
               {actividades.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
-                  {a.no_nombramiento}
+                  {a.etiqueta}
                 </SelectItem>
               ))}
             </SelectContent>

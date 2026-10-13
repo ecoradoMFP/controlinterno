@@ -159,6 +159,10 @@ export async function registrarMovimiento(formData: FormData) {
   const tipoEvento = String(formData.get("tipo_evento") ?? "");
   const nuevaFase = String(formData.get("nueva_fase") ?? "");
   const observacion = String(formData.get("observacion") ?? "").trim() || null;
+  const corrigeMovimientoId = String(formData.get("corrige_movimiento_id") ?? "") || null;
+  // datetime-local llega sin zona: es hora de Guatemala (UTC-6, sin horario de verano).
+  const fechaEvento = String(formData.get("fecha_evento") ?? "");
+  const timestamp = fechaEvento ? new Date(`${fechaEvento}:00-06:00`) : null;
 
   const usuario = await getUsuarioActual();
   // Registro manual (cargos, tipo y fase elegidos a mano): solo Dirección con control_total,
@@ -168,6 +172,9 @@ export async function registrarMovimiento(formData: FormData) {
     fail(actividadId, "documentos", "El registro manual de movimientos es exclusivo de control total.");
   }
   if (!aCargo || !tipoEvento) fail(actividadId, "documentos", "Completa el cargo destino y el tipo de evento.");
+  if (timestamp && (Number.isNaN(timestamp.getTime()) || timestamp.getTime() > Date.now())) {
+    fail(actividadId, "documentos", "La fecha en que ocurrió no puede ser futura.");
+  }
 
   const supabase = await createClient();
 
@@ -183,9 +190,19 @@ export async function registrarMovimiento(formData: FormData) {
     observacion,
     registrado_por_nit: usuario.nit,
     es_correccion_direccion: true,
+    corrige_movimiento_id: corrigeMovimientoId,
+    ...(timestamp ? { timestamp: timestamp.toISOString() } : {}),
   });
 
-  if (movError) fail(actividadId, "documentos", "No se pudo registrar el movimiento (la observación es obligatoria).");
+  if (movError) {
+    fail(
+      actividadId,
+      "documentos",
+      movError.code === "23505"
+        ? "Ese movimiento ya fue corregido antes."
+        : "No se pudo registrar el movimiento (el motivo es obligatorio).",
+    );
+  }
 
   if (nuevaFase) {
     const { error: faseError } = await supabase
@@ -461,6 +478,9 @@ export async function crearInformeRecomendaciones(formData: FormData) {
     id: informeId,
     actividad_id: actividadId,
     no_nombramiento: actividad.no_nombramiento,
+    // El CAI de la auditoría pasa tal cual al seguimiento de sus recomendaciones.
+    cai: actividad.cai,
+    anio_cai: actividad.anio_cai,
     fecha_nombramiento: actividad.fecha_emision_nombramiento,
     departamento_id: actividad.departamento_id,
     dependencia_auditada: actividad.dependencia_auditada,

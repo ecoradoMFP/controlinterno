@@ -68,6 +68,18 @@ export async function crearNombramientoSeguimiento(formData: FormData) {
     fail(ruta, "No tienes permiso para emitir nombramientos de seguimiento en ese departamento.");
   }
 
+  // En el seguimiento de CAI solo se nombra a personal del departamento que nombra (jefaturas,
+  // 2026-10-12); el trigger `validar_departamento_nombrado_seguimiento` lo refuerza en la base.
+  const nombrados = [...new Set([...datos.auditores, ...(datos.coordinador_nit ? [datos.coordinador_nit] : [])])];
+  const { data: deOtroDepartamento } = await supabase
+    .from("usuarios")
+    .select("nit")
+    .in("nit", nombrados)
+    .or(`departamento_id.is.null,departamento_id.neq.${datos.departamento_id}`);
+  if (deOtroDepartamento?.length) {
+    fail(ruta, "Solo puedes nombrar a personal del departamento que emite el nombramiento.");
+  }
+
   // Id generado aquí: la visibilidad del documento se decide re-consultando la tabla, así que
   // no se encadena `.select()` tras el insert (mismo patrón que crearInforme). tipo_documento no
   // se pide aquí: esta pantalla siempre produce un nombramiento -> informe (default de la

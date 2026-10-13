@@ -1,3 +1,4 @@
+import { identificadorAuditoria } from "@/lib/auditoria";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
@@ -20,7 +21,7 @@ export default async function ActividadesPage() {
   // exactamente el alcance correcto para quien esté autenticado (sección 8).
   const { data: actividades, error } = await supabase
     .from("actividades")
-    .select("id, no_nombramiento, dependencia_auditada, tipo_auditoria, etapa_actual, fecha_notificacion, concluida, departamentos(nombre)")
+    .select("id, cai, anio_cai, no_nombramiento, dependencia_auditada, tipo_auditoria, etapa_actual, fecha_notificacion, concluida, departamentos(nombre)")
     .order("created_at", { ascending: false });
 
   return (
@@ -40,7 +41,7 @@ export default async function ActividadesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombramiento</TableHead>
+              <TableHead>CAI</TableHead>
               <TableHead>Departamento</TableHead>
               <TableHead>Dependencia auditada</TableHead>
               <TableHead>Tipo</TableHead>
@@ -54,8 +55,9 @@ export default async function ActividadesPage() {
                 <TableRow key={a.id} className="cursor-pointer">
                   <TableCell>
                     <Link href={`/actividades/${a.id}`} className="codigo-expediente hover:underline">
-                      {a.no_nombramiento}
+                      {identificadorAuditoria(a)}
                     </Link>
+                    {a.cai ? <p className="text-xs text-muted-foreground">{a.no_nombramiento}</p> : null}
                   </TableCell>
                   <TableCell>{a.departamentos?.nombre ?? "—"}</TableCell>
                   <TableCell>{a.dependencia_auditada}</TableCell>

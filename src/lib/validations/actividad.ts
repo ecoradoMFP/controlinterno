@@ -10,6 +10,9 @@ const textoOpcional = z.string().trim().optional().transform((v) => v || null);
 
 export const actividadFormSchema = z
   .object({
+    // El CAI (número + año) identifica la auditoría; el número se reinicia cada año.
+    cai: z.string().trim().min(1, "Requerido").max(20, "Máximo 20 caracteres"),
+    anio_cai: z.coerce.number().int().min(2000, "Año inválido").max(2100, "Año inválido"),
     // Formato abierto: los nombramientos de la DAI no siguen un único patrón (ver
     // `src/lib/validations/formatos.ts`, donde se agregará la validación cuando se defina).
     no_nombramiento: z

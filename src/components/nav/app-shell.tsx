@@ -16,6 +16,7 @@ import {
   Mail,
   Menu,
   Settings,
+  UserCog,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -31,7 +32,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CARGO_LABELS, type Usuario } from "@/types/domain";
+import { CARGO_LABELS } from "@/types/domain";
+import type { UsuarioActual } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
@@ -42,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/oficios", label: "Oficios", icon: Mail },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/capacitaciones", label: "Capacitaciones", icon: GraduationCap },
-  { href: "/recomendaciones", label: "Recomendaciones", icon: ListChecks },
+  { href: "/recomendaciones", label: "Recomendaciones (CAI)", icon: ListChecks },
 ];
 
 function iniciales(nombre: string) {
@@ -119,7 +121,7 @@ function SidebarNav({
   pathname,
   onNavigate,
 }: {
-  usuario: Usuario;
+  usuario: UsuarioActual;
   pathname: string;
   onNavigate?: () => void;
 }) {
@@ -128,6 +130,14 @@ function SidebarNav({
       {NAV_ITEMS.map((item) => (
         <NavRow key={item.href} item={item} active={pathname.startsWith(item.href)} onNavigate={onNavigate} />
       ))}
+      {/* Ampliaciones de nombramiento: las registra la Dirección (Director o Subdirector). */}
+      {(usuario.cargo === "director" || usuario.cargo === "subdirector") && usuario.permiso_sistema !== "consulta" ? (
+        <NavRow
+          item={{ href: "/cargos-temporales", label: "Cargos temporales", icon: UserCog }}
+          active={pathname.startsWith("/cargos-temporales")}
+          onNavigate={onNavigate}
+        />
+      ) : null}
       {usuario.permiso_sistema === "control_total" ? (
         <NavRow
           item={{ href: "/configuracion", label: "Configuración", icon: Settings }}
@@ -144,7 +154,7 @@ export function AppShell({
   notificacionesNoLeidas,
   children,
 }: {
-  usuario: Usuario;
+  usuario: UsuarioActual;
   notificacionesNoLeidas: number;
   children: React.ReactNode;
 }) {
@@ -242,6 +252,11 @@ export function AppShell({
                   <DropdownMenuLabel className="font-normal">
                     <p className="text-sm font-medium text-foreground">{usuario.nombre}</p>
                     {usuario.cargo ? <p className="text-xs text-muted-foreground">{CARGO_LABELS[usuario.cargo]}</p> : null}
+                    {usuario.cargo_temporal ? (
+                      <p className="text-xs text-muted-foreground">
+                        Cargo temporal hasta el {usuario.cargo_temporal.fecha_fin} ({usuario.cargo_temporal.documento_respaldo})
+                      </p>
+                    ) : null}
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

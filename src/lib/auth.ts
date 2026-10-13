@@ -8,7 +8,12 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
  * Supabase Auth no está vinculada a ningún perfil (alta administrativa pendiente, sección
  * 12.4). Nunca lanza: la ausencia de perfil es un estado esperado, no un error.
  */
-export async function getUsuarioActual(): Promise<Usuario | null> {
+export type UsuarioActual = Usuario & {
+  /** Ampliación de nombramiento vigente hoy: mientras dura, `cargo` y `departamento_id` son los de ella. */
+  cargo_temporal: { cargo: CargoEnum; cargo_original: CargoEnum | null; fecha_fin: string; documento_respaldo: string } | null;
+};
+
+export async function getUsuarioActual(): Promise<UsuarioActual | null> {
   const supabase = await createClient();
 
   const {
@@ -23,7 +28,25 @@ export async function getUsuarioActual(): Promise<Usuario | null> {
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
-  return data;
+  if (!data) return null;
+
+  // Mismo cargo efectivo que usa RLS (`authz.usuario_actual`), para que la app muestre y ofrezca
+  // exactamente lo que la base va a permitir.
+  const { data: temporal } = await supabase.rpc("mi_cargo_temporal");
+  const vigente = temporal?.[0];
+  if (!vigente) return { ...data, cargo_temporal: null };
+
+  return {
+    ...data,
+    cargo: vigente.cargo,
+    departamento_id: vigente.departamento_id,
+    cargo_temporal: {
+      cargo: vigente.cargo,
+      cargo_original: data.cargo,
+      fecha_fin: vigente.fecha_fin,
+      documento_respaldo: vigente.documento_respaldo,
+    },
+  };
 }
 
 /**
@@ -256,4 +279,12 @@ export async function puedeDarSeguimiento(
     .eq("documentos_seguimiento.documentos_seguimiento_auditores.usuario_nit", usuario!.nit)
     .limit(1);
   return (data?.length ?? 0) > 0;
+}
+
+/**
+ * Espeja `authz.puede_registrar_cargo_temporal`: las ampliaciones de nombramiento (cargo temporal
+ * de Subjefe o Jefe) las registra la Dirección — Director o Subdirector, con escritura.
+ */
+export function puedeRegistrarCargoTemporal(usuario: Pick<Usuario, "cargo" | "permiso_sistema"> | null): boolean {
+  return !!usuario && puedeEscribir(usuario) && (usuario.cargo === "director" || usuario.cargo === "subdirector");
 }

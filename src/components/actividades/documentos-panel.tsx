@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import {
   CARGO_LABELS,
   FASE_DOCUMENTO_LABELS,
+  TIPO_EVENTO_LABELS,
   type CargoEnum,
   type DocumentoActividad,
   type DocumentoCatalogo,
@@ -35,7 +36,7 @@ const FASES: FaseDocumentoEnum[] = ["elaboracion", "revision", "correccion", "fi
 
 export type DocumentoConDetalle = DocumentoActividad & {
   documentos_catalogo: Pick<DocumentoCatalogo, "nombre" | "etapa" | "orden" | "genera_documento"> | null;
-  movimientos: Pick<Movimiento, "tipo_evento" | "de_cargo" | "timestamp">[];
+  movimientos: Pick<Movimiento, "id" | "tipo_evento" | "de_cargo" | "a_cargo" | "timestamp" | "corrige_movimiento_id">[];
   ruta_completa: string | null;
 };
 
@@ -235,6 +236,32 @@ export function DocumentosPanel({
                       <input type="hidden" name="actividad_id" value={actividadId} />
                       <input type="hidden" name="documento_actividad_id" value={d.id} />
                       <MovimientoFormFields cargoActual={d.cargo_actual_responsable} />
+                      <div className="col-span-2 flex flex-col gap-1.5">
+                        <label className="text-xs text-muted-foreground" htmlFor={`fecha_evento-${d.id}`}>
+                          Cuándo ocurrió (solo si es registro tardío; vacío = ahora)
+                        </label>
+                        <Input id={`fecha_evento-${d.id}`} name="fecha_evento" type="datetime-local" />
+                      </div>
+                      <div className="col-span-2 flex flex-col gap-1.5">
+                        <label className="text-xs text-muted-foreground" htmlFor={`corrige-${d.id}`}>
+                          Movimiento que corrige (opcional: deja de contar y queda marcado)
+                        </label>
+                        <select
+                          id={`corrige-${d.id}`}
+                          name="corrige_movimiento_id"
+                          defaultValue=""
+                          className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Ninguno: es un registro nuevo</option>
+                          {movimientosCorregibles(d.movimientos).map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {new Date(m.timestamp).toLocaleString("es-GT", { dateStyle: "short", timeStyle: "short", timeZone: "America/Guatemala" })}{" "}
+                              · {TIPO_EVENTO_LABELS[m.tipo_evento]}
+                              {m.de_cargo ? ` · ${CARGO_LABELS[m.de_cargo]} → ${CARGO_LABELS[m.a_cargo]}` : ` · a ${CARGO_LABELS[m.a_cargo]}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs text-muted-foreground">Nueva fase (opcional)</label>
                         <Select name="nueva_fase" items={FASE_DOCUMENTO_LABELS}>
@@ -323,4 +350,12 @@ function CadenaRevision({ cadena, documento }: { cadena: CargoEnum[]; documento:
       })}
     </ol>
   );
+}
+
+/** Movimientos que todavía se pueden corregir: los que ninguna corrección reemplazó ya. */
+function movimientosCorregibles(movimientos: DocumentoConDetalle["movimientos"]) {
+  const corregidos = new Set(movimientos.map((m) => m.corrige_movimiento_id).filter(Boolean));
+  return movimientos
+    .filter((m) => !corregidos.has(m.id))
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
