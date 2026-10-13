@@ -15,6 +15,12 @@ import type { Actividad } from "@/types/domain";
 type DatosExpediente = Pick<
   Actividad,
   | "id"
+  | "no_nombramiento"
+  | "tipo_auditoria"
+  | "periodo_evaluado_inicio"
+  | "periodo_evaluado_fin"
+  | "fecha_inicio_plazo"
+  | "expedientes_relacionados"
   | "etapa_actual"
   | "area"
   | "fecha_emision_nombramiento"
@@ -54,42 +60,77 @@ export function ExpedientePanel({
   const enCierre = actividad.etapa_actual === "expediente_cierre";
   const puedeInforme = actividad.etapa_actual === "comunicacion_resultados" || enCierre;
 
+  // Concluida la auditoría, todo queda de consulta; solo Dirección (control total) puede corregir.
+  const puedeEditarNombramiento = actividad.concluida ? puedeCorregirCierre : puedeGestionar;
+
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3 rounded-xl border p-4">
-        <h3 className="font-medium">Nombramiento</h3>
-        <form action={actualizarNombramiento} className="flex flex-col gap-4">
-          <input type="hidden" name="actividad_id" value={actividad.id} />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Campo label="Emisión del nombramiento" name="fecha_emision_nombramiento" valor={actividad.fecha_emision_nombramiento} disabled={!puedeGestionar} />
-            <Campo label="Notificación al equipo" name="fecha_notificacion_equipo" valor={actividad.fecha_notificacion_equipo} disabled={!puedeGestionar} />
-            <Campo label="Notificación a la dependencia" name="fecha_notificacion_dependencia" valor={actividad.fecha_notificacion_dependencia} disabled={!puedeGestionar} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="area">Área</Label>
-            <Input id="area" name="area" defaultValue={actividad.area ?? ""} disabled={!puedeGestionar} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label>Carpeta del expediente digital (la asigna el sistema)</Label>
-            <RutaExpediente ruta={rutaCompleta} etiqueta="Ruta completa" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="observaciones_nombramiento">Observaciones</Label>
-            <Textarea id="observaciones_nombramiento" name="observaciones" defaultValue={actividad.observaciones ?? ""} rows={2} disabled={!puedeGestionar} />
-          </div>
-          <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-            <Dato label="Proyecto de informe presentado a jefatura" valor={fechaProyectoJefatura} ayuda="De la bitácora del Informe de Auditoría" />
-            <Dato label="Proyecto de informe presentado a Dirección" valor={fechaProyectoDireccion} ayuda="De la bitácora del Informe de Auditoría" />
-          </div>
-          {puedeGestionar ? (
-            <Button type="submit" variant="outline" className="w-fit">
-              Guardar nombramiento
-            </Button>
+      <section className="flex flex-col gap-4 rounded-xl border p-4">
+        <div>
+          <h3 className="font-medium">Datos del nombramiento</h3>
+          <p className="text-sm text-muted-foreground">
+            Lo que se anota en el Registro Auxiliar de Nombramientos: el nombramiento de la auditoría, cuándo se
+            emitió y cuándo se notificó al equipo y a la dependencia auditada.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Dato label="No. de nombramiento" valor={actividad.no_nombramiento} />
+          <Dato label="Tipo de auditoría" valor={actividad.tipo_auditoria} />
+          <Dato
+            label="Período evaluado"
+            valor={`Del ${fecha(actividad.periodo_evaluado_inicio)} al ${fecha(actividad.periodo_evaluado_fin)}`}
+          />
+          <Dato label="Inicio del plazo" valor={fecha(actividad.fecha_inicio_plazo)} />
+          <Dato label="Emisión del nombramiento" valor={fecha(actividad.fecha_emision_nombramiento)} />
+          <Dato label="Notificación al equipo" valor={fecha(actividad.fecha_notificacion_equipo)} />
+          <Dato label="Notificación a la dependencia" valor={fecha(actividad.fecha_notificacion_dependencia)} />
+          <Dato label="Área" valor={actividad.area} />
+          {actividad.expedientes_relacionados.length > 0 ? (
+            <Dato label="Expedientes relacionados" valor={actividad.expedientes_relacionados.join(", ")} />
           ) : null}
-        </form>
+          <Dato label="Proyecto de informe entregado a la jefatura" valor={fechaProyectoJefatura} ayuda="Se toma de la bitácora del Informe de Auditoría" />
+          <Dato label="Proyecto de informe entregado a Dirección" valor={fechaProyectoDireccion} ayuda="Se toma de la bitácora del Informe de Auditoría" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-muted-foreground">Carpeta del expediente digital (la asigna el sistema)</p>
+          <RutaExpediente ruta={rutaCompleta} etiqueta="Ruta completa" />
+        </div>
+        {actividad.observaciones ? (
+          <div>
+            <p className="text-sm text-muted-foreground">Observaciones</p>
+            <p className="whitespace-pre-line">{actividad.observaciones}</p>
+          </div>
+        ) : null}
+
+        {puedeEditarNombramiento ? (
+          <details className="rounded-lg border">
+            <summary className="cursor-pointer p-3 font-medium text-primary">
+              {actividad.concluida ? "Corregir datos del nombramiento (solo Dirección)" : "Editar datos del nombramiento"}
+            </summary>
+            <form action={actualizarNombramiento} className="flex flex-col gap-4 border-t p-4">
+              <input type="hidden" name="actividad_id" value={actividad.id} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Campo label="Emisión del nombramiento" name="fecha_emision_nombramiento" valor={actividad.fecha_emision_nombramiento} />
+                <Campo label="Notificación al equipo" name="fecha_notificacion_equipo" valor={actividad.fecha_notificacion_equipo} />
+                <Campo label="Notificación a la dependencia" name="fecha_notificacion_dependencia" valor={actividad.fecha_notificacion_dependencia} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="area">Área</Label>
+                <Input id="area" name="area" defaultValue={actividad.area ?? ""} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="observaciones_nombramiento">Observaciones</Label>
+                <Textarea id="observaciones_nombramiento" name="observaciones" defaultValue={actividad.observaciones ?? ""} rows={2} />
+              </div>
+              <Button type="submit" className="w-fit">
+                Guardar cambios
+              </Button>
+            </form>
+          </details>
+        ) : null}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-xl border p-4">
+      <section className="flex flex-col gap-4 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-medium">Cierre del expediente</h3>
           {actividad.concluida ? <Badge>Concluida</Badge> : <Badge variant="secondary">En curso</Badge>}
@@ -104,12 +145,27 @@ export function ExpedientePanel({
             ya no quedan pendientes.
           </p>
         ) : (
-          <FormCierreExpediente
-            actividadId={actividad.id}
-            datos={actividad}
-            puedeGestionar={puedeGestionar}
-            puedeCorregirCierre={puedeCorregirCierre}
-          />
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Dato label="Notificación del informe" valor={fecha(actividad.fecha_notificacion_informe)} />
+              <Dato label="Notificación a la CGC" valor={fecha(actividad.fecha_notificacion_cgc)} />
+              <Dato label="Entrega al archivo" valor={fecha(actividad.fecha_entrega_archivo)} />
+            </div>
+            <p className="text-sm text-muted-foreground">Con la entrega al archivo la auditoría quedó concluida.</p>
+            {puedeCorregirCierre ? (
+              <details className="rounded-lg border">
+                <summary className="cursor-pointer p-3 font-medium text-primary">Corregir fechas de cierre (solo Dirección)</summary>
+                <div className="border-t p-4">
+                  <FormCierreExpediente
+                    actividadId={actividad.id}
+                    datos={actividad}
+                    puedeGestionar={puedeGestionar}
+                    puedeCorregirCierre={puedeCorregirCierre}
+                  />
+                </div>
+              </details>
+            ) : null}
+          </>
         )}
       </section>
 
@@ -198,7 +254,7 @@ export function FormCierreExpediente({
       ) : null}
       <div className="flex flex-col gap-2">
         <Label htmlFor="observaciones_cierre">
-          Observaciones{puedeCorregirCierre ? " (obligatorio cambiarlas si corriges una fecha ya registrada)" : ""}
+          Observaciones{puedeCorregirCierre && datos.concluida ? " (indique el motivo si corrige una fecha ya registrada)" : ""}
         </Label>
         <Textarea id="observaciones_cierre" name="observaciones" defaultValue={datos.observaciones ?? ""} rows={2} disabled={!puedeGestionar} />
       </div>
@@ -224,12 +280,17 @@ function Campo({ label, name, valor, disabled }: { label: string; name: string; 
   );
 }
 
-function Dato({ label, valor, ayuda }: { label: string; valor: string | null; ayuda: string }) {
+function Dato({ label, valor, ayuda }: { label: string; valor: string | null; ayuda?: string }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p>{valor ?? "—"}</p>
-      <p className="text-xs text-muted-foreground">{ayuda}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="font-medium">{valor || "Sin registrar"}</p>
+      {ayuda ? <p className="text-xs text-muted-foreground">{ayuda}</p> : null}
     </div>
   );
+}
+
+/** "2026-03-26" → "26/03/2026" */
+function fecha(iso: string | null) {
+  return iso ? iso.split("-").reverse().join("/") : null;
 }

@@ -314,18 +314,7 @@ export default async function ActividadDetallePage({
           />
         </TabsContent>
         <TabsContent value="expediente">
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 gap-x-10 gap-y-2 rounded-xl border p-4 text-sm sm:grid-cols-3">
-              <Info label="No. de nombramiento" value={actividad.no_nombramiento} mono />
-              <Info label="Tipo de auditoría" value={actividad.tipo_auditoria} />
-              <Info label="Período evaluado" value={`${actividad.periodo_evaluado_inicio} — ${actividad.periodo_evaluado_fin}`} />
-              <Info label="Inicio de plazo" value={actividad.fecha_inicio_plazo} />
-              <Info
-                label="Expedientes relacionados"
-                value={actividad.expedientes_relacionados.length > 0 ? actividad.expedientes_relacionados.join(", ") : "—"}
-              />
-            </div>
-            <ExpedientePanel
+          <ExpedientePanel
               actividad={actividad}
               rutaCompleta={rutaCompletaExpediente(actividad.ruta_expediente)}
               informeId={informeVinculado?.id ?? null}
@@ -334,7 +323,6 @@ export default async function ActividadDetallePage({
               puedeGestionar={puedeCerrarEtapa}
               puedeCorregirCierre={puedeCorregirHechoConsumado(usuario)}
             />
-          </div>
         </TabsContent>
         <TabsContent value="bitacora">
           <div className="flex flex-col gap-4">
