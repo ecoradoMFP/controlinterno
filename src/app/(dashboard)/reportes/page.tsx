@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FiltrosAutomaticos } from "@/components/recomendaciones/filtros-automaticos";
 import { BarraSemaforo, BarrasHorizontales, Medidor, PlanContraReal } from "@/components/reportes/graficas";
 import {
+  calcularSemaforo,
   semaforoConMotivoPorActividad,
   SEVERIDAD,
   UMBRAL_POR_DEFECTO,
@@ -110,20 +111,25 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const umbralOficio = umbralPorAmbito.get("oficio") ?? UMBRAL_POR_DEFECTO;
   const hoy = hoyGuatemala();
 
-  // ── Semáforo por auditoría, con el motivo (el hito u oficio que la pone en ese color) ──
+  // ── Semáforo por auditoría EN CURSO, con el motivo (la actividad del cronograma que la pone en
+  // ese color). Los oficios no cuentan aquí: van en su propia lista, más abajo. ──
   const peorPorActividad = semaforoConMotivoPorActividad(
-    hitosAbiertos.filter((h) => actividadPorId.has(h.actividad_id)),
-    oficiosAbiertos.filter((o) => o.actividad_id && actividadPorId.has(o.actividad_id)),
+    hitosAbiertos.filter((h) => actividadPorId.get(h.actividad_id)?.concluida === false),
     hoy,
     feriados,
     umbralHito,
-    umbralOficio,
   );
   const conteo: Record<ColorSemaforo, number> = { verde: 0, amarillo: 0, naranja: 0, rojo: 0 };
   for (const { color } of peorPorActividad.values()) conteo[color]++;
   const enRiesgo = [...peorPorActividad.entries()]
     .filter(([, p]) => p.color === "rojo" || p.color === "naranja")
     .sort(([, a], [, b]) => SEVERIDAD[b.color] - SEVERIDAD[a.color] || a.fecha.localeCompare(b.fecha));
+
+  // ── Oficios por atender: sin respuesta y en naranja o rojo, cada uno con su propio color ──
+  const oficiosPorAtender = oficiosAbiertos
+    .map((o) => ({ ...o, color: calcularSemaforo(o.fecha_emision, o.fecha_vencimiento!, hoy, feriados, umbralOficio) }))
+    .filter((o) => o.color === "rojo" || o.color === "naranja")
+    .sort((a, b) => SEVERIDAD[b.color] - SEVERIDAD[a.color] || a.fecha_vencimiento!.localeCompare(b.fecha_vencimiento!));
 
   // ── Indicadores ──
   const enCurso = actividades.filter((a) => !a.concluida);
@@ -293,7 +299,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <div className="flex flex-col gap-5 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
           <div>
             <h2 className="font-semibold">Semáforo de auditorías</h2>
-            <p className="text-sm text-muted-foreground">Cada auditoría toma el color de su actividad del cronograma u oficio más atrasado.</p>
+            <p className="text-sm text-muted-foreground">Auditorías en curso. Cada una toma el color de su actividad del cronograma más atrasada.</p>
           </div>
           <BarraSemaforo conteo={conteo} />
           <div className="flex flex-col gap-2 border-t pt-4">
@@ -315,6 +321,40 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
                       </div>
                       <div className="shrink-0 sm:pt-0.5">
                         <SemaforoBadge color={p.color} />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="flex flex-col gap-2 border-t pt-4">
+            <h3 className="text-sm font-semibold">Oficios por atender ({oficiosPorAtender.length})</h3>
+            <p className="text-xs text-muted-foreground">Sin respuesta y con el plazo por vencer o vencido. No cambian el color de la auditoría.</p>
+            {oficiosPorAtender.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ningún oficio con el plazo por vencer.</p>
+            ) : (
+              <ul className="divide-y">
+                {oficiosPorAtender.map((o) => {
+                  const a = o.actividad_id ? actividadPorId.get(o.actividad_id) : undefined;
+                  return (
+                    <li key={o.no_oficio} className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                      <div className="min-w-0">
+                        <span className="codigo-expediente font-medium">Oficio {o.no_oficio}</span>
+                        {a ? (
+                          <span className="text-sm text-muted-foreground">
+                            {" · "}
+                            <Link href={`/actividades/${a.id}`} className="text-primary hover:underline">
+                              {identificadorAuditoria(a)}
+                            </Link>
+                          </span>
+                        ) : null}
+                        <p className="text-sm">
+                          Sin respuesta; {o.fecha_vencimiento! < hoy ? "venció" : "vence"} el {o.fecha_vencimiento}
+                        </p>
+                      </div>
+                      <div className="shrink-0 sm:pt-0.5">
+                        <SemaforoBadge color={o.color} />
                       </div>
                     </li>
                   );

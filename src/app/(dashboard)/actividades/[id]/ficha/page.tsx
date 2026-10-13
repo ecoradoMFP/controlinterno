@@ -58,11 +58,9 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
     ? null
     : semaforoConMotivoPorActividad(
         (hitos ?? []).filter((h) => !h.fecha_fin_real),
-        (oficios ?? []).filter((o) => !o.fecha_respuesta),
         hoy,
         feriados,
         umbral.get("hito") ?? UMBRAL_POR_DEFECTO,
-        umbral.get("oficio") ?? UMBRAL_POR_DEFECTO,
       ).get(id);
 
   const hitosOrdenados = [...(hitos ?? [])].sort((x, y) => x.codigo_jerarquico.localeCompare(y.codigo_jerarquico, "es", { numeric: true }));

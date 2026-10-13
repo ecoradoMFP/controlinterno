@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
     { data: actividades },
     { data: equipos },
     { data: hitosAbiertos },
-    { data: oficiosAbiertos },
     { data: parametros },
     { data: feriadosRows },
     { data: departamentos },
@@ -55,15 +54,9 @@ export async function GET(request: NextRequest) {
     { data: usuarios },
     { data: notificacionesPrevias },
   ] = await Promise.all([
-    sb.from("actividades").select("id, cai, anio_cai, no_nombramiento, departamento_id, auditor_principal_nit"),
+    sb.from("actividades").select("id, cai, anio_cai, no_nombramiento, departamento_id, auditor_principal_nit").eq("concluida", false),
     sb.from("actividades_equipo").select("actividad_id, usuario_nit"),
     sb.from("hitos_cronograma").select("actividad_id, fecha_inicio_esperada, fecha_fin_esperada").is("fecha_fin_real", null),
-    sb
-      .from("oficios")
-      .select("actividad_id, fecha_emision, fecha_vencimiento")
-      .is("fecha_respuesta", null)
-      .not("fecha_vencimiento", "is", null)
-      .not("actividad_id", "is", null),
     sb.from("parametros_semaforo").select("*"),
     sb.from("calendario_feriados").select("fecha"),
     sb.from("departamentos").select("id, subdireccion_id"),
@@ -75,17 +68,9 @@ export async function GET(request: NextRequest) {
   const feriados = new Set((feriadosRows ?? []).map((f) => f.fecha));
   const umbralPorAmbito = new Map((parametros ?? []).map((p) => [p.ambito, p as UmbralSemaforo]));
   const umbralHito = umbralPorAmbito.get("hito") ?? UMBRAL_POR_DEFECTO;
-  const umbralOficio = umbralPorAmbito.get("oficio") ?? UMBRAL_POR_DEFECTO;
   const hoy = hoyGuatemala();
 
-  const colorPorActividad = calcularColorPorActividad(
-    hitosAbiertos ?? [],
-    oficiosAbiertos ?? [],
-    hoy,
-    feriados,
-    umbralHito,
-    umbralOficio,
-  );
+  const colorPorActividad = calcularColorPorActividad(hitosAbiertos ?? [], hoy, feriados, umbralHito);
 
   // Ya notificados por (actividad, color, destinatario) — no por actividad+color solamente:
   // si alguien se suma al equipo/jefatura mientras el color no cambia, esa persona todavía no

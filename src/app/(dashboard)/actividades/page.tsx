@@ -43,7 +43,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     { data: actividades, error },
     { data: documentos },
     { data: hitosAbiertos },
-    { data: oficiosAbiertos },
     { data: parametros },
     { data: feriadosRows },
   ] = await Promise.all([
@@ -55,11 +54,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
       .order("created_at", { ascending: false }),
     supabase.from("documentos_actividad").select("actividad_id, fase_actual, cargo_actual_responsable, documentos_catalogo(etapa)"),
     supabase.from("hitos_cronograma").select("actividad_id, nombre, fecha_inicio_esperada, fecha_fin_esperada").is("fecha_fin_real", null),
-    supabase
-      .from("oficios")
-      .select("actividad_id, no_oficio, fecha_emision, fecha_vencimiento")
-      .is("fecha_respuesta", null)
-      .not("fecha_vencimiento", "is", null),
     supabase.from("parametros_semaforo").select("*"),
     supabase.from("calendario_feriados").select("fecha"),
   ]);
@@ -68,11 +62,9 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
   const umbral = new Map((parametros ?? []).map((p) => [p.ambito, p as UmbralSemaforo]));
   const semaforo = semaforoConMotivoPorActividad(
     hitosAbiertos ?? [],
-    oficiosAbiertos ?? [],
     hoy,
     new Set((feriadosRows ?? []).map((f) => f.fecha)),
     umbral.get("hito") ?? UMBRAL_POR_DEFECTO,
-    umbral.get("oficio") ?? UMBRAL_POR_DEFECTO,
   );
 
   // "Te toca": documentos de la etapa en curso que tiene tu cargo (mismo criterio que el detalle).
