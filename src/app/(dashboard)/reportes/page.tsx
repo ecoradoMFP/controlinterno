@@ -166,6 +166,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       documentoNombre: d.documentos_catalogo?.nombre ?? null,
       movimientos: sinCorregidos(d.movimientos),
     })),
+    feriados,
   );
   const porCargo = promediarPorClave(segmentos, (s) => s.cargo).map((r) => ({
     clave: r.clave,
@@ -275,7 +276,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           tone="rojo"
           label="En riesgo"
           value={enRiesgo.length}
-          detail={`de ${peorPorActividad.size} con plazos abiertos`}
+          detail={`de ${peorPorActividad.size} con plazos en proceso`}
         />
         <StatCard icon={Mail} tone="naranja" label="Oficios vencidos" value={oficiosVencidos} detail={`${oficiosAbiertos.length} esperando respuesta`} />
         <StatCard
@@ -330,7 +331,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           </div>
           <div className="flex flex-col gap-2 border-t pt-4">
             <h3 className="text-sm font-semibold">Oficios por atender ({oficiosPorAtender.length})</h3>
-            <p className="text-xs text-muted-foreground">Sin respuesta y con el plazo por vencer o vencido. No cambian el color de la auditoría.</p>
+            <p className="text-xs text-muted-foreground">Sin respuesta y con el plazo por vencer o vencido.</p>
             {oficiosPorAtender.length === 0 ? (
               <p className="text-sm text-muted-foreground">Ningún oficio con el plazo por vencer.</p>
             ) : (
@@ -400,7 +401,8 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
             <p className="text-sm text-muted-foreground">
               {cargoMasLento
                 ? `En promedio, un documento pasa ${cargoMasLento.texto} con el ${cargoMasLento.etiqueta} antes de avanzar.`
-                : "Tiempo promedio que un documento pasa con cada cargo antes de avanzar."}
+                : "Tiempo promedio que un documento pasa con cada cargo antes de avanzar."}{" "}
+              Solo cuenta el horario hábil: de 8:00 a 16:30, de lunes a viernes, sin asuetos.
             </p>
           </div>
           <BarrasHorizontales filas={porCargo} resaltar vacio="Todavía no hay documentos que hayan cambiado de manos." />
@@ -408,7 +410,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
           <div>
             <h2 className="font-semibold">Documentos que más tardan</h2>
-            <p className="text-sm text-muted-foreground">Tiempo promedio en cada paso de la revisión.</p>
+            <p className="text-sm text-muted-foreground">Tiempo promedio en cada paso de la revisión, en horario hábil.</p>
           </div>
           <BarrasHorizontales filas={documentosLentos} resaltar vacio="Todavía no hay documentos que hayan cambiado de manos." />
         </div>
@@ -419,7 +421,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <div className="rounded-2xl border bg-card shadow-sm">
           <div className="border-b p-5">
             <h2 className="font-semibold">Carga por departamento</h2>
-            <p className="text-sm text-muted-foreground">Lo que tiene abierto cada departamento hoy.</p>
+            <p className="text-sm text-muted-foreground">Lo que tiene en proceso cada departamento hoy.</p>
           </div>
           <Table>
             <TableHeader>
@@ -461,7 +463,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           <summary className="cursor-pointer p-5 font-semibold">
             Carga por persona ({cargaPersonas.length} con trabajo asignado)
             <span className="block text-sm font-normal text-muted-foreground">
-              Solo quienes tienen auditorías, documentos u oficios abiertos; los que más pendientes tienen, primero.
+              Solo quienes tienen auditorías, documentos u oficios en proceso; los que más pendientes tienen, primero.
             </span>
           </summary>
           <Table>

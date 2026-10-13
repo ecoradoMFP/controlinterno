@@ -6,6 +6,36 @@ import type { CargoEnum, EtapaDocumentoEnum } from "@/types/domain";
 
 const MS_POR_HORA = 1000 * 60 * 60;
 
+/** Jornada de la DAI: 8:00 a 16:30, hora de Guatemala (UTC-6 todo el año, sin horario de verano). */
+const JORNADA_INICIO_HORA = 8;
+const JORNADA_FIN_HORA = 16.5;
+export const HORAS_JORNADA = JORNADA_FIN_HORA - JORNADA_INICIO_HORA;
+const DESFASE_GUATEMALA_MS = -6 * MS_POR_HORA;
+
+/**
+ * Horas hábiles entre dos instantes: solo cuenta lo que cae dentro de la jornada (8:00 a 16:30)
+ * de lunes a viernes que no sean asueto. Un documento recibido el viernes a las 16:00 y entregado
+ * el lunes a las 9:00 suma 1.5 h (media hora del viernes + una del lunes), no 65 h de reloj.
+ */
+export function horasHabilesEntre(desdeMs: number, hastaMs: number, feriados: ReadonlySet<string>): number {
+  if (hastaMs <= desdeMs) return 0;
+  // Se trabaja en "hora local como si fuera UTC" para que la fecha y el día de la semana salgan
+  // de Guatemala y no de la zona del servidor.
+  const desde = desdeMs + DESFASE_GUATEMALA_MS;
+  const hasta = hastaMs + DESFASE_GUATEMALA_MS;
+  const MS_DIA = 24 * MS_POR_HORA;
+  let total = 0;
+  for (let dia = Math.floor(desde / MS_DIA) * MS_DIA; dia < hasta; dia += MS_DIA) {
+    const fecha = new Date(dia);
+    const diaSemana = fecha.getUTCDay();
+    if (diaSemana === 0 || diaSemana === 6 || feriados.has(fecha.toISOString().slice(0, 10))) continue;
+    const ini = Math.max(desde, dia + JORNADA_INICIO_HORA * MS_POR_HORA);
+    const fin = Math.min(hasta, dia + JORNADA_FIN_HORA * MS_POR_HORA);
+    if (fin > ini) total += fin - ini;
+  }
+  return total / MS_POR_HORA;
+}
+
 /**
  * Quita de la bitácora los movimientos que la Dirección corrigió (`corrige_movimiento_id`): siguen
  * a la vista en la hoja de ruta, marcados, pero no cuentan para tiempos ni flujos — los reemplaza
@@ -32,20 +62,21 @@ export interface SegmentoPermanencia {
 
 /**
  * Sección 7: "tiempo promedio de permanencia por cargo" — el dato central del cuello de
- * botella. Se mide en horas reales de reloj (timestamp a timestamp), no en días calendario: un
- * documento puede ir y volver entre dos cargos varias veces en la misma jornada (p. ej. una
- * corrección rápida), y truncar a fecha colapsaría todos esos tramos a "1 día" cada uno,
- * ocultando exactamente el patrón que este reporte necesita mostrar. No excluye noches/fines de
- * semana/feriados (a diferencia del semáforo de hitos/oficios, que sí lo hace porque ahí se mide
- * contra un plazo en días hábiles) — si más adelante se quiere "horas hábiles" en vez de horas de
- * reloj, es un cambio localizado aquí.
+ * botella. Se mide en horas hábiles (`horasHabilesEntre`: jornada de 8:00 a 16:30, sin fines de
+ * semana ni asuetos), timestamp a timestamp y no por fecha: un documento puede ir y volver entre
+ * dos cargos varias veces en la misma jornada, y truncar a fecha colapsaría esos tramos a "1 día"
+ * cada uno. Las noches y fines de semana no cuentan, para no culpar a quien recibe un documento
+ * el viernes por la tarde.
  *
  * Solo se cuentan tramos cerrados (delimitados por dos eventos, o por la creación del documento
  * y su primer movimiento): un tramo abierto (documento todavía en manos de alguien, sin evento
  * siguiente) es censura por la derecha y sesgaría el promedio histórico si se mezclara con
  * tramos ya concluidos.
  */
-export function calcularSegmentosPermanencia(documentos: DocumentoParaPermanencia[]): SegmentoPermanencia[] {
+export function calcularSegmentosPermanencia(
+  documentos: DocumentoParaPermanencia[],
+  feriados: ReadonlySet<string>,
+): SegmentoPermanencia[] {
   const segmentos: SegmentoPermanencia[] = [];
 
   for (const doc of documentos) {
@@ -61,7 +92,7 @@ export function calcularSegmentosPermanencia(documentos: DocumentoParaPermanenci
       if (cargoActual) {
         segmentos.push({
           cargo: cargoActual,
-          horas: (eventoMs - cursorMs) / MS_POR_HORA,
+          horas: horasHabilesEntre(cursorMs, eventoMs, feriados),
           departamentoNombre: doc.departamentoNombre,
           documentoNombre: doc.documentoNombre,
         });
@@ -98,11 +129,11 @@ export function promediarPorClave(
     .sort((a, b) => b.horasPromedio - a.horasPromedio);
 }
 
-/** "6.5 h" bajo un día, "3.2 días" arriba — para que un tramo de 40 min no se lea como "0.0 días"
- * ni uno de 12 días se lea como "288.0 h". */
+/** Horas hábiles en palabras: "6.5 h" bajo una jornada, "3.2 días hábiles" arriba (1 día hábil =
+ * una jornada de 8.5 h), para que un tramo de 40 min no se lea como "0.1 días hábiles". */
 export function formatearHoras(horas: number): string {
-  if (Math.abs(horas) < 24) return `${horas.toFixed(1)} h`;
-  return `${(horas / 24).toFixed(1)} días`;
+  if (Math.abs(horas) < HORAS_JORNADA) return `${horas.toFixed(1)} h`;
+  return `${(horas / HORAS_JORNADA).toFixed(1)} días hábiles`;
 }
 
 export interface Cumplimiento {
