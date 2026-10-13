@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FiltrosAutomaticos } from "@/components/recomendaciones/filtros-automaticos";
 import { BarraSemaforo, BarrasHorizontales, Medidor, PlanContraReal } from "@/components/reportes/graficas";
 import {
-  calcularSemaforo,
+  semaforoConMotivoPorActividad,
+  SEVERIDAD,
   UMBRAL_POR_DEFECTO,
   type ColorSemaforo,
   type UmbralSemaforo,
@@ -27,7 +28,6 @@ import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, ETAPA_DOCUMENTO_LABELS, type Carg
 
 const SELECT_CLASES = "h-9 rounded-lg border border-input bg-background px-3 text-sm";
 const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
-const SEVERIDAD: Record<ColorSemaforo, number> = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
 
 /**
  * Tablero de Reportes. Responde, en este orden, lo que Dirección y jefaturas preguntan: ¿cómo
@@ -111,22 +111,14 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const hoy = hoyGuatemala();
 
   // ── Semáforo por auditoría, con el motivo (el hito u oficio que la pone en ese color) ──
-  const peorPorActividad = new Map<string, { color: ColorSemaforo; motivo: string; fecha: string }>();
-  const considerar = (actividadId: string | null, color: ColorSemaforo, motivo: string, fecha: string) => {
-    if (!actividadId || !actividadPorId.has(actividadId)) return;
-    const actual = peorPorActividad.get(actividadId);
-    if (!actual || SEVERIDAD[color] > SEVERIDAD[actual.color] || (color === actual.color && fecha < actual.fecha)) {
-      peorPorActividad.set(actividadId, { color, motivo, fecha });
-    }
-  };
-  for (const h of hitosAbiertos) {
-    const color = calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriados, umbralHito);
-    considerar(h.actividad_id, color, `Hito "${h.nombre}" ${h.fecha_fin_esperada < hoy ? "venció" : "vence"} el ${h.fecha_fin_esperada}`, h.fecha_fin_esperada);
-  }
-  for (const o of oficiosAbiertos) {
-    const color = calcularSemaforo(o.fecha_emision, o.fecha_vencimiento!, hoy, feriados, umbralOficio);
-    considerar(o.actividad_id, color, `Oficio ${o.no_oficio} sin respuesta; ${o.fecha_vencimiento! < hoy ? "venció" : "vence"} el ${o.fecha_vencimiento}`, o.fecha_vencimiento!);
-  }
+  const peorPorActividad = semaforoConMotivoPorActividad(
+    hitosAbiertos.filter((h) => actividadPorId.has(h.actividad_id)),
+    oficiosAbiertos.filter((o) => o.actividad_id && actividadPorId.has(o.actividad_id)),
+    hoy,
+    feriados,
+    umbralHito,
+    umbralOficio,
+  );
   const conteo: Record<ColorSemaforo, number> = { verde: 0, amarillo: 0, naranja: 0, rojo: 0 };
   for (const { color } of peorPorActividad.values()) conteo[color]++;
   const enRiesgo = [...peorPorActividad.entries()]

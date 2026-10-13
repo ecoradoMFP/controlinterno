@@ -2,7 +2,7 @@
 
 export type ColorSemaforo = "verde" | "amarillo" | "naranja" | "rojo";
 
-const SEVERIDAD: Record<ColorSemaforo, number> = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
+export const SEVERIDAD: Record<ColorSemaforo, number> = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
 
 export function peorColor(a: ColorSemaforo, b: ColorSemaforo): ColorSemaforo {
   return SEVERIDAD[b] > SEVERIDAD[a] ? b : a;
@@ -113,6 +113,46 @@ export function calcularColorPorActividad(
   }
 
   return colorPorActividad;
+}
+
+export interface SemaforoConMotivo {
+  color: ColorSemaforo;
+  /** El hito u oficio que pone a la auditoría en ese color, en palabras. */
+  motivo: string;
+  /** Vencimiento de ese hito u oficio (desempata: el que vence antes). */
+  fecha: string;
+}
+
+/**
+ * Mismo peor caso que `calcularColorPorActividad`, pero diciendo QUÉ lo causa: el hito u oficio
+ * más grave (y, a igual color, el que vence antes). Lo usan la lista de auditorías y /reportes.
+ */
+export function semaforoConMotivoPorActividad(
+  hitosAbiertos: readonly (HitoAbiertoParaSemaforo & { nombre: string })[],
+  oficiosAbiertos: readonly (OficioAbiertoParaSemaforo & { no_oficio: string })[],
+  hoy: string,
+  feriados: ReadonlySet<string>,
+  umbralHito: UmbralSemaforo,
+  umbralOficio: UmbralSemaforo,
+): Map<string, SemaforoConMotivo> {
+  const peor = new Map<string, SemaforoConMotivo>();
+  const considerar = (actividadId: string | null, color: ColorSemaforo, motivo: string, fecha: string) => {
+    if (!actividadId) return;
+    const actual = peor.get(actividadId);
+    if (!actual || SEVERIDAD[color] > SEVERIDAD[actual.color] || (color === actual.color && fecha < actual.fecha)) {
+      peor.set(actividadId, { color, motivo, fecha });
+    }
+  };
+  for (const h of hitosAbiertos) {
+    const color = calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriados, umbralHito);
+    considerar(h.actividad_id, color, `Hito "${h.nombre}" ${h.fecha_fin_esperada < hoy ? "venció" : "vence"} el ${h.fecha_fin_esperada}`, h.fecha_fin_esperada);
+  }
+  for (const o of oficiosAbiertos) {
+    if (!o.fecha_vencimiento) continue;
+    const color = calcularSemaforo(o.fecha_emision, o.fecha_vencimiento, hoy, feriados, umbralOficio);
+    considerar(o.actividad_id, color, `Oficio ${o.no_oficio} sin respuesta; ${o.fecha_vencimiento < hoy ? "venció" : "vence"} el ${o.fecha_vencimiento}`, o.fecha_vencimiento);
+  }
+  return peor;
 }
 
 export const COLOR_SEMAFORO_LABELS: Record<ColorSemaforo, string> = {
