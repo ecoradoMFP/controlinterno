@@ -41,10 +41,10 @@ export default async function ActividadDetallePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; error?: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
-  const { tab = "documentos", error } = await searchParams;
+  const { tab = "documentos" } = await searchParams;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
@@ -264,12 +264,6 @@ export default async function ActividadDetallePage({
       </Card>
 
       <PasosCiclo pasos={pasos} etiqueta="Avance de la auditoría" />
-
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
 
       <SiguientePaso
         actividadId={id}

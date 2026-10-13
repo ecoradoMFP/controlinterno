@@ -1,7 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { errorAccion as fail, type ResultadoAccion } from "@/lib/actions/resultado";
 import { createClient } from "@/lib/supabase/server";
 import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
 import {
@@ -12,71 +12,71 @@ import {
   recomendacionFormSchema,
 } from "@/lib/validations/recomendacion";
 
-function fail(informeId: string, message: string): never {
-  const params = new URLSearchParams({ error: message });
-  redirect(`/recomendaciones/informes/${informeId}?${params.toString()}`);
-}
+// Estas acciones se usan con `FormAccion`: no redirigen, así la página del informe se actualiza en
+// su lugar sin saltar arriba. Ver lib/actions/resultado.ts.
 
 async function verificarAlcance(informeId: string) {
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
   // Sección 12.3: defensa en profundidad además de RLS (informes_auditoria_equipo/
   // deficiencias/recomendaciones/seguimientos_recomendacion insert policies).
   if (!(await puedeOperarInforme(usuario, informeId, supabase))) {
-    fail(informeId, "No tiene permiso para modificar este informe.");
+    return fail("No tiene permiso para modificar este informe.");
   }
   // Un CAI bloqueado ya no admite cambios de captura (la base de datos también lo exige).
   const { data: informe } = await supabase.from("informes_auditoria").select("bloqueado_en").eq("id", informeId).maybeSingle();
   if (informe?.bloqueado_en) {
-    fail(informeId, "El CAI está bloqueado: ya no se pueden agregar ni modificar deficiencias, recomendaciones ni el equipo.");
+    return fail("El CAI está bloqueado: ya no se pueden agregar ni modificar deficiencias, recomendaciones ni el equipo.");
   }
   return { usuario: usuario!, supabase };
 }
 
 // Cerrar la captura del CAI. Lo hace quien puede operar el informe; desbloquear es de la jefatura.
-export async function bloquearInforme(formData: FormData) {
+export async function bloquearInforme(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
-  if (!informeId) fail(informeId, "Falta identificar el informe.");
-  const { supabase } = await verificarAlcance(informeId);
+  if (!informeId) return fail("Falta identificar el informe.");
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   // El trigger informes_auditoria_bloqueo asigna quién y cuándo.
   const { error } = await supabase.from("informes_auditoria").update({ bloqueado_en: new Date().toISOString() }).eq("id", informeId);
-  if (error) fail(informeId, "No se pudo bloquear el CAI.");
+  if (error) return fail("No se pudo bloquear el CAI.");
 
   revalidatePath("/recomendaciones", "layout");
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
-export async function desbloquearInforme(formData: FormData) {
+export async function desbloquearInforme(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
-  if (!informeId) fail(informeId, "Falta identificar el informe.");
+  if (!informeId) return fail("Falta identificar el informe.");
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
   const { data: informe } = await supabase.from("informes_auditoria").select("departamento_id").eq("id", informeId).maybeSingle();
   const gestionables = await departamentosParaNombrarSeguimiento(usuario, supabase);
-  if (!informe || !gestionables.includes(informe.departamento_id)) fail(informeId, "Solo la jefatura puede desbloquear un CAI.");
+  if (!informe || !gestionables.includes(informe.departamento_id)) return fail("Solo la jefatura puede desbloquear un CAI.");
 
   const { error } = await supabase.from("informes_auditoria").update({ bloqueado_en: null }).eq("id", informeId);
-  if (error) fail(informeId, "No se pudo desbloquear el CAI.");
+  if (error) return fail("No se pudo desbloquear el CAI.");
 
   revalidatePath("/recomendaciones", "layout");
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 // Corregir un error de captura de la deficiencia. El trigger exige el motivo, rechaza el cambio si
 // alguna de sus recomendaciones ya tiene seguimientos evaluados y guarda el valor anterior.
-export async function editarDeficiencia(formData: FormData) {
+export async function editarDeficiencia(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const deficienciaId = String(formData.get("deficiencia_id") ?? "");
-  if (!informeId || !deficienciaId) fail(informeId, "Falta identificar la deficiencia.");
+  if (!informeId || !deficienciaId) return fail("Falta identificar la deficiencia.");
 
-  const { supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   const parsed = edicionDeficienciaSchema.safeParse({
     titulo: formData.get("titulo"),
     descripcion: formData.get("descripcion") ?? undefined,
     motivo: formData.get("motivo"),
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
 
   const { error } = await supabase
     .from("deficiencias")
@@ -86,58 +86,61 @@ export async function editarDeficiencia(formData: FormData) {
       motivo_ultimo_cambio: parsed.data.motivo,
     })
     .eq("id", deficienciaId);
-  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo guardar la corrección."));
+  if (error) return fail(mensajeDeCambio(error.message, "No se pudo guardar la corrección."));
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
-export async function agregarMiembroEquipoInforme(formData: FormData) {
+export async function agregarMiembroEquipoInforme(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const usuarioNit = String(formData.get("usuario_nit") ?? "");
-  if (!informeId || !usuarioNit) fail(informeId, "Falta seleccionar al usuario.");
+  if (!informeId || !usuarioNit) return fail("Falta seleccionar al usuario.");
 
-  const { supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   const { error } = await supabase.from("informes_auditoria_equipo").insert({
     informe_id: informeId,
     usuario_nit: usuarioNit,
   });
-  if (error) fail(informeId, "No se pudo agregar al equipo.");
+  if (error) return fail("No se pudo agregar al equipo.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
-export async function eliminarMiembroEquipoInforme(formData: FormData) {
+export async function eliminarMiembroEquipoInforme(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const usuarioNit = String(formData.get("usuario_nit") ?? "");
-  if (!informeId || !usuarioNit) fail(informeId, "Falta identificar al miembro del equipo.");
+  if (!informeId || !usuarioNit) return fail("Falta identificar al miembro del equipo.");
 
-  const { supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   const { error } = await supabase
     .from("informes_auditoria_equipo")
     .delete()
     .eq("informe_id", informeId)
     .eq("usuario_nit", usuarioNit);
-  if (error) fail(informeId, "No se pudo quitar al miembro del equipo.");
+  if (error) return fail("No se pudo quitar al miembro del equipo.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
-export async function agregarDeficiencia(formData: FormData) {
+export async function agregarDeficiencia(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
-  if (!informeId) fail(informeId, "Falta identificar el informe.");
+  if (!informeId) return fail("Falta identificar el informe.");
 
-  const { usuario, supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { usuario, supabase } = alcance;
 
   const parsed = deficienciaFormSchema.safeParse({
     titulo: formData.get("titulo"),
     descripcion: formData.get("descripcion") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, "Revise el título de la deficiencia.");
+  if (!parsed.success) return fail("Revise el título de la deficiencia.");
 
   const { data: ultima } = await supabase
     .from("deficiencias")
@@ -153,18 +156,19 @@ export async function agregarDeficiencia(formData: FormData) {
     descripcion: parsed.data.descripcion || null,
     creado_por_nit: usuario.nit,
   });
-  if (error) fail(informeId, "No se pudo agregar la deficiencia.");
+  if (error) return fail("No se pudo agregar la deficiencia.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 // Cada deficiencia de un CAI lleva UNA recomendación: se capturan juntas, en un solo paso.
-export async function agregarDeficienciaConRecomendacion(formData: FormData) {
+export async function agregarDeficienciaConRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
-  if (!informeId) fail(informeId, "Falta identificar el informe.");
+  if (!informeId) return fail("Falta identificar el informe.");
 
-  const { usuario, supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { usuario, supabase } = alcance;
 
   const parsed = deficienciaConRecomendacionSchema.safeParse({
     titulo: formData.get("titulo"),
@@ -173,7 +177,7 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData) {
     responsables: formData.get("responsables") ?? undefined,
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
 
   // Siguiente número entre las deficiencias vigentes (las eliminadas ya no se ven ni cuentan).
   const { data: ultima } = await supabase
@@ -192,7 +196,7 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData) {
     descripcion: parsed.data.descripcion || null,
     creado_por_nit: usuario.nit,
   });
-  if (errorDef) fail(informeId, "No se pudo agregar la deficiencia.");
+  if (errorDef) return fail("No se pudo agregar la deficiencia.");
 
   const { error: errorRec } = await supabase.from("recomendaciones").insert({
     deficiencia_id: deficienciaId,
@@ -204,32 +208,33 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData) {
   });
   // La deficiencia no se puede borrar: si falla la recomendación queda visible con su propio
   // formulario para volver a capturarla.
-  if (errorRec) fail(informeId, "La deficiencia se guardó, pero no su recomendación: captúrala en la deficiencia.");
+  if (errorRec) return fail("La deficiencia se guardó, pero no su recomendación: captúrela en la deficiencia.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
-export async function agregarRecomendacion(formData: FormData) {
+export async function agregarRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const deficienciaId = String(formData.get("deficiencia_id") ?? "");
-  if (!informeId || !deficienciaId) fail(informeId, "Falta identificar la deficiencia.");
+  if (!informeId || !deficienciaId) return fail("Falta identificar la deficiencia.");
 
-  const { usuario, supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { usuario, supabase } = alcance;
 
   const parsed = recomendacionFormSchema.safeParse({
     texto: formData.get("texto"),
     responsables: formData.get("responsables") ?? undefined,
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise el texto de la recomendación.");
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Revise el texto de la recomendación.");
 
   // Cada deficiencia de un CAI lleva una sola recomendación (se cierra una a una).
   const { count: vigentes } = await supabase
     .from("recomendaciones")
     .select("id", { count: "exact", head: true })
     .eq("deficiencia_id", deficienciaId);
-  if ((vigentes ?? 0) > 0) fail(informeId, "Esta deficiencia ya tiene su recomendación.");
+  if ((vigentes ?? 0) > 0) return fail("Esta deficiencia ya tiene su recomendación.");
 
   // Siguiente número entre las recomendaciones vigentes (las eliminadas ya no se ven ni cuentan).
   const { data: ultima } = await supabase
@@ -247,20 +252,21 @@ export async function agregarRecomendacion(formData: FormData) {
     fecha_implementacion: parsed.data.fecha_implementacion,
     creado_por_nit: usuario.nit,
   });
-  if (error) fail(informeId, "No se pudo agregar la recomendación.");
+  if (error) return fail("No se pudo agregar la recomendación.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 // Corregir un error de captura. El trigger de la base exige el motivo, rechaza el cambio si la
 // recomendación ya tiene seguimientos evaluados y guarda el valor anterior en el historial.
-export async function editarRecomendacion(formData: FormData) {
+export async function editarRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const recomendacionId = String(formData.get("recomendacion_id") ?? "");
-  if (!informeId || !recomendacionId) fail(informeId, "Falta identificar la recomendación.");
+  if (!informeId || !recomendacionId) return fail("Falta identificar la recomendación.");
 
-  const { supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   const parsed = edicionRecomendacionSchema.safeParse({
     texto: formData.get("texto"),
@@ -268,7 +274,7 @@ export async function editarRecomendacion(formData: FormData) {
     fecha_implementacion: formData.get("fecha_implementacion") ?? undefined,
     motivo: formData.get("motivo"),
   });
-  if (!parsed.success) fail(informeId, parsed.error.issues[0]?.message ?? "Revise los campos de la recomendación.");
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Revise los campos de la recomendación.");
 
   const { error } = await supabase
     .from("recomendaciones")
@@ -279,49 +285,50 @@ export async function editarRecomendacion(formData: FormData) {
       motivo_ultimo_cambio: parsed.data.motivo,
     })
     .eq("id", recomendacionId);
-  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo guardar la corrección."));
+  if (error) return fail(mensajeDeCambio(error.message, "No se pudo guardar la corrección."));
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 // "Eliminar" una deficiencia = anularla junto con su recomendación: dejan de verse pero quedan en
 // la bitácora con su motivo, quién y cuándo.
-export async function eliminarDeficiencia(formData: FormData) {
+export async function eliminarDeficiencia(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const deficienciaId = String(formData.get("deficiencia_id") ?? "");
-  if (!informeId || !deficienciaId) fail(informeId, "Falta identificar la deficiencia.");
+  if (!informeId || !deficienciaId) return fail("Falta identificar la deficiencia.");
 
-  const { supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   const motivo = String(formData.get("motivo") ?? "").trim();
-  if (motivo.length < 5) fail(informeId, "Explica brevemente el motivo (mínimo 5 caracteres).");
+  if (motivo.length < 5) return fail("Explique brevemente el motivo (mínimo 5 caracteres).");
 
   const { error } = await supabase.rpc("anular_deficiencia", { p_id: deficienciaId, p_motivo: motivo });
-  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo eliminar la deficiencia."));
+  if (error) return fail(mensajeDeCambio(error.message, "No se pudo eliminar la deficiencia."));
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
   revalidatePath("/recomendaciones", "layout");
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 // "Eliminar" = anular: la recomendación deja de verse pero queda en el historial con su motivo.
-export async function eliminarRecomendacion(formData: FormData) {
+export async function eliminarRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const recomendacionId = String(formData.get("recomendacion_id") ?? "");
-  if (!informeId || !recomendacionId) fail(informeId, "Falta identificar la recomendación.");
+  if (!informeId || !recomendacionId) return fail("Falta identificar la recomendación.");
 
-  const { supabase } = await verificarAlcance(informeId);
+  const alcance = await verificarAlcance(informeId);
+  if ("error" in alcance) return alcance;
+  const { supabase } = alcance;
 
   const motivo = String(formData.get("motivo") ?? "").trim();
-  if (motivo.length < 5) fail(informeId, "Explica brevemente el motivo (mínimo 5 caracteres).");
+  if (motivo.length < 5) return fail("Explique brevemente el motivo (mínimo 5 caracteres).");
 
   const { error } = await supabase.rpc("anular_recomendacion", { p_id: recomendacionId, p_motivo: motivo });
-  if (error) fail(informeId, mensajeDeCambio(error.message, "No se pudo eliminar la recomendación."));
+  if (error) return fail(mensajeDeCambio(error.message, "No se pudo eliminar la recomendación."));
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
   revalidatePath("/recomendaciones");
-  redirect(`/recomendaciones/informes/${informeId}`);
 }
 
 // Los mensajes de las reglas de la base (motivo, seguimientos evaluados, permisos) ya están

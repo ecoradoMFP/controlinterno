@@ -1,5 +1,5 @@
 import { agregarRevisor, agregarFirmante } from "@/app/(dashboard)/oficios/[id]/actions";
-import { Button } from "@/components/ui/button";
+import { BotonAccion, FormAccion, type ResultadoAccion } from "@/components/form-accion";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -64,7 +64,7 @@ function Lista({
   participantes: Participante[];
   candidatos: Usuario[];
   oficioId: string;
-  action: (formData: FormData) => void;
+  action: (formData: FormData) => Promise<ResultadoAccion>;
   puedeEditar: boolean;
   vacio: string;
 }) {
@@ -89,7 +89,7 @@ function Lista({
       {puedeEditar && candidatos.length > 0 ? (
         <details className="rounded-xl border border-dashed">
           <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">+ Agregar a {titulo.toLowerCase()}</summary>
-        <form action={action} className="flex flex-wrap items-end gap-3 border-t p-3">
+        <FormAccion action={action} className="flex flex-wrap items-end gap-3 border-t p-3">
           <input type="hidden" name="oficio_id" value={oficioId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             {candidatos.length === 1 ? (
@@ -119,8 +119,8 @@ function Lista({
               </Select>
             )}
           </div>
-          <Button type="submit">Agregar</Button>
-        </form>
+          <BotonAccion>Agregar</BotonAccion>
+        </FormAccion>
         </details>
       ) : null}
     </div>

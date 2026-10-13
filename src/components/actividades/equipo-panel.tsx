@@ -1,5 +1,5 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { agregarMiembroEquipo, actualizarConfirmacionEquipo, corregirFechaEquipo } from "@/app/(dashboard)/actividades/[id]/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -70,7 +70,7 @@ export function EquipoPanel({
       {puedeEditar ? (
         <details className="group rounded-xl border border-dashed" open={equipo.length === 0}>
           <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">+ Agregar al equipo</summary>
-        <form action={agregarMiembroEquipo} className="flex flex-wrap items-end gap-3 border-t p-3">
+        <FormAccion action={agregarMiembroEquipo} mantenerAbierto className="flex flex-wrap items-end gap-3 border-t p-3">
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Usuario</label>
@@ -105,8 +105,8 @@ export function EquipoPanel({
             <label className="text-xs text-muted-foreground">Rol en el equipo (opcional)</label>
             <Input name="rol_en_equipo" placeholder="Apoyo, muestreo, ..." />
           </div>
-          <Button type="submit">Agregar</Button>
-        </form>
+          <BotonAccion>Agregar</BotonAccion>
+        </FormAccion>
         </details>
       ) : null}
     </div>
@@ -183,7 +183,7 @@ function ConfirmacionCampo({
           {registrada}
           <span className="text-primary underline-offset-2 group-open:hidden hover:underline">Corregir</span>
         </summary>
-        <form action={corregirFechaEquipo} className="mt-2 flex w-72 flex-col gap-2 rounded-lg border bg-background p-3">
+        <FormAccion action={corregirFechaEquipo} className="mt-2 flex w-72 flex-col gap-2 rounded-lg border bg-background p-3">
           <input type="hidden" name="actividad_id" value={actividadId} />
           <input type="hidden" name="usuario_nit" value={usuarioNit} />
           <input type="hidden" name="campo" value={campo} />
@@ -195,10 +195,10 @@ function ConfirmacionCampo({
             <span className="font-medium">Motivo de la corrección</span>
             <Textarea name="motivo" required minLength={10} rows={2} className="text-xs" />
           </label>
-          <Button type="submit" variant="outline" size="sm" className="w-fit">
+          <BotonAccion variant="outline" size="sm" className="w-fit">
             Guardar corrección
-          </Button>
-        </form>
+          </BotonAccion>
+        </FormAccion>
       </details>
     );
   }
@@ -208,15 +208,15 @@ function ConfirmacionCampo({
   }
 
   return (
-    <form action={actualizarConfirmacionEquipo} className="flex items-center gap-1.5">
+    <FormAccion action={actualizarConfirmacionEquipo} className="flex items-center gap-1.5">
       <input type="hidden" name="actividad_id" value={actividadId} />
       <input type="hidden" name="usuario_nit" value={usuarioNit} />
       <input type="hidden" name="campo" value={campo} />
       <Input type="date" name="fecha" required className="h-7 w-32 text-xs" />
-      <Button type="submit" variant="outline" size="sm" className="h-7">
+      <BotonAccion variant="outline" size="sm" className="h-7">
         {etiqueta}
-      </Button>
-    </form>
+      </BotonAccion>
+    </FormAccion>
   );
 }
 

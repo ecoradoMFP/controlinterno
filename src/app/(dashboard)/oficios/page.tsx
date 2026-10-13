@@ -52,7 +52,7 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
     supabase
       .from("oficios")
       .select(
-        "id, no_oficio, destinatario, asunto, fecha_emision, fecha_vencimiento, fecha_respuesta, fecha_envio, actividades(cai, anio_cai, no_nombramiento)",
+        "id, no_oficio, destinatario, dependencia_destino, asunto, fecha_emision, fecha_vencimiento, fecha_respuesta, fecha_envio, actividades(cai, anio_cai, no_nombramiento)",
       )
       .order("created_at", { ascending: false }),
     supabase.from("parametros_semaforo").select("*").eq("ambito", "oficio").maybeSingle(),
@@ -67,7 +67,7 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
   const filas = (oficios ?? []).map((o) => ({ ...o, estado: estadoOficio(o, hoy, feriados, umbral) }));
   const coincideTexto = (o: (typeof filas)[number]) =>
     !q ||
-    sinTildes([o.no_oficio, o.destinatario, o.asunto, o.actividades ? identificadorAuditoria(o.actividades) : ""].join(" ")).includes(q);
+    sinTildes([o.no_oficio, o.destinatario, o.dependencia_destino ?? "", o.asunto, o.actividades ? identificadorAuditoria(o.actividades) : ""].join(" ")).includes(q);
   const base = filas.filter(coincideTexto);
   const vista = ["atencion", "respondidos", "todos"].includes(vistaParam ?? "") ? vistaParam! : "pendientes";
   const visibles = base
@@ -126,7 +126,7 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
             name="q"
             type="text"
             defaultValue={qParam ?? ""}
-            placeholder="Buscar por número, destinatario, asunto o CAI"
+            placeholder="Buscar por número, destinatario, dependencia, asunto o CAI"
             aria-label="Buscar oficios"
             className="h-10 min-w-64 flex-1 sm:max-w-md"
           />
@@ -160,7 +160,7 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
                     </p>
                     <p className="line-clamp-2 text-lg">{o.asunto}</p>
                     <p className="text-muted-foreground">
-                      Para: <span className="text-foreground">{o.destinatario}</span>
+                      Para: <span className="text-foreground">{[o.destinatario, o.dependencia_destino].filter(Boolean).join(", ")}</span>
                       {!o.fecha_respuesta && o.fecha_vencimiento ? ` · Debe responder a más tardar el ${fecha(o.fecha_vencimiento)}` : ""}
                       {!o.fecha_envio ? " · Falta registrar el envío" : ""}
                     </p>

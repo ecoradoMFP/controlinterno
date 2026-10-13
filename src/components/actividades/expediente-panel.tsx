@@ -1,3 +1,4 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import Link from "next/link";
 import {
   actualizarNombramiento,
@@ -7,7 +8,6 @@ import {
 import { RutaExpediente } from "@/components/actividades/ruta-expediente";
 import { MOSTRAR_RUTAS_EXPEDIENTE } from "@/lib/expediente-digital";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -110,7 +110,7 @@ export function ExpedientePanel({
             <summary className="cursor-pointer p-3 font-medium text-primary">
               {actividad.concluida ? "Corregir datos del nombramiento (solo Dirección)" : "Editar datos del nombramiento"}
             </summary>
-            <form action={actualizarNombramiento} className="flex flex-col gap-4 border-t p-4">
+            <FormAccion action={actualizarNombramiento} className="flex flex-col gap-4 border-t p-4">
               <input type="hidden" name="actividad_id" value={actividad.id} />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Campo label="Emisión del nombramiento" name="fecha_emision_nombramiento" valor={actividad.fecha_emision_nombramiento} />
@@ -125,10 +125,10 @@ export function ExpedientePanel({
                 <Label htmlFor="observaciones_nombramiento">Observaciones</Label>
                 <Textarea id="observaciones_nombramiento" name="observaciones" defaultValue={actividad.observaciones ?? ""} rows={2} />
               </div>
-              <Button type="submit" className="w-fit">
+              <BotonAccion className="w-fit">
                 Guardar cambios
-              </Button>
-            </form>
+              </BotonAccion>
+            </FormAccion>
           </details>
         ) : null}
       </section>
@@ -182,18 +182,18 @@ export function ExpedientePanel({
             </Link>
           </p>
         ) : puedeInforme ? (
-          <form action={crearInformeRecomendaciones} className="flex flex-col gap-2">
+          <FormAccion action={crearInformeRecomendaciones} className="flex flex-col gap-2">
             <input type="hidden" name="actividad_id" value={actividad.id} />
             <p className="text-sm text-muted-foreground">
               Cree el informe en Recomendaciones con el nombramiento, la dependencia, el período y el equipo de esta
               auditoría; solo faltará capturar las deficiencias y recomendaciones.
             </p>
             {puedeGestionar ? (
-              <Button type="submit" variant="outline" className="w-fit">
+              <BotonAccion variant="outline" className="w-fit">
                 Registrar informe en Recomendaciones
-              </Button>
+              </BotonAccion>
             ) : null}
-          </form>
+          </FormAccion>
         ) : (
           <p className="text-sm text-muted-foreground">
             El informe se pasa al inventario a partir de Comunicación de Resultados.
@@ -223,7 +223,7 @@ export function FormCierreExpediente({
 }) {
   const cierreBloqueado = (fecha: string | null) => !!fecha && !puedeCorregirCierre;
   return (
-    <form action={registrarCierreExpediente} className="flex flex-col gap-4">
+    <FormAccion action={registrarCierreExpediente} className="flex flex-col gap-4">
       <input type="hidden" name="actividad_id" value={actividadId} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Campo
@@ -266,11 +266,11 @@ export function FormCierreExpediente({
         Dirección (control total) dejando constancia en observaciones.
       </p>
       {puedeGestionar && !(datos.concluida && !puedeCorregirCierre) ? (
-        <Button type="submit" className="w-fit">
+        <BotonAccion className="w-fit">
           Registrar cierre
-        </Button>
+        </BotonAccion>
       ) : null}
-    </form>
+    </FormAccion>
   );
 }
 

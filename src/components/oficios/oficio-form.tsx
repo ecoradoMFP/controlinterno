@@ -11,10 +11,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FechasOficioFields } from "@/components/oficios/fechas-oficio-fields";
+import { SelectMedioEnvio } from "@/components/oficios/select-medio-envio";
+import { SelectDependencia, type UnidadMinisterio } from "@/components/select-dependencia";
 import type { Usuario } from "@/types/domain";
+
+const SIN_AUDITORIA = "Sin auditoría relacionada";
 
 export function OficioForm({
   actividades,
+  unidades,
   responsable,
   asuetos,
   error,
@@ -22,6 +27,7 @@ export function OficioForm({
 }: {
   /** `etiqueta`: el identificador visible de la auditoría (su CAI). */
   actividades: { id: string; etiqueta: string }[];
+  unidades: UnidadMinisterio[];
   responsable: Usuario;
   asuetos: string[];
   error?: string;
@@ -49,24 +55,19 @@ export function OficioForm({
       <Field label="Auditoría relacionada (opcional)" htmlFor="actividad_id">
         {actividades.length === 0 ? (
           <Input id="actividad_id_display" value="Sin auditorías disponibles" disabled />
-        ) : actividades.length === 1 ? (
-          // Con una sola actividad candidata, el Select de Base UI puede abrir y cerrar el
-          // popup en el mismo gesto sin confirmar la selección — visto en vivo: el oficio se
-          // guardaba con actividad_id=null aunque la actividad se veía "seleccionada" en
-          // pantalla. Con una sola opción no hay nada que elegir, así que se fija directo.
-          <>
-            <Input id="actividad_id_display" value={actividades[0].etiqueta} disabled />
-            <input type="hidden" name="actividad_id" value={actividades[0].id} />
-          </>
         ) : (
+          // La primera opción (valor null) deja el oficio sin auditoría: así se puede deshacer una
+          // selección hecha por error. Con ella la lista nunca queda con una sola opción, que es
+          // cuando el Select de Base UI no confirmaba el valor elegido.
           <Select
             name="actividad_id"
-            items={Object.fromEntries(actividades.map((a) => [a.id, a.etiqueta]))}
+            items={[{ value: null, label: SIN_AUDITORIA }, ...actividades.map((a) => ({ value: a.id, label: a.etiqueta }))]}
           >
             <SelectTrigger id="actividad_id" className="w-full">
-              <SelectValue placeholder="Sin auditoría relacionada" />
+              <SelectValue placeholder={SIN_AUDITORIA} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={null}>{SIN_AUDITORIA}</SelectItem>
               {actividades.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
                   {a.etiqueta}
@@ -75,6 +76,10 @@ export function OficioForm({
             </SelectContent>
           </Select>
         )}
+      </Field>
+
+      <Field label="Dependencia de destino" htmlFor="dependencia_destino" error={fieldErrors?.dependencia_destino}>
+        <SelectDependencia unidades={unidades} name="dependencia_destino" id="dependencia_destino" />
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
@@ -92,8 +97,8 @@ export function OficioForm({
 
       <FechasOficioFields asuetos={asuetos} errores={fieldErrors} />
 
-      <Field label="Medio de envío (opcional)" htmlFor="medio_envio">
-        <Input id="medio_envio" name="medio_envio" placeholder="Correo, físico, ..." />
+      <Field label="Medio de envío" htmlFor="medio_envio" error={fieldErrors?.medio_envio}>
+        <SelectMedioEnvio id="medio_envio" />
       </Field>
 
       <Field label="Observaciones (opcional)" htmlFor="observaciones">

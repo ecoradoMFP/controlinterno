@@ -1,3 +1,4 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { FileDown } from "lucide-react";
 import { agregarHito, concluirHito, corregirPlazoCronograma } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,23 +127,23 @@ export function CronogramaPanel({
                       {puedeEditar && !h.fecha_fin_real ? (
                         <details>
                           <summary className="cursor-pointer text-sm text-primary">Marcar como concluida</summary>
-                          <form action={concluirHito} className="mt-2 flex flex-wrap items-end gap-2">
+                          <FormAccion action={concluirHito} className="mt-2 flex flex-wrap items-end gap-2">
                             <input type="hidden" name="actividad_id" value={actividadId} />
                             <input type="hidden" name="hito_id" value={h.id} />
                             <label className="flex flex-col gap-1 text-sm">
                               Fecha en que concluyó
                               <Input name="fecha_fin_real" type="date" required defaultValue={hoy} className="h-9 w-40" />
                             </label>
-                            <Button type="submit" size="sm">
+                            <BotonAccion size="sm">
                               Confirmar
-                            </Button>
-                          </form>
+                            </BotonAccion>
+                          </FormAccion>
                         </details>
                       ) : null}
                       {puedeCorregir && !h.fecha_fin_real ? (
                         <details>
                           <summary className="cursor-pointer text-sm text-primary">Corregir plazo (jefatura)</summary>
-                          <form action={corregirPlazoCronograma} className="mt-2 flex w-72 flex-col gap-2 rounded-lg border bg-background p-3">
+                          <FormAccion action={corregirPlazoCronograma} className="mt-2 flex w-72 flex-col gap-2 rounded-lg border bg-background p-3">
                             <input type="hidden" name="actividad_id" value={actividadId} />
                             <input type="hidden" name="hito_id" value={h.id} />
                             <label className="flex flex-col gap-1 text-sm">
@@ -157,10 +158,10 @@ export function CronogramaPanel({
                               Motivo de la corrección
                               <Textarea name="motivo" required minLength={10} rows={2} />
                             </label>
-                            <Button type="submit" size="sm" variant="outline" className="w-fit">
+                            <BotonAccion size="sm" variant="outline" className="w-fit">
                               Guardar corrección
-                            </Button>
-                          </form>
+                            </BotonAccion>
+                          </FormAccion>
                         </details>
                       ) : null}
                     </div>
@@ -204,7 +205,7 @@ export function CronogramaPanel({
           <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">
             + Agregar otra actividad al cronograma
           </summary>
-          <form action={agregarHito} className="flex flex-wrap items-end gap-3 border-t p-4">
+          <FormAccion action={agregarHito} mantenerAbierto className="flex flex-wrap items-end gap-3 border-t p-4">
             <input type="hidden" name="actividad_id" value={actividadId} />
             <div className="flex w-24 flex-col gap-1.5">
               <label className="text-xs text-muted-foreground">No.</label>
@@ -248,8 +249,8 @@ export function CronogramaPanel({
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" variant="outline">Agregar actividad</Button>
-          </form>
+            <BotonAccion variant="outline">Agregar actividad</BotonAccion>
+          </FormAccion>
         </details>
       ) : null}
     </div>

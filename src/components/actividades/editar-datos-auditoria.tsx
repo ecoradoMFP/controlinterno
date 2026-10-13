@@ -1,5 +1,5 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { editarDatosAuditoria } from "@/app/(dashboard)/actividades/[id]/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,7 +61,7 @@ export function EditarDatosAuditoria({
       {puedeCorregir ? (
         <details className="rounded-lg border">
           <summary className="cursor-pointer p-3 font-medium text-primary">Corregir datos de la auditoría (jefatura)</summary>
-          <form action={editarDatosAuditoria} className="flex flex-col gap-4 border-t p-4">
+          <FormAccion action={editarDatosAuditoria} className="flex flex-col gap-4 border-t p-4">
             <input type="hidden" name="actividad_id" value={actividad.id} />
             <div className="flex flex-col gap-2">
               <Label htmlFor="ed_dependencia">Dependencia auditada</Label>
@@ -105,10 +105,10 @@ export function EditarDatosAuditoria({
               <Label htmlFor="ed_motivo">Motivo de la corrección</Label>
               <Textarea id="ed_motivo" name="motivo" required minLength={10} rows={2} />
             </div>
-            <Button type="submit" className="w-fit">
+            <BotonAccion className="w-fit">
               Guardar corrección
-            </Button>
-          </form>
+            </BotonAccion>
+          </FormAccion>
         </details>
       ) : null}
 

@@ -1,3 +1,4 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import Link from "next/link";
 import {
   agregarDeficienciaConRecomendacion,
@@ -7,7 +8,6 @@ import {
   editarRecomendacion,
   eliminarRecomendacion,
 } from "@/app/(dashboard)/recomendaciones/informes/[id]/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SemaforoChip } from "@/components/semaforo-chip";
@@ -93,7 +93,7 @@ export function DeficienciasPanel({
                   )}
 
                   {puedeEditar && d.recomendaciones.length === 0 ? (
-                    <form action={agregarRecomendacion} className="flex flex-col gap-3 rounded-md border border-dashed p-3">
+                    <FormAccion action={agregarRecomendacion} className="flex flex-col gap-3 rounded-md border border-dashed p-3">
                       <input type="hidden" name="informe_id" value={informeId} />
                       <input type="hidden" name="deficiencia_id" value={d.id} />
                       <div className="flex flex-col gap-1.5">
@@ -111,11 +111,11 @@ export function DeficienciasPanel({
                           <label className="text-xs text-muted-foreground">Fecha de implementación</label>
                           <Input name="fecha_implementacion" type="date" required />
                         </div>
-                        <Button type="submit" variant="outline" size="sm">
+                        <BotonAccion variant="outline" size="sm">
                           Agregar recomendación
-                        </Button>
+                        </BotonAccion>
                       </div>
-                    </form>
+                    </FormAccion>
                   ) : null}
                 </div>
               </div>
@@ -127,7 +127,7 @@ export function DeficienciasPanel({
       <HistorialCambios historial={historial} />
 
       {puedeEditar ? (
-        <form action={agregarDeficienciaConRecomendacion} className="flex flex-col gap-4 rounded-xl border border-dashed p-4">
+        <FormAccion action={agregarDeficienciaConRecomendacion} mantenerAbierto className="flex flex-col gap-4 rounded-xl border border-dashed p-4">
           <input type="hidden" name="informe_id" value={informeId} />
           <div>
             <h3 className="font-medium">Agregar deficiencia y su recomendación</h3>
@@ -159,10 +159,10 @@ export function DeficienciasPanel({
               <Input id="nueva-fecha" name="fecha_implementacion" type="date" required />
             </div>
           </div>
-          <Button type="submit" className="w-fit">
+          <BotonAccion className="w-fit">
             Agregar deficiencia y recomendación
-          </Button>
-        </form>
+          </BotonAccion>
+        </FormAccion>
       ) : null}
     </div>
   );
@@ -216,7 +216,7 @@ function RecomendacionItem({
           <details className="mt-2 rounded-md border bg-background p-3">
             <summary className="cursor-pointer text-sm font-medium">Corregir o eliminar esta recomendación</summary>
             <div className="mt-3 flex flex-col gap-4">
-              <form action={editarRecomendacion} className="flex flex-col gap-3">
+              <FormAccion action={editarRecomendacion} className="flex flex-col gap-3">
                 <input type="hidden" name="informe_id" value={informeId} />
                 <input type="hidden" name="recomendacion_id" value={recomendacion.id} />
                 <div className="flex flex-col gap-1.5">
@@ -235,12 +235,12 @@ function RecomendacionItem({
                   <label className="text-xs text-muted-foreground">¿Por qué se corrige? (obligatorio, queda en el historial)</label>
                   <Input name="motivo" required minLength={5} placeholder="Ej.: error de digitación al copiar el texto" />
                 </div>
-                <Button type="submit" size="sm" className="w-fit">
+                <BotonAccion size="sm" className="w-fit">
                   Guardar corrección
-                </Button>
-              </form>
+                </BotonAccion>
+              </FormAccion>
 
-              <form action={eliminarRecomendacion} className="flex flex-col gap-3 border-t pt-3">
+              <FormAccion action={eliminarRecomendacion} className="flex flex-col gap-3 border-t pt-3">
                 <input type="hidden" name="informe_id" value={informeId} />
                 <input type="hidden" name="recomendacion_id" value={recomendacion.id} />
                 <p className="text-xs text-muted-foreground">
@@ -251,10 +251,10 @@ function RecomendacionItem({
                   <label className="text-xs text-muted-foreground">¿Por qué se elimina? (obligatorio)</label>
                   <Input name="motivo" required minLength={5} placeholder="Ej.: recomendación capturada dos veces" />
                 </div>
-                <Button type="submit" size="sm" variant="destructive" className="w-fit">
+                <BotonAccion size="sm" variant="destructive" className="w-fit">
                   Eliminar recomendación
-                </Button>
-              </form>
+                </BotonAccion>
+              </FormAccion>
             </div>
           </details>
         )
@@ -290,7 +290,7 @@ function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: Deficien
   return (
     <details className="mt-2 rounded-md border bg-background p-3">
       <summary className="cursor-pointer text-sm font-medium">Corregir o eliminar esta deficiencia</summary>
-      <form action={editarDeficiencia} className="mt-3 flex flex-col gap-3">
+      <FormAccion action={editarDeficiencia} className="mt-3 flex flex-col gap-3">
         <input type="hidden" name="informe_id" value={informeId} />
         <input type="hidden" name="deficiencia_id" value={deficiencia.id} />
         <div className="flex flex-col gap-1.5">
@@ -305,11 +305,11 @@ function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: Deficien
           <label className="text-xs text-muted-foreground">¿Por qué se corrige? (obligatorio, queda en el historial)</label>
           <Input name="motivo" required minLength={5} placeholder="Ej.: error de digitación en el título" />
         </div>
-        <Button type="submit" size="sm" className="w-fit">
+        <BotonAccion size="sm" className="w-fit">
           Guardar corrección
-        </Button>
-      </form>
-      <form action={eliminarDeficiencia} className="mt-4 flex flex-col gap-3 border-t pt-3">
+        </BotonAccion>
+      </FormAccion>
+      <FormAccion action={eliminarDeficiencia} className="mt-4 flex flex-col gap-3 border-t pt-3">
         <input type="hidden" name="informe_id" value={informeId} />
         <input type="hidden" name="deficiencia_id" value={deficiencia.id} />
         <p className="text-xs text-muted-foreground">
@@ -320,10 +320,10 @@ function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: Deficien
           <label className="text-xs text-muted-foreground">¿Por qué se elimina? (obligatorio)</label>
           <Input name="motivo" required minLength={5} placeholder="Ej.: deficiencia capturada por error" />
         </div>
-        <Button type="submit" size="sm" variant="destructive" className="w-fit">
+        <BotonAccion size="sm" variant="destructive" className="w-fit">
           Eliminar deficiencia y su recomendación
-        </Button>
-      </form>
+        </BotonAccion>
+      </FormAccion>
     </details>
   );
 }

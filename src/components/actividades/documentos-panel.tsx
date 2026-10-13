@@ -1,3 +1,4 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { esJefaturaAuditoria } from "@/lib/auth";
 import {
   agregarDocumentoActividad,
@@ -6,7 +7,6 @@ import {
   registrarMovimiento,
 } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -126,7 +126,7 @@ export function DocumentosPanel({
           <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">
             + Iniciar un documento de {ETAPA_ACTIVIDAD_LABELS[etapaActual]}
           </summary>
-          <form action={agregarDocumentoActividad} className="flex flex-wrap items-end gap-3 border-t p-4">
+          <FormAccion action={agregarDocumentoActividad} mantenerAbierto className="flex flex-wrap items-end gap-3 border-t p-4">
             <input type="hidden" name="actividad_id" value={actividadId} />
             <div className="flex min-w-64 flex-col gap-1.5">
               <label className="text-xs text-muted-foreground">Documento del catálogo pendiente de iniciar</label>
@@ -155,8 +155,8 @@ export function DocumentosPanel({
                 </Select>
               )}
             </div>
-            <Button type="submit" variant="outline">Iniciar documento</Button>
-          </form>
+            <BotonAccion variant="outline">Iniciar documento</BotonAccion>
+          </FormAccion>
         </details>
       ) : null}
     </div>
@@ -229,7 +229,7 @@ function DocumentoCard({
       ) : null}
 
       {hayAcciones ? (
-        <form action={avanzarDocumento} className="mt-3 flex flex-col gap-2 border-t pt-3">
+        <FormAccion action={avanzarDocumento} className="mt-3 flex flex-col gap-2 border-t pt-3">
           <input type="hidden" name="actividad_id" value={actividadId} />
           <input type="hidden" name="documento_actividad_id" value={d.id} />
           <input type="hidden" name="fase_esperada" value={d.fase_actual} />
@@ -241,19 +241,19 @@ function DocumentoCard({
           />
           <div className="flex flex-wrap items-center gap-2">
             {destino ? (
-              <Button type="submit" name="accion" value="entregar">
+              <BotonAccion name="accion" value="entregar">
                 {d.fase_actual === "correccion" ? "Entregar corregido" : "Entregar"} a {CARGO_LABELS[destino]}
-              </Button>
+              </BotonAccion>
             ) : null}
             {puedeAprobar ? (
-              <Button type="submit" name="accion" value="aprobar">
+              <BotonAccion name="accion" value="aprobar">
                 {siguiente ? `Aprobar y pasar a ${CARGO_LABELS[siguiente]}` : "Aprobar y finalizar"}
-              </Button>
+              </BotonAccion>
             ) : null}
             {puedeDevolver ? (
-              <Button type="submit" name="accion" value="devolver" variant="outline">
+              <BotonAccion name="accion" value="devolver" variant="outline">
                 Devolver al Auditor para corrección
-              </Button>
+              </BotonAccion>
             ) : null}
           </div>
           {puedeDevolver ? (
@@ -261,7 +261,7 @@ function DocumentoCard({
               Si lo devuelve, al corregirse la revisión empieza de nuevo: Auditor → Subjefe → Jefe, según corresponda.
             </p>
           ) : null}
-        </form>
+        </FormAccion>
       ) : null}
 
       <details className="mt-3 border-t pt-3">
@@ -277,20 +277,20 @@ function DocumentoCard({
           {generaDocumento && !d.no_aplica ? <RutaExpediente ruta={d.ruta_completa} etiqueta="Archivo" /> : null}
 
           {puedeEditar && puedeVistoBueno && !d.no_aplica ? (
-            <form action={avanzarDocumento} className="flex flex-wrap items-end gap-2">
+            <FormAccion action={avanzarDocumento} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="actividad_id" value={actividadId} />
               <input type="hidden" name="documento_actividad_id" value={d.id} />
               <input type="hidden" name="fase_esperada" value={d.fase_actual} />
               <input type="hidden" name="responsable_esperado" value={d.cargo_actual_responsable} />
               <Textarea name="observacion" rows={1} placeholder="Observación (opcional)" className="max-w-md" />
-              <Button type="submit" name="accion" value="visto_bueno" size="sm" variant="outline">
+              <BotonAccion name="accion" value="visto_bueno" size="sm" variant="outline">
                 Dejar visto bueno ({CARGO_LABELS[usuario!.cargo!]})
-              </Button>
-            </form>
+              </BotonAccion>
+            </FormAccion>
           ) : null}
 
           {puedeEditar && puedeNoAplica && !finalizado ? (
-            <form action={marcarNoAplica} className="flex flex-wrap items-end gap-2">
+            <FormAccion action={marcarNoAplica} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="actividad_id" value={actividadId} />
               <input type="hidden" name="documento_actividad_id" value={d.id} />
               <Textarea
@@ -301,18 +301,18 @@ function DocumentoCard({
                 placeholder="Justificación para marcarlo como No aplica (queda en la bitácora)"
                 className="max-w-md"
               />
-              <Button type="submit" size="sm" variant="outline">Marcar No aplica</Button>
-            </form>
+              <BotonAccion size="sm" variant="outline">Marcar No aplica</BotonAccion>
+            </FormAccion>
           ) : null}
 
           {puedeEditar && puedeNoAplica && d.no_aplica && enEtapaActual ? (
-            <form action={marcarNoAplica} className="flex flex-wrap items-end gap-2">
+            <FormAccion action={marcarNoAplica} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="actividad_id" value={actividadId} />
               <input type="hidden" name="documento_actividad_id" value={d.id} />
               <input type="hidden" name="revertir" value="1" />
               <Textarea name="justificacion" rows={1} required minLength={10} placeholder="Motivo para revertir el No aplica" className="max-w-md" />
-              <Button type="submit" size="sm" variant="outline">Revertir No aplica</Button>
-            </form>
+              <BotonAccion size="sm" variant="outline">Revertir No aplica</BotonAccion>
+            </FormAccion>
           ) : null}
 
           {esControlTotal ? <RegistroManual actividadId={actividadId} documento={d} /> : null}
@@ -327,7 +327,7 @@ function RegistroManual({ actividadId, documento: d }: { actividadId: string; do
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3">
       <p className="text-sm font-medium">Registro manual de Dirección (registro tardío o corrección)</p>
-      <form action={registrarMovimiento} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <FormAccion action={registrarMovimiento} mantenerAbierto className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <input type="hidden" name="actividad_id" value={actividadId} />
         <input type="hidden" name="documento_actividad_id" value={d.id} />
         <MovimientoFormFields cargoActual={d.cargo_actual_responsable} />
@@ -372,8 +372,8 @@ function RegistroManual({ actividadId, documento: d }: { actividadId: string; do
           <label className="text-xs text-muted-foreground">Motivo (obligatorio, queda en la bitácora)</label>
           <Textarea name="observacion" rows={1} required />
         </div>
-        <Button type="submit" variant="outline" className="self-end">Registrar</Button>
-      </form>
+        <BotonAccion variant="outline" className="self-end">Registrar</BotonAccion>
+      </FormAccion>
     </div>
   );
 }

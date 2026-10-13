@@ -1,9 +1,9 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { departamentosParaNombrarSeguimiento, getUsuarioActual, puedeOperarInforme } from "@/lib/auth";
 import { bloquearInforme, desbloquearInforme } from "@/app/(dashboard)/recomendaciones/informes/[id]/actions";
-import { Button } from "@/components/ui/button";
 import { Lock, LockOpen } from "lucide-react";
 import { etiquetaCai } from "@/lib/recomendaciones";
 import { BackLink } from "@/components/nav/back-link";
@@ -17,10 +17,10 @@ export default async function InformeDetallePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; error?: string; soloPendientes?: string }>;
+  searchParams: Promise<{ tab?: string; soloPendientes?: string }>;
 }) {
   const { id } = await params;
-  const { tab = "deficiencias", error, soloPendientes } = await searchParams;
+  const { tab = "deficiencias", soloPendientes } = await searchParams;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
@@ -144,12 +144,6 @@ export default async function InformeDetallePage({
         </CardContent>
       </Card>
 
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
       {bloqueado ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm">
           <div className="flex items-start gap-3">
@@ -164,12 +158,12 @@ export default async function InformeDetallePage({
             </div>
           </div>
           {puedeDesbloquear ? (
-            <form action={desbloquearInforme}>
+            <FormAccion action={desbloquearInforme}>
               <input type="hidden" name="informe_id" value={id} />
-              <Button type="submit" variant="outline">
+              <BotonAccion variant="outline">
                 <LockOpen /> Desbloquear
-              </Button>
-            </form>
+              </BotonAccion>
+            </FormAccion>
           ) : null}
         </div>
       ) : puedeOperar ? (
@@ -177,17 +171,17 @@ export default async function InformeDetallePage({
           <summary className="flex cursor-pointer items-center gap-2 font-medium">
             <Lock className="size-4" aria-hidden /> Bloquear este CAI (cerrar la captura)
           </summary>
-          <form action={bloquearInforme} className="mt-3 flex flex-col gap-3">
+          <FormAccion action={bloquearInforme} className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="informe_id" value={id} />
             <p className="text-muted-foreground">
-              Úsalo cuando la captura esté completa y revisada. Después ya no se podrán agregar, corregir ni eliminar
+              Úselo cuando la captura esté completa y revisada. Después ya no se podrán agregar, corregir ni eliminar
               deficiencias o recomendaciones, ni cambiar el equipo. El seguimiento (nombramientos, evaluaciones e informes) no se
               bloquea. Solo la jefatura puede desbloquearlo.
             </p>
-            <Button type="submit" className="w-fit">
+            <BotonAccion className="w-fit">
               <Lock /> Bloquear CAI
-            </Button>
-          </form>
+            </BotonAccion>
+          </FormAccion>
         </details>
       ) : null}
 

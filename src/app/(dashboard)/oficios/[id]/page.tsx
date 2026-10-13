@@ -10,15 +10,8 @@ import { BackLink } from "@/components/nav/back-link";
 import { RutaExpediente } from "@/components/actividades/ruta-expediente";
 import { rutaCompletaExpediente } from "@/lib/expediente-digital";
 
-export default async function OficioDetallePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; error?: string }>;
-}) {
+export default async function OficioDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await searchParams;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
@@ -66,6 +59,7 @@ export default async function OficioDetallePage({
               label="Dirigido a"
               value={[oficio.destinatario, oficio.puesto_destinatario].filter(Boolean).join(", ") || null}
             />
+            <Info label="Dependencia de destino" value={oficio.dependencia_destino} />
             <Info label="Responsable de elaborarlo" value={oficio.responsable?.nombre} />
             <div>
               <p className="text-sm text-muted-foreground">Auditoría</p>
@@ -90,12 +84,6 @@ export default async function OficioDetallePage({
           <RutaExpediente ruta={rutaCompletaExpediente(oficio.ruta_archivo)} etiqueta="Archivo" />
         </CardContent>
       </Card>
-
-      {error ? (
-        <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive">
-          {error}
-        </p>
-      ) : null}
 
       <SeguimientoOficio oficio={oficio} puedeEditar={puedeEditar} puedeCorregir={puedeCorregir} />
 

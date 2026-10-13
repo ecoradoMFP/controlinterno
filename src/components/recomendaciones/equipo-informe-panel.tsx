@@ -1,5 +1,5 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { agregarMiembroEquipoInforme, eliminarMiembroEquipoInforme } from "@/app/(dashboard)/recomendaciones/informes/[id]/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -34,13 +34,13 @@ export function EquipoInformePanel({
                 {m.usuarios?.cargo ? ` · ${CARGO_LABELS[m.usuarios.cargo]}` : ""}
               </span>
               {puedeEditar ? (
-                <form action={eliminarMiembroEquipoInforme}>
+                <FormAccion action={eliminarMiembroEquipoInforme}>
                   <input type="hidden" name="informe_id" value={informeId} />
                   <input type="hidden" name="usuario_nit" value={m.usuario_nit} />
-                  <Button type="submit" variant="ghost" size="sm">
+                  <BotonAccion variant="ghost" size="sm">
                     Quitar
-                  </Button>
-                </form>
+                  </BotonAccion>
+                </FormAccion>
               ) : null}
             </li>
           ))
@@ -48,7 +48,7 @@ export function EquipoInformePanel({
       </ul>
 
       {puedeEditar ? (
-        <form action={agregarMiembroEquipoInforme} className="flex flex-wrap items-end gap-3">
+        <FormAccion action={agregarMiembroEquipoInforme} mantenerAbierto className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="informe_id" value={informeId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Auditor</label>
@@ -77,8 +77,8 @@ export function EquipoInformePanel({
               </Select>
             )}
           </div>
-          <Button type="submit">Agregar</Button>
-        </form>
+          <BotonAccion>Agregar</BotonAccion>
+        </FormAccion>
       ) : null}
     </div>
   );

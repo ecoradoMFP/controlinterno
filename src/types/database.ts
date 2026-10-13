@@ -1177,6 +1177,7 @@ export type Database = {
           actividad_id: string | null
           asunto: string
           created_at: string
+          dependencia_destino: string | null
           destinatario: string
           fecha_emision: string
           fecha_envio: string | null
@@ -1197,6 +1198,7 @@ export type Database = {
           actividad_id?: string | null
           asunto: string
           created_at?: string
+          dependencia_destino?: string | null
           destinatario: string
           fecha_emision: string
           fecha_envio?: string | null
@@ -1217,6 +1219,7 @@ export type Database = {
           actividad_id?: string | null
           asunto?: string
           created_at?: string
+          dependencia_destino?: string | null
           destinatario?: string
           fecha_emision?: string
           fecha_envio?: string | null

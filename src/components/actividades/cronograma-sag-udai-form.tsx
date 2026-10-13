@@ -1,8 +1,8 @@
 "use client";
 
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { useState } from "react";
 import { registrarCronogramaSagUdai } from "@/app/(dashboard)/actividades/[id]/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ACTIVIDADES_SAG_UDAI } from "@/lib/cronograma";
 import { diasHabilesEntre } from "@/lib/semaforo";
@@ -24,7 +24,7 @@ export function CronogramaSagUdaiForm({ actividadId, asuetos }: { actividadId: s
     setFechas((prev) => ({ ...prev, [codigo]: { ...(prev[codigo] ?? { del: "", al: "" }), [campo]: valor } }));
 
   return (
-    <form action={registrarCronogramaSagUdai} className="flex flex-col gap-4">
+    <FormAccion action={registrarCronogramaSagUdai} className="flex flex-col gap-4">
       <input type="hidden" name="actividad_id" value={actividadId} />
       <div className="overflow-x-auto rounded-xl border">
         <table className="w-full text-left">
@@ -88,9 +88,9 @@ export function CronogramaSagUdaiForm({ actividadId, asuetos }: { actividadId: s
         Escriba las mismas fechas que se registran en el SAG-UDAI-WEB y revíselas antes de guardar: los días hábiles ya
         descuentan fines de semana y asuetos.
       </p>
-      <Button type="submit" size="lg" className="w-fit">
+      <BotonAccion size="lg" className="w-fit">
         Guardar cronograma
-      </Button>
-    </form>
+      </BotonAccion>
+    </FormAccion>
   );
 }

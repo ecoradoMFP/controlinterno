@@ -1,3 +1,4 @@
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import Link from "next/link";
 import { cerrarEtapa } from "@/app/(dashboard)/actividades/[id]/actions";
 import { ConfirmacionEquipo } from "@/components/actividades/equipo-panel";
@@ -232,12 +233,12 @@ export function SiguientePaso({
           puedeCerrarEtapa ? (
             <>
               <p>Todos los pendientes de {etapaLabel} están terminados. Ya puede cerrar la etapa.</p>
-              <form action={cerrarEtapa}>
+              <FormAccion action={cerrarEtapa}>
                 <input type="hidden" name="actividad_id" value={actividadId} />
-                <Button type="submit" size="lg">
+                <BotonAccion size="lg">
                   Cerrar {etapaLabel} y pasar a {ETAPA_ACTIVIDAD_LABELS[etapaSiguiente]}
-                </Button>
-              </form>
+                </BotonAccion>
+              </FormAccion>
             </>
           ) : (
             <p className="text-muted-foreground">

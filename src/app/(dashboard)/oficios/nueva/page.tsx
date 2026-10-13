@@ -22,9 +22,10 @@ export default async function NuevoOficioPage({
   const supabase = await createClient();
 
   // RLS (`actividades_select`) ya acota esto al alcance real de quien elabora el oficio.
-  const [{ data: actividades }, { data: asuetos }] = await Promise.all([
+  const [{ data: actividades }, { data: asuetos }, { data: unidades }] = await Promise.all([
     supabase.from("actividades").select("id, cai, anio_cai, no_nombramiento").order("created_at", { ascending: false }),
     supabase.from("calendario_feriados").select("fecha"),
+    supabase.from("unidades_ministerio").select("id, nombre, padre_id, orden").eq("activo", true),
   ]);
 
   return (
@@ -38,6 +39,7 @@ export default async function NuevoOficioPage({
         <CardContent>
           <OficioForm
             actividades={(actividades ?? []).map((a) => ({ id: a.id, etiqueta: identificadorAuditoria(a) }))}
+            unidades={unidades ?? []}
             responsable={usuario}
             asuetos={(asuetos ?? []).map((a) => a.fecha)}
             error={error}

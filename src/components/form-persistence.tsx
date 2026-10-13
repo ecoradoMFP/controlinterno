@@ -24,6 +24,8 @@ export function FormPersistence() {
     };
     const alEnviar = (e: SubmitEvent) => {
       if (!(e.target instanceof HTMLFormElement)) return;
+      // FormAccion conserva lo escrito por su cuenta (no navega ni vacía el formulario).
+      if (e.target.hasAttribute("data-sin-persistencia")) return;
       const enviado = e.target;
       guardarFormulario(enviado);
       dejarDeVigilar();

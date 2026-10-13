@@ -1,6 +1,7 @@
+import { SelectMedioEnvio } from "@/components/oficios/select-medio-envio";
 import { registrarEnvio, registrarRecepcion, registrarRespuesta } from "@/app/(dashboard)/oficios/[id]/actions";
 import { PasosCiclo, type PasoCiclo } from "@/components/recomendaciones/pasos-ciclo";
-import { Button } from "@/components/ui/button";
+import { BotonAccion, FormAccion } from "@/components/form-accion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,41 +135,41 @@ function Registro({ titulo, texto, correccion }: { titulo: string; texto: string
 
 function FormEnvio({ oficio, correccion }: { oficio: Oficio; correccion?: boolean }) {
   return (
-    <form action={registrarEnvio} className="flex flex-wrap items-end gap-3">
+    <FormAccion action={registrarEnvio} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="oficio_id" value={oficio.id} />
       <Campo label="Fecha de envío" htmlFor={`fecha_envio${correccion ? "_c" : ""}`}>
         <Input id={`fecha_envio${correccion ? "_c" : ""}`} name="fecha_envio" type="date" defaultValue={oficio.fecha_envio ?? ""} required />
       </Campo>
-      <Campo label="Medio de envío (opcional)" htmlFor={`medio_envio${correccion ? "_c" : ""}`}>
-        <Input id={`medio_envio${correccion ? "_c" : ""}`} name="medio_envio" defaultValue={oficio.medio_envio ?? ""} placeholder="Ej. correo, mensajería" />
+      <Campo label="Medio de envío" htmlFor={`medio_envio${correccion ? "_c" : ""}`}>
+        <SelectMedioEnvio id={`medio_envio${correccion ? "_c" : ""}`} defaultValue={oficio.medio_envio} />
       </Campo>
       {correccion ? <MotivoCorreccion id="motivo_envio" /> : null}
-      <Button type="submit" size={correccion ? "default" : "lg"} variant={correccion ? "outline" : "default"}>
+      <BotonAccion size={correccion ? "default" : "lg"} variant={correccion ? "outline" : "default"}>
         {correccion ? "Guardar corrección" : "Registrar envío"}
-      </Button>
-    </form>
+      </BotonAccion>
+    </FormAccion>
   );
 }
 
 function FormRecepcion({ oficio, correccion }: { oficio: Oficio; correccion?: boolean }) {
   return (
-    <form action={registrarRecepcion} className="flex flex-wrap items-end gap-3">
+    <FormAccion action={registrarRecepcion} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="oficio_id" value={oficio.id} />
       <Campo label="Fecha en que la dependencia lo recibió" htmlFor={`fecha_recepcion${correccion ? "_c" : ""}`}>
         <Input id={`fecha_recepcion${correccion ? "_c" : ""}`} name="fecha_recepcion" type="date" defaultValue={oficio.fecha_recepcion ?? ""} required />
       </Campo>
       {correccion ? <MotivoCorreccion id="motivo_recepcion" /> : null}
-      <Button type="submit" size={correccion ? "default" : "lg"} variant={correccion ? "outline" : "default"}>
+      <BotonAccion size={correccion ? "default" : "lg"} variant={correccion ? "outline" : "default"}>
         {correccion ? "Guardar corrección" : "Registrar recepción"}
-      </Button>
-    </form>
+      </BotonAccion>
+    </FormAccion>
   );
 }
 
 function FormRespuesta({ oficio, correccion }: { oficio: Oficio; correccion?: boolean }) {
   const s = correccion ? "_c" : "";
   return (
-    <form action={registrarRespuesta} className="flex flex-col gap-3">
+    <FormAccion action={registrarRespuesta} className="flex flex-col gap-3">
       <input type="hidden" name="oficio_id" value={oficio.id} />
       <div className="flex flex-wrap items-end gap-3">
         <Campo label="Fecha de la respuesta" htmlFor={`fecha_respuesta${s}`}>
@@ -185,10 +186,10 @@ function FormRespuesta({ oficio, correccion }: { oficio: Oficio; correccion?: bo
           <Textarea id="observaciones" name="observaciones" defaultValue={oficio.observaciones ?? ""} />
         </Campo>
       )}
-      <Button type="submit" size={correccion ? "default" : "lg"} variant={correccion ? "outline" : "default"} className="w-fit">
+      <BotonAccion size={correccion ? "default" : "lg"} variant={correccion ? "outline" : "default"} className="w-fit">
         {correccion ? "Guardar corrección" : "Registrar respuesta"}
-      </Button>
-    </form>
+      </BotonAccion>
+    </FormAccion>
   );
 }
 
