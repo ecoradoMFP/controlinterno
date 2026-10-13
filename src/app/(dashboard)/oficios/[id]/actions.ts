@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeCorregirHechoConsumado, puedeEscribir } from "@/lib/auth";
+import type { Database } from "@/types/database";
 
 function fail(oficioId: string, tab: string, message: string): never {
   redirect(`/oficios/${oficioId}?tab=${tab}&error=${encodeURIComponent(message)}`);
@@ -14,88 +15,73 @@ function ok(oficioId: string, tab: string): never {
   redirect(`/oficios/${oficioId}?tab=${tab}`);
 }
 
-export async function registrarEnvio(formData: FormData) {
+type CambiosOficio = Database["public"]["Tables"]["oficios"]["Update"];
+
+const fechaDMA = (iso: string) => iso.split("-").reverse().join("/");
+
+type CampoFecha = "fecha_envio" | "fecha_recepcion" | "fecha_respuesta";
+const ETIQUETA: Record<CampoFecha, string> = {
+  fecha_envio: "envío",
+  fecha_recepcion: "recepción",
+  fecha_respuesta: "respuesta",
+};
+
+/**
+ * Registra (o, si ya estaba, corrige) una fecha del seguimiento del oficio. Una fecha ya registrada
+ * solo la corrige control total y con motivo: el trigger `oficios_proteger_hechos_consumados`
+ * exige que cambien las observaciones, así que el motivo se AGREGA a las que ya había, con la
+ * fecha anterior y la nueva, sin borrar nada.
+ */
+async function registrarFecha(formData: FormData, campo: CampoFecha, extra: CambiosOficio) {
   const oficioId = String(formData.get("oficio_id"));
-  const fechaEnvio = String(formData.get("fecha_envio") ?? "");
-  const medioEnvio = String(formData.get("medio_envio") ?? "").trim() || null;
+  const nueva = String(formData.get(campo) ?? "");
+  const motivo = String(formData.get("motivo_correccion") ?? "").trim();
+  const etiqueta = ETIQUETA[campo];
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tiene permiso para registrar el envío.");
-  if (!fechaEnvio) fail(oficioId, "seguimiento", "Indique la fecha de envío.");
+  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", `No tiene permiso para registrar la ${etiqueta}.`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nueva)) fail(oficioId, "seguimiento", `Indique la fecha de ${etiqueta}.`);
 
   const supabase = await createClient();
+  const { data: actual } = await supabase.from("oficios").select(`${campo}, observaciones`).eq("id", oficioId).maybeSingle();
+  if (!actual) fail(oficioId, "seguimiento", "No se encontró el oficio.");
+  const anterior = (actual as Record<string, string | null>)[campo];
 
-  // Defensa en profundidad (sección 12.3), misma regla que el trigger
-  // oficios_proteger_hechos_consumados: una fecha_envio ya registrada solo la corrige
-  // control_total.
-  const { data: actual } = await supabase.from("oficios").select("fecha_envio").eq("id", oficioId).maybeSingle();
-  if (actual?.fecha_envio && !puedeCorregirHechoConsumado(usuario)) {
-    fail(oficioId, "seguimiento", "El envío ya fue registrado; solo un usuario con control total puede corregirlo.");
+  const cambios: CambiosOficio = { ...extra, [campo]: nueva };
+  if (anterior) {
+    // Defensa en profundidad (sección 12.3): misma regla que el trigger.
+    if (!puedeCorregirHechoConsumado(usuario)) {
+      fail(oficioId, "seguimiento", `La ${etiqueta} ya fue registrada; solo Dirección puede corregirla.`);
+    }
+    if (motivo.length < 10) fail(oficioId, "seguimiento", "Escriba el motivo de la corrección (al menos 10 caracteres).");
+    const nota = `Corrección de la fecha de ${etiqueta} (${fechaDMA(anterior)} → ${fechaDMA(nueva)}): ${motivo}`;
+    cambios.observaciones = [actual.observaciones, nota].filter(Boolean).join("\n");
   }
 
-  const { error } = await supabase
-    .from("oficios")
-    .update({ fecha_envio: fechaEnvio, medio_envio: medioEnvio })
-    .eq("id", oficioId);
-
-  if (error) fail(oficioId, "seguimiento", "No se pudo registrar el envío.");
+  const { error } = await supabase.from("oficios").update(cambios).eq("id", oficioId);
+  if (error) fail(oficioId, "seguimiento", `No se pudo registrar la ${etiqueta}.`);
 
   ok(oficioId, "seguimiento");
+}
+
+export async function registrarEnvio(formData: FormData) {
+  await registrarFecha(formData, "fecha_envio", {
+    medio_envio: String(formData.get("medio_envio") ?? "").trim() || null,
+  });
 }
 
 export async function registrarRecepcion(formData: FormData) {
-  const oficioId = String(formData.get("oficio_id"));
-  const fechaRecepcion = String(formData.get("fecha_recepcion") ?? "");
-
-  const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tiene permiso para registrar la recepción.");
-  if (!fechaRecepcion) fail(oficioId, "seguimiento", "Indique la fecha de recepción.");
-
-  const supabase = await createClient();
-
-  const { data: actual } = await supabase.from("oficios").select("fecha_recepcion").eq("id", oficioId).maybeSingle();
-  if (actual?.fecha_recepcion && !puedeCorregirHechoConsumado(usuario)) {
-    fail(oficioId, "seguimiento", "La recepción ya fue registrada; solo un usuario con control total puede corregirla.");
-  }
-
-  const { error } = await supabase
-    .from("oficios")
-    .update({ fecha_recepcion: fechaRecepcion })
-    .eq("id", oficioId);
-
-  if (error) fail(oficioId, "seguimiento", "No se pudo registrar la recepción.");
-
-  ok(oficioId, "seguimiento");
+  await registrarFecha(formData, "fecha_recepcion", {});
 }
 
 export async function registrarRespuesta(formData: FormData) {
-  const oficioId = String(formData.get("oficio_id"));
-  const noRespuesta = String(formData.get("no_respuesta") ?? "").trim() || null;
-  const fechaRespuesta = String(formData.get("fecha_respuesta") ?? "");
-  const observaciones = String(formData.get("observaciones") ?? "").trim() || null;
-
-  const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(oficioId, "seguimiento", "No tiene permiso para registrar la respuesta.");
-  if (!fechaRespuesta) fail(oficioId, "seguimiento", "Indique la fecha de respuesta.");
-
-  const supabase = await createClient();
-
-  const { data: actual } = await supabase.from("oficios").select("fecha_respuesta").eq("id", oficioId).maybeSingle();
-  if (actual?.fecha_respuesta && !puedeCorregirHechoConsumado(usuario)) {
-    fail(oficioId, "seguimiento", "La respuesta ya fue registrada; solo un usuario con control total puede corregirla.");
-  }
-
-  const { error } = await supabase
-    .from("oficios")
-    .update({ no_respuesta: noRespuesta, fecha_respuesta: fechaRespuesta, observaciones })
-    .eq("id", oficioId);
-
-  // Sección 12.1: si fecha_respuesta ya estaba registrada, el trigger solo deja corregirla a
-  // control_total y exige que `observaciones` documente el cambio — este mismo error cubre
-  // ambos casos (permiso insuficiente en RLS o el trigger rechazando la corrección).
-  if (error) fail(oficioId, "seguimiento", "No se pudo registrar la respuesta.");
-
-  ok(oficioId, "seguimiento");
+  const extra: CambiosOficio = {
+    no_respuesta: String(formData.get("no_respuesta") ?? "").trim() || null,
+  };
+  // Al registrarla por primera vez se pueden anotar observaciones; en una corrección, el motivo
+  // se agrega solo (ver `registrarFecha`).
+  if (formData.has("observaciones")) extra.observaciones = String(formData.get("observaciones")).trim() || null;
+  await registrarFecha(formData, "fecha_respuesta", extra);
 }
 
 export async function agregarRevisor(formData: FormData) {

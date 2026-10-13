@@ -1,10 +1,10 @@
 import { identificadorAuditoria } from "@/lib/auditoria";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeCorregirHechoConsumado, puedeEscribir } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SeguimientoPanel } from "@/components/oficios/seguimiento-panel";
+import { SeguimientoOficio } from "@/components/oficios/seguimiento-panel";
 import { ParticipantesPanel } from "@/components/oficios/participantes-panel";
 import { BackLink } from "@/components/nav/back-link";
 import { RutaExpediente } from "@/components/actividades/ruta-expediente";
@@ -18,7 +18,7 @@ export default async function OficioDetallePage({
   searchParams: Promise<{ tab?: string; error?: string }>;
 }) {
   const { id } = await params;
-  const { tab = "seguimiento", error } = await searchParams;
+  const { error } = await searchParams;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
@@ -49,54 +49,67 @@ export default async function OficioDetallePage({
   const puedeEditar = puedeEscribir(usuario);
   const puedeCorregir = puedeCorregirHechoConsumado(usuario);
 
+  const fecha = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : null);
+
   return (
     <div className="flex flex-col gap-6">
       <BackLink href="/oficios" label="Volver a Oficios" />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="codigo-expediente text-lg">{oficio.no_oficio}</CardTitle>
-          <p className="text-sm text-muted-foreground">{oficio.asunto}</p>
+        <CardHeader className="gap-1">
+          <CardTitle className="codigo-expediente text-xl">{oficio.no_oficio}</CardTitle>
+          <p className="text-lg">{oficio.asunto}</p>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
-          <Info label="Auditoría relacionada" value={oficio.actividades ? identificadorAuditoria(oficio.actividades) : null} />
-          <Info label="Responsable" value={oficio.responsable?.nombre} />
-          <Info label="Destinatario" value={oficio.destinatario} />
-          <Info label="Puesto del destinatario" value={oficio.puesto_destinatario} />
-          <Info label="Fecha de emisión" value={oficio.fecha_emision} />
-          <Info label="Plazo de respuesta" value={oficio.plazo_respuesta_dias ? `${oficio.plazo_respuesta_dias} días` : undefined} />
-          <Info label="Fecha de vencimiento" value={oficio.fecha_vencimiento} />
-          <div className="col-span-2 sm:col-span-4">
-            <RutaExpediente ruta={rutaCompletaExpediente(oficio.ruta_archivo)} etiqueta="Archivo" />
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-x-10 gap-y-3 sm:grid-cols-3">
+            <Info
+              label="Dirigido a"
+              value={[oficio.destinatario, oficio.puesto_destinatario].filter(Boolean).join(", ") || null}
+            />
+            <Info label="Responsable de elaborarlo" value={oficio.responsable?.nombre} />
+            <div>
+              <p className="text-sm text-muted-foreground">Auditoría</p>
+              {oficio.actividad_id && oficio.actividades ? (
+                <Link href={`/actividades/${oficio.actividad_id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+                  {identificadorAuditoria(oficio.actividades)}
+                </Link>
+              ) : (
+                <p className="font-medium">Sin auditoría relacionada</p>
+              )}
+            </div>
+            <Info label="Fecha de emisión" value={fecha(oficio.fecha_emision)} />
+            <Info
+              label="Plazo para responder"
+              value={
+                oficio.fecha_vencimiento
+                  ? `Hasta el ${fecha(oficio.fecha_vencimiento)}${oficio.plazo_respuesta_dias ? ` (${oficio.plazo_respuesta_dias} días)` : ""}`
+                  : "Sin plazo"
+              }
+            />
           </div>
+          <RutaExpediente ruta={rutaCompletaExpediente(oficio.ruta_archivo)} etiqueta="Archivo" />
         </CardContent>
       </Card>
 
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive">
           {error}
         </p>
       ) : null}
 
-      <Tabs defaultValue={tab}>
-        <TabsList>
-          <TabsTrigger value="seguimiento">Seguimiento</TabsTrigger>
-          <TabsTrigger value="participantes">Revisores y firmantes</TabsTrigger>
-        </TabsList>
-        <TabsContent value="seguimiento">
-          <SeguimientoPanel oficio={oficio} puedeEditar={puedeEditar} puedeCorregir={puedeCorregir} />
-        </TabsContent>
-        <TabsContent value="participantes">
-          <ParticipantesPanel
-            oficioId={id}
-            revisores={revisores ?? []}
-            firmantes={firmantes ?? []}
-            candidatosRevisores={candidatosRevisores}
-            candidatosFirmantes={candidatosFirmantes}
-            puedeEditar={puedeEditar}
-          />
-        </TabsContent>
-      </Tabs>
+      <SeguimientoOficio oficio={oficio} puedeEditar={puedeEditar} puedeCorregir={puedeCorregir} />
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Revisores y firmantes</h2>
+        <ParticipantesPanel
+          oficioId={id}
+          revisores={revisores ?? []}
+          firmantes={firmantes ?? []}
+          candidatosRevisores={candidatosRevisores}
+          candidatosFirmantes={candidatosFirmantes}
+          puedeEditar={puedeEditar}
+        />
+      </section>
     </div>
   );
 }
@@ -104,8 +117,8 @@ export default async function OficioDetallePage({
 function Info({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p>{value ?? "—"}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="font-medium">{value || "—"}</p>
     </div>
   );
 }

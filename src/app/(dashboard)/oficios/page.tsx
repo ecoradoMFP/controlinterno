@@ -1,43 +1,50 @@
-import { identificadorAuditoria } from "@/lib/auditoria";
 import Link from "next/link";
+import { AlertTriangle, CheckCircle2, ChevronRight, ListChecks, Mail, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { identificadorAuditoria } from "@/lib/auditoria";
+import { hoyGuatemala } from "@/lib/recomendaciones";
+import { FiltrosAutomaticos } from "@/components/recomendaciones/filtros-automaticos";
 import { SemaforoChip, type TonoSemaforo } from "@/components/semaforo-chip";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { StatCard } from "@/components/ui/stat-card";
+import { cn } from "@/lib/utils";
+import { sinTildes } from "@/lib/texto";
 import { calcularSemaforo, cumplidoATiempo, UMBRAL_POR_DEFECTO, COLOR_SEMAFORO_LABELS, type UmbralSemaforo } from "@/lib/semaforo";
 import type { Oficio } from "@/types/domain";
 
+const RUTA = "/oficios";
+
+/** "2026-03-26" → "26/03/2026" */
+const fecha = (iso: string) => iso.split("-").reverse().join("/");
+
 /**
- * Estado de un oficio para la lista, usando el motor de semáforo real (sección 5) en vez de un
- * corte binario vencido/no-vencido: un oficio abierto que todavía tiene margen se ve distinto
- * de uno que ya está en rojo, igual que en /reportes.
+ * Estado de un oficio con el motor de semáforo real (sección 5): un oficio sin respuesta que aún
+ * tiene margen se ve distinto de uno que ya está en rojo, igual que en /reportes.
  */
 function estadoOficio(
   o: Pick<Oficio, "fecha_emision" | "fecha_respuesta" | "fecha_vencimiento">,
   hoy: string,
   feriados: ReadonlySet<string>,
   umbral: UmbralSemaforo,
-): { tono: TonoSemaforo; label: string } {
+): { tono: TonoSemaforo; label: string; atencion: boolean } {
   if (o.fecha_respuesta) {
     const aTiempo = !o.fecha_vencimiento || cumplidoATiempo(o.fecha_vencimiento, o.fecha_respuesta);
-    return aTiempo
-      ? { tono: "verde", label: "Respondido a tiempo" }
-      : { tono: "amarillo", label: "Respondido tarde" };
+    return { tono: aTiempo ? "verde" : "amarillo", label: aTiempo ? "Respondido a tiempo" : "Respondido tarde", atencion: false };
   }
-  if (!o.fecha_vencimiento) return { tono: "neutral", label: "Sin plazo" };
+  if (!o.fecha_vencimiento) return { tono: "neutral", label: "Sin plazo", atencion: false };
   const color = calcularSemaforo(o.fecha_emision, o.fecha_vencimiento, hoy, feriados, umbral);
-  return { tono: color, label: COLOR_SEMAFORO_LABELS[color] };
+  return { tono: color, label: COLOR_SEMAFORO_LABELS[color], atencion: color === "naranja" || color === "rojo" };
 }
 
-export default async function OficiosPage() {
+/**
+ * Bandeja de oficios: por defecto los que esperan respuesta. Las tarjetas filtran (sin respuesta,
+ * requieren atención, respondidos, todos) y cada fila dice a quién va, de qué auditoría es y si va
+ * a tiempo. El seguimiento se hace dentro de cada oficio.
+ */
+export default async function OficiosPage({ searchParams }: { searchParams: Promise<{ vista?: string; q?: string }> }) {
+  const { vista: vistaParam, q: qParam } = await searchParams;
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
   // Sin filtro explícito: RLS (authz.puede_ver_oficio) ya devuelve el alcance correcto.
@@ -45,7 +52,7 @@ export default async function OficiosPage() {
     supabase
       .from("oficios")
       .select(
-        "id, no_oficio, destinatario, asunto, fecha_emision, fecha_vencimiento, fecha_respuesta, actividades(cai, anio_cai, no_nombramiento)",
+        "id, no_oficio, destinatario, asunto, fecha_emision, fecha_vencimiento, fecha_respuesta, fecha_envio, actividades(cai, anio_cai, no_nombramiento)",
       )
       .order("created_at", { ascending: false }),
     supabase.from("parametros_semaforo").select("*").eq("ambito", "oficio").maybeSingle(),
@@ -54,62 +61,123 @@ export default async function OficiosPage() {
 
   const feriados = new Set((feriadosRows ?? []).map((f) => f.fecha));
   const umbral = (parametros as UmbralSemaforo | null) ?? UMBRAL_POR_DEFECTO;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyGuatemala();
+  const q = sinTildes(qParam ?? "").trim();
+
+  const filas = (oficios ?? []).map((o) => ({ ...o, estado: estadoOficio(o, hoy, feriados, umbral) }));
+  const coincideTexto = (o: (typeof filas)[number]) =>
+    !q ||
+    sinTildes([o.no_oficio, o.destinatario, o.asunto, o.actividades ? identificadorAuditoria(o.actividades) : ""].join(" ")).includes(q);
+  const base = filas.filter(coincideTexto);
+  const vista = ["atencion", "respondidos", "todos"].includes(vistaParam ?? "") ? vistaParam! : "pendientes";
+  const visibles = base
+    .filter((o) =>
+      vista === "pendientes" ? !o.fecha_respuesta : vista === "atencion" ? o.estado.atencion : vista === "respondidos" ? !!o.fecha_respuesta : true,
+    )
+    // Los que vencen antes, primero; los respondidos al final.
+    .sort(
+      (a, b) =>
+        Number(!!a.fecha_respuesta) - Number(!!b.fecha_respuesta) ||
+        (a.fecha_vencimiento ?? "9999").localeCompare(b.fecha_vencimiento ?? "9999"),
+    );
+
+  const urlCon = (v: string) => {
+    const params = new URLSearchParams(Object.entries({ vista: v === "pendientes" ? "" : v, q: qParam ?? "" }).filter(([, x]) => x));
+    return `${RUTA}${params.size ? `?${params}` : ""}`;
+  };
+  const kpi = (clave: string, label: string, detail: string, valor: number, icon: LucideIcon, tone: "accent" | "naranja" | "verde") => (
+    <Link
+      key={clave}
+      href={urlCon(vista === clave ? "pendientes" : clave)}
+      aria-pressed={vista === clave}
+      className={cn("block h-full rounded-2xl", vista === clave && "ring-2 ring-primary")}
+    >
+      <StatCard icon={icon} tone={tone} label={label} value={String(valor)} detail={detail} className="h-full" />
+    </Link>
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Oficios</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Oficios</h1>
+          <p className="text-muted-foreground">Seleccione un oficio para registrar su envío, recepción o respuesta.</p>
+        </div>
         {puedeEscribir(usuario) ? (
-          <Button render={<Link href="/oficios/nueva" />}>Nuevo oficio</Button>
+          <Button size="lg" render={<Link href="/oficios/nueva" />}>
+            Registrar nuevo oficio
+          </Button>
         ) : null}
       </div>
 
-      {error ? <p className="text-sm text-destructive">No se pudieron cargar los oficios.</p> : null}
+      {error ? <p className="text-destructive">No se pudieron cargar los oficios.</p> : null}
+
+      <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
+        {kpi("pendientes", "Sin respuesta", "Esperan respuesta de la dependencia", base.filter((o) => !o.fecha_respuesta).length, Mail, "accent")}
+        {kpi("atencion", "Requieren atención", "Plazo por vencer o vencido", base.filter((o) => o.estado.atencion).length, AlertTriangle, "naranja")}
+        {kpi("respondidos", "Respondidos", "Ya tienen respuesta", base.filter((o) => !!o.fecha_respuesta).length, CheckCircle2, "verde")}
+        {kpi("todos", "Todos", "Sin importar el estado", base.length, ListChecks, "accent")}
+      </div>
 
       <div className="rounded-xl border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>No. de oficio</TableHead>
-              <TableHead>Auditoría</TableHead>
-              <TableHead>Destinatario</TableHead>
-              <TableHead>Asunto</TableHead>
-              <TableHead>Vencimiento</TableHead>
-              <TableHead>Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {oficios && oficios.length > 0 ? (
-              oficios.map((o) => {
-                const estado = estadoOficio(o, hoy, feriados, umbral);
-                return (
-                  <TableRow key={o.id} className="cursor-pointer">
-                    <TableCell>
-                      <Link href={`/oficios/${o.id}`} className="codigo-expediente hover:underline">
-                        {o.no_oficio}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{o.actividades ? identificadorAuditoria(o.actividades) : "—"}</TableCell>
-                    <TableCell>{o.destinatario}</TableCell>
-                    <TableCell className="max-w-xs truncate">{o.asunto}</TableCell>
-                    <TableCell>{o.fecha_vencimiento ?? "—"}</TableCell>
-                    <TableCell>
-                      <SemaforoChip tono={estado.tono} label={estado.label} />
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                  No hay oficios dentro de su alcance todavía.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <FiltrosAutomaticos ruta={RUTA} className="flex flex-wrap items-center gap-3 border-b p-4">
+          <input type="hidden" name="vista" value={vista === "pendientes" ? "" : vista} />
+          <Input
+            name="q"
+            type="text"
+            defaultValue={qParam ?? ""}
+            placeholder="Buscar por número, destinatario, asunto o CAI"
+            aria-label="Buscar oficios"
+            className="h-10 min-w-64 flex-1 sm:max-w-md"
+          />
+          {q || vista !== "pendientes" ? (
+            <Button variant="outline" nativeButton={false} render={<Link href={RUTA} />}>
+              Quitar filtros
+            </Button>
+          ) : null}
+        </FiltrosAutomaticos>
+
+        {visibles.length === 0 ? (
+          <p className="p-6 text-muted-foreground">
+            {filas.length === 0
+              ? "Todavía no hay oficios registrados que usted pueda consultar."
+              : vista === "pendientes" && !q
+                ? "No hay oficios esperando respuesta."
+                : "Ningún oficio coincide con la búsqueda."}
+          </p>
+        ) : (
+          <ul className="divide-y">
+            {visibles.map((o) => (
+              <li key={o.id}>
+                <Link
+                  href={`/oficios/${o.id}`}
+                  className="group flex flex-col gap-3 p-5 hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="codigo-expediente text-lg font-semibold">{o.no_oficio}</span>
+                      {o.actividades ? <span className="text-muted-foreground">{identificadorAuditoria(o.actividades)}</span> : null}
+                    </p>
+                    <p className="line-clamp-2 text-lg">{o.asunto}</p>
+                    <p className="text-muted-foreground">
+                      Para: <span className="text-foreground">{o.destinatario}</span>
+                      {!o.fecha_respuesta && o.fecha_vencimiento ? ` · Debe responder a más tardar el ${fecha(o.fecha_vencimiento)}` : ""}
+                      {!o.fecha_envio ? " · Falta registrar el envío" : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-3">
+                    <SemaforoChip tono={o.estado.tono} label={o.estado.label} />
+                    <span className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 font-medium text-primary group-hover:bg-background">
+                      Ver oficio <ChevronRight className="size-4" aria-hidden />
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
 }
+

@@ -87,7 +87,9 @@ function Lista({
       </ul>
 
       {puedeEditar && candidatos.length > 0 ? (
-        <form action={action} className="flex flex-wrap items-end gap-3">
+        <details className="rounded-xl border border-dashed">
+          <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">+ Agregar a {titulo.toLowerCase()}</summary>
+        <form action={action} className="flex flex-wrap items-end gap-3 border-t p-3">
           <input type="hidden" name="oficio_id" value={oficioId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             {candidatos.length === 1 ? (
@@ -119,6 +121,7 @@ function Lista({
           </div>
           <Button type="submit">Agregar</Button>
         </form>
+        </details>
       ) : null}
     </div>
   );

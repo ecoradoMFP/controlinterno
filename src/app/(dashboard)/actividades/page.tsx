@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
+import { sinTildes } from "@/lib/texto";
 import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, type EtapaActividadEnum } from "@/types/domain";
 
 type Filtros = { vista?: string; etapa?: string; departamento?: string; q?: string };
@@ -308,7 +309,3 @@ function FilaAuditoria({ fila: f }: { fila: FilaVista }) {
   );
 }
 
-/** Para buscar sin importar mayúsculas ni tildes ("tesoreria" encuentra "Tesorería"). */
-function sinTildes(texto: string) {
-  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
