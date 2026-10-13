@@ -11,6 +11,8 @@ import {
   puedeEscribir,
 } from "@/lib/auth";
 import { cierreExpedienteSchema, nombramientoSchema } from "@/lib/validations/actividad";
+import { ACTIVIDADES_SAG_UDAI } from "@/lib/cronograma";
+import { diasHabilesEntre } from "@/lib/semaforo";
 import {
   SIGUIENTE_ETAPA,
   ETAPA_ACTIVIDAD_LABELS,
@@ -103,9 +105,9 @@ export async function agregarHito(formData: FormData) {
   const documentoCatalogoId = String(formData.get("documento_catalogo_id") ?? "") || null;
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para agregar hitos.");
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para agregar actividades al cronograma.");
   if (!codigoJerarquico || !nombre || !etapa || !cargoResponsable || !fechaInicioEsperada || !fechaFinEsperada) {
-    fail(actividadId, "cronograma", "Complete todos los campos requeridos del hito.");
+    fail(actividadId, "cronograma", "Complete todos los campos de la actividad.");
   }
   if (fechaFinEsperada < fechaInicioEsperada) {
     fail(actividadId, "cronograma", "La fecha de fin esperado no puede ser anterior al inicio esperado.");
@@ -124,7 +126,46 @@ export async function agregarHito(formData: FormData) {
     documento_catalogo_id: documentoCatalogoId,
   });
 
-  if (error) fail(actividadId, "cronograma", "No se pudo agregar el hito (¿código ya usado en esta auditoría?).");
+  if (error) fail(actividadId, "cronograma", "No se pudo agregar la actividad (¿el número ya está usado en esta auditoría?).");
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=cronograma`);
+}
+
+/** Las 8 actividades con plazo SAG-UDAI, de una vez (ver `ACTIVIDADES_SAG_UDAI`). */
+export async function registrarCronogramaSagUdai(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+
+  const usuario = await getUsuarioActual();
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para registrar el cronograma.");
+
+  const filas = ACTIVIDADES_SAG_UDAI.map((a) => ({
+    ...a,
+    del: String(formData.get(`del_${a.codigo}`) ?? ""),
+    al: String(formData.get(`al_${a.codigo}`) ?? ""),
+  }));
+  const incompleta = filas.find((f) => !/^\d{4}-\d{2}-\d{2}$/.test(f.del) || !/^\d{4}-\d{2}-\d{2}$/.test(f.al));
+  if (incompleta) fail(actividadId, "cronograma", `Indique las fechas "Del" y "Al" de: ${incompleta.nombre}.`);
+  const invertida = filas.find((f) => f.al < f.del);
+  if (invertida) fail(actividadId, "cronograma", `En "${invertida.nombre}", la fecha "Al" no puede ser anterior a "Del".`);
+
+  const supabase = await createClient();
+  const { data: asuetos } = await supabase.from("calendario_feriados").select("fecha");
+  const feriados = new Set((asuetos ?? []).map((f) => f.fecha));
+
+  const { error } = await supabase.from("hitos_cronograma").insert(
+    filas.map((f) => ({
+      actividad_id: actividadId,
+      codigo_jerarquico: f.codigo,
+      nombre: f.nombre,
+      etapa: f.etapa,
+      cargo_responsable: "auditor" as const,
+      fecha_inicio_esperada: f.del,
+      fecha_fin_esperada: f.al,
+      dias_habiles_esperados: diasHabilesEntre(f.del, f.al, feriados),
+    })),
+  );
+  if (error) fail(actividadId, "cronograma", "No se pudo guardar el cronograma. Puede que ya esté registrado.");
 
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/actividades/${actividadId}?tab=cronograma`);
@@ -136,7 +177,7 @@ export async function concluirHito(formData: FormData) {
   const fechaFinReal = String(formData.get("fecha_fin_real") ?? "");
 
   const usuario = await getUsuarioActual();
-  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para concluir hitos.");
+  if (!puedeEscribir(usuario)) fail(actividadId, "cronograma", "No tiene permiso para concluir actividades del cronograma.");
   if (!fechaFinReal) fail(actividadId, "cronograma", "Indique la fecha real de conclusión.");
 
   const supabase = await createClient();
@@ -145,7 +186,7 @@ export async function concluirHito(formData: FormData) {
     .update({ fecha_fin_real: fechaFinReal, estado: "concluido" })
     .eq("id", hitoId);
 
-  if (error) fail(actividadId, "cronograma", "No se pudo marcar el hito como concluido.");
+  if (error) fail(actividadId, "cronograma", "No se pudo marcar la actividad como concluida.");
 
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/actividades/${actividadId}?tab=cronograma`);

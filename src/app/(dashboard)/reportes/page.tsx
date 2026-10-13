@@ -275,7 +275,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <StatCard
           icon={CheckCircle2}
           tone="verde"
-          label="Hitos a tiempo"
+          label="Cronograma a tiempo"
           value={cumplimientoHitos.pct === null ? "—" : `${Math.round(cumplimientoHitos.pct)}%`}
           detail={`${cumplimientoHitos.aTiempo} de ${cumplimientoHitos.aTiempo + cumplimientoHitos.tarde} concluidos`}
         />
@@ -293,7 +293,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <div className="flex flex-col gap-5 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
           <div>
             <h2 className="font-semibold">Semáforo de auditorías</h2>
-            <p className="text-sm text-muted-foreground">Cada auditoría toma el color de su hito u oficio más atrasado.</p>
+            <p className="text-sm text-muted-foreground">Cada auditoría toma el color de su actividad del cronograma u oficio más atrasado.</p>
           </div>
           <BarraSemaforo conteo={conteo} />
           <div className="flex flex-col gap-2 border-t pt-4">
@@ -340,7 +340,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
             <h2 className="font-semibold">Cumplimiento de plazos</h2>
             <p className="text-sm text-muted-foreground">De lo ya cerrado, cuánto se cerró a tiempo.</p>
           </div>
-          <Medidor titulo="Hitos del cronograma" aTiempo={cumplimientoHitos.aTiempo} tarde={cumplimientoHitos.tarde} />
+          <Medidor titulo="Actividades del cronograma" aTiempo={cumplimientoHitos.aTiempo} tarde={cumplimientoHitos.tarde} />
           <Medidor titulo="Oficios respondidos" aTiempo={cumplimientoOficios.aTiempo} tarde={cumplimientoOficios.tarde} />
         </div>
         <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">

@@ -12,7 +12,7 @@ const ORDEN_SEMAFORO: ColorSemaforo[] = ["verde", "amarillo", "naranja", "rojo"]
 export function BarraSemaforo({ conteo }: { conteo: Record<ColorSemaforo, number> }) {
   const total = ORDEN_SEMAFORO.reduce((s, c) => s + conteo[c], 0);
   if (total === 0) {
-    return <p className="text-sm text-muted-foreground">Ninguna auditoría tiene hitos u oficios con plazo abierto.</p>;
+    return <p className="text-sm text-muted-foreground">Ninguna auditoría tiene actividades del cronograma u oficios con plazo abierto.</p>;
   }
   return (
     <div className="flex flex-col gap-3">
@@ -112,7 +112,7 @@ export function PlanContraReal({ filas }: { filas: { etapa: string; plan: number
       {filas.map((f) => {
         const diferencia = Math.round(f.real - f.plan);
         return (
-          <li key={f.etapa} className="flex flex-col gap-1.5" title={`${f.etapa}: promedio de ${f.n} hito(s)`}>
+          <li key={f.etapa} className="flex flex-col gap-1.5" title={`${f.etapa}: promedio de ${f.n} actividad(es) del cronograma`}>
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="font-medium">{f.etapa}</span>
               <span

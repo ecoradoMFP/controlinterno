@@ -145,7 +145,7 @@ export function semaforoConMotivoPorActividad(
   };
   for (const h of hitosAbiertos) {
     const color = calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriados, umbralHito);
-    considerar(h.actividad_id, color, `Hito "${h.nombre}" ${h.fecha_fin_esperada < hoy ? "venció" : "vence"} el ${h.fecha_fin_esperada}`, h.fecha_fin_esperada);
+    considerar(h.actividad_id, color, `La actividad "${h.nombre}" del cronograma ${h.fecha_fin_esperada < hoy ? "venció" : "vence"} el ${h.fecha_fin_esperada}`, h.fecha_fin_esperada);
   }
   for (const o of oficiosAbiertos) {
     if (!o.fecha_vencimiento) continue;

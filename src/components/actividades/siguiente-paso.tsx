@@ -50,6 +50,7 @@ export function SiguientePaso({
   hitos,
   equipoPendiente,
   sinEquipo,
+  sinCronograma,
   puedeEditar,
   puedeCerrarEtapa,
   puedeCorregirFechasEquipo,
@@ -66,6 +67,8 @@ export function SiguientePaso({
   hitos: PendienteHito[];
   equipoPendiente: PendienteEquipo[];
   sinEquipo: boolean;
+  /** Todavía no se registran los plazos SAG-UDAI (cronograma de actividades). */
+  sinCronograma: boolean;
   puedeEditar: boolean;
   puedeCerrarEtapa: boolean;
   puedeCorregirFechasEquipo: boolean;
@@ -74,7 +77,7 @@ export function SiguientePaso({
   cierre: DatosCierre;
   puedeCorregirCierre: boolean;
 }) {
-  const pendientes = documentos.length + hitos.length + equipoPendiente.length + (sinEquipo ? 1 : 0);
+  const pendientes = documentos.length + hitos.length + equipoPendiente.length + (sinEquipo ? 1 : 0) + (sinCronograma ? 1 : 0);
   const etapaLabel = ETAPA_ACTIVIDAD_LABELS[etapa];
 
   let titulo: string;
@@ -106,8 +109,22 @@ export function SiguientePaso({
 
         {!concluida && pendientes > 0 ? (
           <p>
-            Para cerrar {etapaLabel} falta{pendientes === 1 ? "" : "n"} {resumenPendientes(documentos.length, hitos.length, equipoPendiente.length + (sinEquipo ? 1 : 0))}.
+            Pendiente para cerrar {etapaLabel}: {resumenPendientes(documentos.length, hitos.length, equipoPendiente.length + (sinEquipo ? 1 : 0), sinCronograma)}.
           </p>
+        ) : null}
+
+        {!concluida && sinCronograma ? (
+          <Grupo titulo="Cronograma de actividades">
+            <Fila>
+              <span>
+                <span className="font-medium">Registrar los plazos del SAG-UDAI-WEB</span>
+                <span className="block text-sm text-muted-foreground">
+                  Ocho actividades con su fecha de inicio y de fin; se reportan a la Contraloría General de Cuentas.
+                </span>
+              </span>
+              <Button render={<Link href={`/actividades/${actividadId}?tab=cronograma#cronograma`} />}>Registrar cronograma</Button>
+            </Fila>
+          </Grupo>
         ) : null}
 
         {!concluida && sinEquipo ? (
@@ -157,12 +174,12 @@ export function SiguientePaso({
         ) : null}
 
         {!concluida && hitosAVer.length > 0 ? (
-          <Grupo titulo={`Plazos del cronograma (${hitosAVer.length})`}>
+          <Grupo titulo={`Actividades del cronograma (${hitosAVer.length})`}>
             {hitosAVer.map((h) => (
               <Fila key={h.id}>
                 <span className="min-w-0">
                   <span className="font-medium">
-                    {h.codigo} — {h.nombre}
+                    {h.codigo}. {h.nombre}
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     Vence el {h.fechaFin} · a cargo del {CARGO_LABELS[h.responsable]}
@@ -190,7 +207,7 @@ export function SiguientePaso({
                 <span className="text-foreground">{porCargo(otrosDocs)}</span>.{" "}
               </>
             ) : null}
-            {otrosHitos > 0 ? `${otrosHitos === 1 ? "Otro plazo del cronograma va" : `Otros ${otrosHitos} plazos del cronograma van`} en tiempo. ` : null}
+            {otrosHitos > 0 ? `${otrosHitos === 1 ? "Otra actividad del cronograma va" : `Otras ${otrosHitos} actividades del cronograma van`} en tiempo. ` : null}
             Puede consultarlos abajo, en las pestañas{" "}
             <Link href={`/actividades/${actividadId}?tab=documentos#documentos`} className="text-primary underline-offset-2 hover:underline">
               Documentos
@@ -266,10 +283,11 @@ function Fila({ children }: { children: React.ReactNode }) {
   );
 }
 
-function resumenPendientes(docs: number, hitos: number, equipo: number) {
+function resumenPendientes(docs: number, hitos: number, equipo: number, sinCronograma: boolean) {
   const partes = [
+    sinCronograma ? "registrar el cronograma" : null,
     docs ? `${docs} documento${docs === 1 ? "" : "s"}` : null,
-    hitos ? `${hitos} plazo${hitos === 1 ? "" : "s"} del cronograma` : null,
+    hitos ? `${hitos} actividad${hitos === 1 ? "" : "es"} del cronograma` : null,
     equipo ? `${equipo} pendiente${equipo === 1 ? "" : "s"} del equipo` : null,
   ].filter(Boolean);
   return partes.length > 1 ? `${partes.slice(0, -1).join(", ")} y ${partes.at(-1)}` : partes[0];

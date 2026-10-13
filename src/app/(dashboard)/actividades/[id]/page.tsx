@@ -263,6 +263,7 @@ export default async function ActividadDetallePage({
         hitos={hitosPendientes}
         equipoPendiente={equipoPendiente}
         sinEquipo={sinEquipo}
+        sinCronograma={(hitos ?? []).length === 0}
         puedeEditar={puedeEditar}
         puedeCerrarEtapa={puedeCerrarEtapa}
         puedeCorregirFechasEquipo={puedeEditar && esJefaturaAuditoria(usuario)}

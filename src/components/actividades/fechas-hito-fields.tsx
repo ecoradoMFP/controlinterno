@@ -24,11 +24,11 @@ export function FechasHitoFields({ asuetos }: { asuetos: string[] }) {
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Inicio esperado</label>
+        <label className="text-xs text-muted-foreground">Del</label>
         <Input ref={inicio} name="fecha_inicio_esperada" type="date" required onChange={recalcular} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Fin esperado</label>
+        <label className="text-xs text-muted-foreground">Al</label>
         <Input ref={fin} name="fecha_fin_esperada" type="date" required onChange={recalcular} />
       </div>
       <div className="flex w-36 flex-col gap-1.5">
@@ -41,7 +41,7 @@ export function FechasHitoFields({ asuetos }: { asuetos: string[] }) {
           step={1}
           required
           placeholder="Se calcula solo"
-          title="Se calcula con las fechas, sin fines de semana ni asuetos. Puedes cambiarlo si hay una excepción."
+          title="Se calcula con las fechas, sin fines de semana ni asuetos. Puede cambiarlo si hay una excepción."
           onChange={(e) => {
             // Si lo borra, vuelve a calcularse con las fechas.
             editadoAMano.current = e.target.value !== "";
