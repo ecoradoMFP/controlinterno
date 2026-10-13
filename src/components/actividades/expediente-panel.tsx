@@ -53,7 +53,6 @@ export function ExpedientePanel({
 }) {
   const enCierre = actividad.etapa_actual === "expediente_cierre";
   const puedeInforme = actividad.etapa_actual === "comunicacion_resultados" || enCierre;
-  const cierreBloqueado = (fecha: string | null) => !!fecha && !puedeCorregirCierre;
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,65 +98,28 @@ export function ExpedientePanel({
           <p className="text-sm text-muted-foreground">
             Las fechas de cierre se registran cuando la auditoría llega a Expediente / Cierre.
           </p>
+        ) : !actividad.concluida ? (
+          <p className="text-sm text-muted-foreground">
+            Se registra en la tarjeta <span className="font-medium text-foreground">Siguiente paso</span>, arriba, cuando
+            ya no quedan pendientes.
+          </p>
         ) : (
-          <form action={registrarCierreExpediente} className="flex flex-col gap-4">
-            <input type="hidden" name="actividad_id" value={actividad.id} />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Campo
-                label="Notificación del informe"
-                name="fecha_notificacion_informe"
-                valor={actividad.fecha_notificacion_informe}
-                disabled={!puedeGestionar || cierreBloqueado(actividad.fecha_notificacion_informe)}
-              />
-              <Campo
-                label="Notificación a la CGC"
-                name="fecha_notificacion_cgc"
-                valor={actividad.fecha_notificacion_cgc}
-                disabled={!puedeGestionar || cierreBloqueado(actividad.fecha_notificacion_cgc)}
-              />
-              <Campo
-                label="Entrega al archivo"
-                name="fecha_entrega_archivo"
-                valor={actividad.fecha_entrega_archivo}
-                disabled={!puedeGestionar || cierreBloqueado(actividad.fecha_entrega_archivo)}
-              />
-            </div>
-            {/* Los campos deshabilitados no se envían: se reenvían ocultos para no borrarlos. */}
-            {cierreBloqueado(actividad.fecha_notificacion_informe) ? (
-              <input type="hidden" name="fecha_notificacion_informe" value={actividad.fecha_notificacion_informe ?? ""} />
-            ) : null}
-            {cierreBloqueado(actividad.fecha_notificacion_cgc) ? (
-              <input type="hidden" name="fecha_notificacion_cgc" value={actividad.fecha_notificacion_cgc ?? ""} />
-            ) : null}
-            {cierreBloqueado(actividad.fecha_entrega_archivo) ? (
-              <input type="hidden" name="fecha_entrega_archivo" value={actividad.fecha_entrega_archivo ?? ""} />
-            ) : null}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="observaciones_cierre">
-                Observaciones{puedeCorregirCierre ? " (obligatorio cambiarlas si corriges una fecha ya registrada)" : ""}
-              </Label>
-              <Textarea id="observaciones_cierre" name="observaciones" defaultValue={actividad.observaciones ?? ""} rows={2} disabled={!puedeGestionar} />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Con la entrega al archivo la auditoría queda concluida. Una vez registradas, las fechas solo las corrige
-              Dirección (control total) dejando constancia en observaciones.
-            </p>
-            {puedeGestionar && !(actividad.concluida && !puedeCorregirCierre) ? (
-              <Button type="submit" className="w-fit">
-                Registrar cierre
-              </Button>
-            ) : null}
-          </form>
+          <FormCierreExpediente
+            actividadId={actividad.id}
+            datos={actividad}
+            puedeGestionar={puedeGestionar}
+            puedeCorregirCierre={puedeCorregirCierre}
+          />
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-xl border p-4">
+      <section id="recomendaciones" className="flex scroll-mt-4 flex-col gap-3 rounded-xl border p-4">
         <h3 className="font-medium">Inventario de recomendaciones</h3>
         {informeId ? (
           <p className="text-sm">
             El informe de esta auditoría ya está en el inventario.{" "}
-            <Link href={`/recomendaciones/informes/${informeId}`} className="underline underline-offset-2">
-              Ver deficiencias y recomendaciones
+            <Link href={`/recomendaciones/cai/${informeId}`} className="underline underline-offset-2">
+              Ver el CAI en Recomendaciones
             </Link>
           </p>
         ) : puedeInforme ? (
@@ -180,6 +142,76 @@ export function ExpedientePanel({
         )}
       </section>
     </div>
+  );
+}
+
+export type DatosCierre = Pick<
+  Actividad,
+  "fecha_notificacion_informe" | "fecha_notificacion_cgc" | "fecha_entrega_archivo" | "observaciones" | "concluida"
+>;
+
+/** Notificación del informe, a la CGC y entrega al archivo: con la entrega la auditoría concluye. */
+export function FormCierreExpediente({
+  actividadId,
+  datos,
+  puedeGestionar,
+  puedeCorregirCierre,
+}: {
+  actividadId: string;
+  datos: DatosCierre;
+  puedeGestionar: boolean;
+  puedeCorregirCierre: boolean;
+}) {
+  const cierreBloqueado = (fecha: string | null) => !!fecha && !puedeCorregirCierre;
+  return (
+    <form action={registrarCierreExpediente} className="flex flex-col gap-4">
+      <input type="hidden" name="actividad_id" value={actividadId} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Campo
+          label="Notificación del informe"
+          name="fecha_notificacion_informe"
+          valor={datos.fecha_notificacion_informe}
+          disabled={!puedeGestionar || cierreBloqueado(datos.fecha_notificacion_informe)}
+        />
+        <Campo
+          label="Notificación a la CGC"
+          name="fecha_notificacion_cgc"
+          valor={datos.fecha_notificacion_cgc}
+          disabled={!puedeGestionar || cierreBloqueado(datos.fecha_notificacion_cgc)}
+        />
+        <Campo
+          label="Entrega al archivo"
+          name="fecha_entrega_archivo"
+          valor={datos.fecha_entrega_archivo}
+          disabled={!puedeGestionar || cierreBloqueado(datos.fecha_entrega_archivo)}
+        />
+      </div>
+      {/* Los campos deshabilitados no se envían: se reenvían ocultos para no borrarlos. */}
+      {cierreBloqueado(datos.fecha_notificacion_informe) ? (
+        <input type="hidden" name="fecha_notificacion_informe" value={datos.fecha_notificacion_informe ?? ""} />
+      ) : null}
+      {cierreBloqueado(datos.fecha_notificacion_cgc) ? (
+        <input type="hidden" name="fecha_notificacion_cgc" value={datos.fecha_notificacion_cgc ?? ""} />
+      ) : null}
+      {cierreBloqueado(datos.fecha_entrega_archivo) ? (
+        <input type="hidden" name="fecha_entrega_archivo" value={datos.fecha_entrega_archivo ?? ""} />
+      ) : null}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="observaciones_cierre">
+          Observaciones{puedeCorregirCierre ? " (obligatorio cambiarlas si corriges una fecha ya registrada)" : ""}
+        </Label>
+        <Textarea id="observaciones_cierre" name="observaciones" defaultValue={datos.observaciones ?? ""} rows={2} disabled={!puedeGestionar} />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Con la entrega al archivo la auditoría queda concluida. Una vez registradas, las fechas solo las corrige
+        Dirección (control total) dejando constancia en observaciones.
+      </p>
+      {puedeGestionar && !(datos.concluida && !puedeCorregirCierre) ? (
+        <Button type="submit" className="w-fit">
+          Registrar cierre
+        </Button>
+      ) : null}
+    </form>
   );
 }
 

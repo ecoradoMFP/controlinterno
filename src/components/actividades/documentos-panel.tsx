@@ -22,11 +22,13 @@ import { RutaExpediente } from "@/components/actividades/ruta-expediente";
 import { cn } from "@/lib/utils";
 import {
   CARGO_LABELS,
+  ETAPA_ACTIVIDAD_LABELS,
   FASE_DOCUMENTO_LABELS,
   TIPO_EVENTO_LABELS,
   type CargoEnum,
   type DocumentoActividad,
   type DocumentoCatalogo,
+  type EtapaActividadEnum,
   type FaseDocumentoEnum,
   type Movimiento,
   type Usuario,
@@ -49,6 +51,10 @@ function destinoEntrega(_documento: DocumentoConDetalle, cadena: CargoEnum[]): C
   return cadena[1] ?? null;
 }
 
+const ORDEN_ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
+
+type UsuarioPanel = Pick<Usuario, "cargo" | "permiso_sistema"> | null;
+
 export function DocumentosPanel({
   actividadId,
   documentos,
@@ -62,8 +68,114 @@ export function DocumentosPanel({
   documentos: DocumentoConDetalle[];
   catalogoDisponible: DocumentoCatalogo[];
   ordenRevisionPorDocumento: Map<string, CargoEnum[]>;
-  usuario: Pick<Usuario, "cargo" | "permiso_sistema"> | null;
-  etapaActual: string;
+  usuario: UsuarioPanel;
+  etapaActual: EtapaActividadEnum;
+  puedeEditar: boolean;
+}) {
+  // La etapa en curso a la vista; las demás plegadas, para no mezclar lo que ya se cerró.
+  const grupos = ORDEN_ETAPAS.map((etapa) => ({
+    etapa,
+    docs: documentos.filter((d) => d.documentos_catalogo?.etapa === etapa),
+  })).filter((g) => g.docs.length > 0);
+
+  return (
+    <div id="documentos" className="flex scroll-mt-4 flex-col gap-4">
+      {grupos.map(({ etapa, docs }) => {
+        const terminados = docs.filter((d) => d.fase_actual === "finalizado").length;
+        const encabezado = (
+          <>
+            <span className="font-medium">{ETAPA_ACTIVIDAD_LABELS[etapa]}</span>
+            <span className="text-sm text-muted-foreground">
+              {terminados} de {docs.length} terminado{docs.length === 1 ? "" : "s"}
+            </span>
+          </>
+        );
+        const lista =
+          docs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ningún documento de esta etapa iniciado todavía.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {docs.map((d) => (
+                <DocumentoCard
+                  key={d.id}
+                  actividadId={actividadId}
+                  documento={d}
+                  cadena={ordenRevisionPorDocumento.get(d.documento_catalogo_id) ?? []}
+                  usuario={usuario}
+                  etapaActual={etapaActual}
+                  puedeEditar={puedeEditar}
+                />
+              ))}
+            </div>
+          );
+        return etapa === etapaActual ? (
+          <section key={etapa} className="flex flex-col gap-3">
+            <h3 className="flex items-baseline gap-3">{encabezado}</h3>
+            {lista}
+          </section>
+        ) : (
+          <details key={etapa} className="rounded-xl border">
+            <summary className="flex cursor-pointer items-baseline gap-3 p-3">{encabezado}</summary>
+            <div className="border-t p-3">{lista}</div>
+          </details>
+        );
+      })}
+
+      {puedeEditar && catalogoDisponible.length > 0 ? (
+        <details className="rounded-xl border border-dashed">
+          <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">
+            + Iniciar un documento de {ETAPA_ACTIVIDAD_LABELS[etapaActual]}
+          </summary>
+          <form action={agregarDocumentoActividad} className="flex flex-wrap items-end gap-3 border-t p-4">
+            <input type="hidden" name="actividad_id" value={actividadId} />
+            <div className="flex min-w-64 flex-col gap-1.5">
+              <label className="text-xs text-muted-foreground">Documento del catálogo pendiente de iniciar</label>
+              {catalogoDisponible.length === 1 ? (
+                // Con una sola opción, el Select de Base UI puede abrir y cerrar el popup en
+                // el mismo gesto (click o Enter) sin confirmar la selección, dejando el input
+                // oculto vacío y bloqueando el submit silenciosamente — mismo bug que el
+                // selector de auditor principal en actividad-form.tsx. Con una sola opción no
+                // hay nada que elegir, así que se fija igual que ese caso.
+                <>
+                  <Input value={catalogoDisponible[0].nombre} disabled />
+                  <input type="hidden" name="documento_catalogo_id" value={catalogoDisponible[0].id} />
+                </>
+              ) : (
+                <Select
+                  name="documento_catalogo_id"
+                  required
+                  items={Object.fromEntries(catalogoDisponible.map((c) => [c.id, c.nombre]))}
+                >
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona un documento" /></SelectTrigger>
+                  <SelectContent>
+                    {catalogoDisponible.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <Button type="submit" variant="outline">Iniciar documento</Button>
+          </form>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function DocumentoCard({
+  actividadId,
+  documento: d,
+  cadena,
+  usuario,
+  etapaActual,
+  puedeEditar,
+}: {
+  actividadId: string;
+  documento: DocumentoConDetalle;
+  cadena: CargoEnum[];
+  usuario: UsuarioPanel;
+  etapaActual: EtapaActividadEnum;
   puedeEditar: boolean;
 }) {
   const esControlTotal = usuario?.permiso_sistema === "control_total";
@@ -71,258 +183,198 @@ export function DocumentosPanel({
   // Espeja la validación de `marcar_no_aplica`: decisión de jefatura o control_total.
   const puedeNoAplica = esJefaturaAuditoria(usuario);
 
+  const finalizado = d.fase_actual === "finalizado";
+  const enRevision = d.fase_actual === "revision";
+  const posicion = cadena.indexOf(d.cargo_actual_responsable);
+  const siguiente = posicion >= 0 ? cadena[posicion + 1] ?? null : null;
+  const esResponsable = usuario?.cargo === d.cargo_actual_responsable;
+  const puedeEntregar =
+    !finalizado && !enRevision && (esResponsable || esControlTotal || usuario?.permiso_sistema === "captura_delegada");
+  const destino = puedeEntregar ? destinoEntrega(d, cadena) : null;
+  const puedeAprobar = enRevision && (esResponsable || esControlTotal);
+  const puedeDevolver = enRevision && (esResponsable || esControlTotal || usuario?.permiso_sistema === "captura_delegada");
+  const generaDocumento = d.documentos_catalogo?.genera_documento ?? true;
+  const hayAcciones = puedeEditar && !d.no_aplica && (!!destino || puedeAprobar || puedeDevolver);
+  const meToca = puedeEditar && !finalizado && esResponsable;
+  const enEtapaActual = d.documentos_catalogo?.etapa === etapaActual;
+
   return (
-    <div className="flex flex-col gap-6">
-      {documentos.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Ningún documento del catálogo iniciado todavía.</p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {documentos.map((d) => {
-            const cadena = ordenRevisionPorDocumento.get(d.documento_catalogo_id) ?? [];
-            const finalizado = d.fase_actual === "finalizado";
-            const enRevision = d.fase_actual === "revision";
-            const posicion = cadena.indexOf(d.cargo_actual_responsable);
-            const siguiente = posicion >= 0 ? cadena[posicion + 1] ?? null : null;
-            const esResponsable = usuario?.cargo === d.cargo_actual_responsable;
-            const puedeEntregar =
-              !finalizado &&
-              !enRevision &&
-              (esResponsable || esControlTotal || usuario?.permiso_sistema === "captura_delegada");
-            const destino = puedeEntregar ? destinoEntrega(d, cadena) : null;
-            const puedeAprobar = enRevision && (esResponsable || esControlTotal);
-            const puedeDevolver =
-              enRevision && (esResponsable || esControlTotal || usuario?.permiso_sistema === "captura_delegada");
-            const generaDocumento = d.documentos_catalogo?.genera_documento ?? true;
-            const hayAcciones = !!destino || puedeAprobar || puedeDevolver || puedeVistoBueno;
-
-            return (
-              <div key={d.id} className="rounded-xl border p-4">
-                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <p className="font-medium">
-                      {d.documentos_catalogo ? `${d.documentos_catalogo.orden}. ` : ""}
-                      {d.documentos_catalogo?.nombre ?? "Documento"}
-                    </p>
-                    {cadena.length > 0 ? <CadenaRevision cadena={cadena} documento={d} /> : null}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {!generaDocumento ? <Badge variant="outline">Sin documento</Badge> : null}
-                    {d.no_aplica ? (
-                      <Badge variant="outline">No aplica</Badge>
-                    ) : (
-                      <Badge variant={finalizado ? "default" : "secondary"}>{FASE_DOCUMENTO_LABELS[d.fase_actual]}</Badge>
-                    )}
-                    <Link
-                      href={`/actividades/${actividadId}/hoja-de-ruta?documento=${d.id}`}
-                      className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                    >
-                      Hoja de ruta
-                    </Link>
-                  </div>
-                </div>
-
-                {d.no_aplica ? (
-                  <div className="flex flex-col gap-2 border-t pt-3 text-sm">
-                    <p>
-                      <span className="text-muted-foreground">Justificación de No aplica: </span>
-                      {d.no_aplica_justificacion}
-                    </p>
-                    {puedeEditar && puedeNoAplica && d.documentos_catalogo?.etapa === etapaActual ? (
-                      <details>
-                        <summary className="cursor-pointer text-xs text-muted-foreground">Revertir No aplica</summary>
-                        <form action={marcarNoAplica} className="mt-2 flex flex-wrap items-end gap-2">
-                          <input type="hidden" name="actividad_id" value={actividadId} />
-                          <input type="hidden" name="documento_actividad_id" value={d.id} />
-                          <input type="hidden" name="revertir" value="1" />
-                          <Textarea name="justificacion" rows={1} required minLength={10} placeholder="Motivo para revertir" className="max-w-md" />
-                          <Button type="submit" size="sm" variant="outline">Revertir</Button>
-                        </form>
-                      </details>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {puedeEditar && !d.no_aplica && !finalizado && !hayAcciones ? (
-                  <p className="border-t pt-3 text-xs text-muted-foreground">
-                    {enRevision
-                      ? `En revisión de ${CARGO_LABELS[d.cargo_actual_responsable]}: lo aprueba o devuelve ese cargo.`
-                      : `En ${FASE_DOCUMENTO_LABELS[d.fase_actual].toLowerCase()} con ${CARGO_LABELS[d.cargo_actual_responsable]}: lo entrega ese cargo.`}
-                  </p>
-                ) : null}
-
-                {puedeEditar && !d.no_aplica && hayAcciones && (!finalizado || puedeVistoBueno) ? (
-                  <form action={avanzarDocumento} className="flex flex-col gap-2 border-t pt-3">
-                    <input type="hidden" name="actividad_id" value={actividadId} />
-                    <input type="hidden" name="documento_actividad_id" value={d.id} />
-                    <input type="hidden" name="fase_esperada" value={d.fase_actual} />
-                    <input type="hidden" name="responsable_esperado" value={d.cargo_actual_responsable} />
-                    <Textarea
-                      name="observacion"
-                      rows={1}
-                      placeholder={enRevision ? "Observación (obligatoria si devuelves para corrección)" : "Observación (opcional)"}
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      {destino ? (
-                        <Button type="submit" name="accion" value="entregar" size="sm">
-                          {d.fase_actual === "correccion" ? "Entregar corregido" : "Entregar"} a {CARGO_LABELS[destino]}
-                        </Button>
-                      ) : null}
-                      {puedeAprobar ? (
-                        <Button type="submit" name="accion" value="aprobar" size="sm">
-                          {siguiente ? `Aprobar y pasar a ${CARGO_LABELS[siguiente]}` : "Aprobar y finalizar"}
-                        </Button>
-                      ) : null}
-                      {puedeDevolver ? (
-                        <>
-                          <Button type="submit" name="accion" value="devolver" size="sm" variant="outline">
-                            Devolver al Auditor para corrección
-                          </Button>
-                          <span className="self-center text-xs text-muted-foreground">
-                            Al corregirse, la revisión se reinicia: Auditor → Subjefe → Jefe, según corresponda.
-                          </span>
-                        </>
-                      ) : null}
-                      {puedeVistoBueno ? (
-                        <Button type="submit" name="accion" value="visto_bueno" size="sm" variant="ghost">
-                          Dejar visto bueno ({CARGO_LABELS[usuario!.cargo!]})
-                        </Button>
-                      ) : null}
-                      {enRevision && !puedeAprobar && !puedeDevolver ? (
-                        <p className="self-center text-xs text-muted-foreground">
-                          En revisión de {CARGO_LABELS[d.cargo_actual_responsable]}: lo aprueba o devuelve ese cargo.
-                        </p>
-                      ) : null}
-                      {!finalizado && !enRevision && !puedeEntregar ? (
-                        <p className="self-center text-xs text-muted-foreground">
-                          En {FASE_DOCUMENTO_LABELS[d.fase_actual].toLowerCase()} con{" "}
-                          {CARGO_LABELS[d.cargo_actual_responsable]}: lo entrega ese cargo.
-                        </p>
-                      ) : null}
-                    </div>
-                  </form>
-                ) : null}
-
-                {puedeEditar && puedeNoAplica && !finalizado ? (
-                  <details className="mt-3 border-t pt-3">
-                    <summary className="cursor-pointer text-xs text-muted-foreground">Marcar como No aplica</summary>
-                    <form action={marcarNoAplica} className="mt-2 flex flex-wrap items-end gap-2">
-                      <input type="hidden" name="actividad_id" value={actividadId} />
-                      <input type="hidden" name="documento_actividad_id" value={d.id} />
-                      <Textarea
-                        name="justificacion"
-                        rows={1}
-                        required
-                        minLength={10}
-                        placeholder="Justificación (obligatoria, queda en la bitácora)"
-                        className="max-w-md"
-                      />
-                      <Button type="submit" size="sm" variant="outline">Confirmar No aplica</Button>
-                    </form>
-                  </details>
-                ) : null}
-
-                {generaDocumento && !d.no_aplica ? (
-                  <div className="mt-3 flex flex-col gap-2 border-t pt-3">
-                    <RutaExpediente ruta={d.ruta_completa} etiqueta="Archivo" />
-                  </div>
-                ) : null}
-
-                {esControlTotal ? (
-                  <details className="mt-3 border-t pt-3">
-                    <summary className="cursor-pointer text-xs text-muted-foreground">
-                      Registro manual (Dirección: registro tardío o corrección)
-                    </summary>
-                    <form action={registrarMovimiento} className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <input type="hidden" name="actividad_id" value={actividadId} />
-                      <input type="hidden" name="documento_actividad_id" value={d.id} />
-                      <MovimientoFormFields cargoActual={d.cargo_actual_responsable} />
-                      <div className="col-span-2 flex flex-col gap-1.5">
-                        <label className="text-xs text-muted-foreground" htmlFor={`fecha_evento-${d.id}`}>
-                          Cuándo ocurrió (solo si es registro tardío; vacío = ahora)
-                        </label>
-                        <Input id={`fecha_evento-${d.id}`} name="fecha_evento" type="datetime-local" />
-                      </div>
-                      <div className="col-span-2 flex flex-col gap-1.5">
-                        <label className="text-xs text-muted-foreground" htmlFor={`corrige-${d.id}`}>
-                          Movimiento que corrige (opcional: deja de contar y queda marcado)
-                        </label>
-                        <select
-                          id={`corrige-${d.id}`}
-                          name="corrige_movimiento_id"
-                          defaultValue=""
-                          className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                        >
-                          <option value="">Ninguno: es un registro nuevo</option>
-                          {movimientosCorregibles(d.movimientos).map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {new Date(m.timestamp).toLocaleString("es-GT", { dateStyle: "short", timeStyle: "short", timeZone: "America/Guatemala" })}{" "}
-                              · {TIPO_EVENTO_LABELS[m.tipo_evento]}
-                              {m.de_cargo ? ` · ${CARGO_LABELS[m.de_cargo]} → ${CARGO_LABELS[m.a_cargo]}` : ` · a ${CARGO_LABELS[m.a_cargo]}`}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-muted-foreground">Nueva fase (opcional)</label>
-                        <Select name="nueva_fase" items={FASE_DOCUMENTO_LABELS}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Sin cambio" /></SelectTrigger>
-                          <SelectContent>
-                            {FASES.map((f) => (
-                              <SelectItem key={f} value={f}>{FASE_DOCUMENTO_LABELS[f]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-3">
-                        <label className="text-xs text-muted-foreground">Motivo (obligatorio, queda en la bitácora)</label>
-                        <Textarea name="observacion" rows={1} required />
-                      </div>
-                      <Button type="submit" variant="outline" className="self-end">Registrar</Button>
-                    </form>
-                  </details>
-                ) : null}
-              </div>
-            );
-          })}
+    <div
+      id={`doc-${d.id}`}
+      className={cn("scroll-mt-4 rounded-xl border p-4", meToca && "border-primary/40 bg-primary/5")}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="font-medium">
+            {d.documentos_catalogo ? `${d.documentos_catalogo.orden}. ` : ""}
+            {d.documentos_catalogo?.nombre ?? "Documento"}
+          </p>
+          {cadena.length > 0 && !d.no_aplica ? <CadenaRevision cadena={cadena} documento={d} /> : null}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          {meToca ? <Badge>Te toca</Badge> : null}
+          {d.no_aplica ? (
+            <Badge variant="outline">No aplica</Badge>
+          ) : (
+            <Badge variant={finalizado ? "default" : "secondary"}>{FASE_DOCUMENTO_LABELS[d.fase_actual]}</Badge>
+          )}
+        </div>
+      </div>
 
-      {puedeEditar && catalogoDisponible.length > 0 ? (
-        <form
-          action={agregarDocumentoActividad}
-          className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-4"
-        >
+      {d.no_aplica ? (
+        <p className="mt-3 text-sm">
+          <span className="text-muted-foreground">No aplica: </span>
+          {d.no_aplica_justificacion}
+        </p>
+      ) : null}
+
+      {hayAcciones ? (
+        <form action={avanzarDocumento} className="mt-3 flex flex-col gap-2 border-t pt-3">
           <input type="hidden" name="actividad_id" value={actividadId} />
-          <div className="flex min-w-64 flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Documento del catálogo pendiente de iniciar</label>
-            {catalogoDisponible.length === 1 ? (
-              // Con una sola opción, el Select de Base UI puede abrir y cerrar el popup en
-              // el mismo gesto (click o Enter) sin confirmar la selección, dejando el input
-              // oculto vacío y bloqueando el submit silenciosamente — mismo bug que el
-              // selector de auditor principal en actividad-form.tsx. Con una sola opción no
-              // hay nada que elegir, así que se fija igual que ese caso.
-              <>
-                <Input value={catalogoDisponible[0].nombre} disabled />
-                <input type="hidden" name="documento_catalogo_id" value={catalogoDisponible[0].id} />
-              </>
-            ) : (
-              <Select
-                name="documento_catalogo_id"
-                required
-                items={Object.fromEntries(catalogoDisponible.map((c) => [c.id, c.nombre]))}
-              >
-                <SelectTrigger className="w-full"><SelectValue placeholder="Selecciona un documento" /></SelectTrigger>
-                <SelectContent>
-                  {catalogoDisponible.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+          <input type="hidden" name="documento_actividad_id" value={d.id} />
+          <input type="hidden" name="fase_esperada" value={d.fase_actual} />
+          <input type="hidden" name="responsable_esperado" value={d.cargo_actual_responsable} />
+          <Textarea
+            name="observacion"
+            rows={1}
+            placeholder={enRevision ? "Observación (obligatoria si lo devuelves para corrección)" : "Observación (opcional)"}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {destino ? (
+              <Button type="submit" name="accion" value="entregar">
+                {d.fase_actual === "correccion" ? "Entregar corregido" : "Entregar"} a {CARGO_LABELS[destino]}
+              </Button>
+            ) : null}
+            {puedeAprobar ? (
+              <Button type="submit" name="accion" value="aprobar">
+                {siguiente ? `Aprobar y pasar a ${CARGO_LABELS[siguiente]}` : "Aprobar y finalizar"}
+              </Button>
+            ) : null}
+            {puedeDevolver ? (
+              <Button type="submit" name="accion" value="devolver" variant="outline">
+                Devolver al Auditor para corrección
+              </Button>
+            ) : null}
           </div>
-          <Button type="submit" variant="outline">Iniciar documento</Button>
+          {puedeDevolver ? (
+            <p className="text-xs text-muted-foreground">
+              Si lo devuelves, al corregirse la revisión empieza de nuevo: Auditor → Subjefe → Jefe, según corresponda.
+            </p>
+          ) : null}
         </form>
       ) : null}
+
+      <details className="mt-3 border-t pt-3">
+        <summary className="cursor-pointer text-xs text-muted-foreground">Más opciones</summary>
+        <div className="mt-3 flex flex-col gap-4">
+          <Link
+            href={`/actividades/${actividadId}/hoja-de-ruta?documento=${d.id}`}
+            className="w-fit text-sm text-primary underline-offset-2 hover:underline"
+          >
+            Ver la hoja de ruta de este documento
+          </Link>
+
+          {generaDocumento && !d.no_aplica ? <RutaExpediente ruta={d.ruta_completa} etiqueta="Archivo" /> : null}
+          {!generaDocumento ? <p className="text-xs text-muted-foreground">Este paso no genera un archivo.</p> : null}
+
+          {puedeEditar && puedeVistoBueno && !d.no_aplica ? (
+            <form action={avanzarDocumento} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="actividad_id" value={actividadId} />
+              <input type="hidden" name="documento_actividad_id" value={d.id} />
+              <input type="hidden" name="fase_esperada" value={d.fase_actual} />
+              <input type="hidden" name="responsable_esperado" value={d.cargo_actual_responsable} />
+              <Textarea name="observacion" rows={1} placeholder="Observación (opcional)" className="max-w-md" />
+              <Button type="submit" name="accion" value="visto_bueno" size="sm" variant="outline">
+                Dejar visto bueno ({CARGO_LABELS[usuario!.cargo!]})
+              </Button>
+            </form>
+          ) : null}
+
+          {puedeEditar && puedeNoAplica && !finalizado ? (
+            <form action={marcarNoAplica} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="actividad_id" value={actividadId} />
+              <input type="hidden" name="documento_actividad_id" value={d.id} />
+              <Textarea
+                name="justificacion"
+                rows={1}
+                required
+                minLength={10}
+                placeholder="Justificación para marcarlo como No aplica (queda en la bitácora)"
+                className="max-w-md"
+              />
+              <Button type="submit" size="sm" variant="outline">Marcar No aplica</Button>
+            </form>
+          ) : null}
+
+          {puedeEditar && puedeNoAplica && d.no_aplica && enEtapaActual ? (
+            <form action={marcarNoAplica} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="actividad_id" value={actividadId} />
+              <input type="hidden" name="documento_actividad_id" value={d.id} />
+              <input type="hidden" name="revertir" value="1" />
+              <Textarea name="justificacion" rows={1} required minLength={10} placeholder="Motivo para revertir el No aplica" className="max-w-md" />
+              <Button type="submit" size="sm" variant="outline">Revertir No aplica</Button>
+            </form>
+          ) : null}
+
+          {esControlTotal ? <RegistroManual actividadId={actividadId} documento={d} /> : null}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+/** Dirección: registro tardío (con la fecha real) o corrección de un movimiento anterior. */
+function RegistroManual({ actividadId, documento: d }: { actividadId: string; documento: DocumentoConDetalle }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border p-3">
+      <p className="text-sm font-medium">Registro manual de Dirección (registro tardío o corrección)</p>
+      <form action={registrarMovimiento} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <input type="hidden" name="actividad_id" value={actividadId} />
+        <input type="hidden" name="documento_actividad_id" value={d.id} />
+        <MovimientoFormFields cargoActual={d.cargo_actual_responsable} />
+        <div className="col-span-2 flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground" htmlFor={`fecha_evento-${d.id}`}>
+            Cuándo ocurrió (solo si es registro tardío; vacío = ahora)
+          </label>
+          <Input id={`fecha_evento-${d.id}`} name="fecha_evento" type="datetime-local" />
+        </div>
+        <div className="col-span-2 flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground" htmlFor={`corrige-${d.id}`}>
+            Movimiento que corrige (opcional: deja de contar y queda marcado)
+          </label>
+          <select
+            id={`corrige-${d.id}`}
+            name="corrige_movimiento_id"
+            defaultValue=""
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Ninguno: es un registro nuevo</option>
+            {movimientosCorregibles(d.movimientos).map((m) => (
+              <option key={m.id} value={m.id}>
+                {new Date(m.timestamp).toLocaleString("es-GT", { dateStyle: "short", timeStyle: "short", timeZone: "America/Guatemala" })}{" "}
+                · {TIPO_EVENTO_LABELS[m.tipo_evento]}
+                {m.de_cargo ? ` · ${CARGO_LABELS[m.de_cargo]} → ${CARGO_LABELS[m.a_cargo]}` : ` · a ${CARGO_LABELS[m.a_cargo]}`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">Nueva fase (opcional)</label>
+          <Select name="nueva_fase" items={FASE_DOCUMENTO_LABELS}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Sin cambio" /></SelectTrigger>
+            <SelectContent>
+              {FASES.map((f) => (
+                <SelectItem key={f} value={f}>{FASE_DOCUMENTO_LABELS[f]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-3">
+          <label className="text-xs text-muted-foreground">Motivo (obligatorio, queda en la bitácora)</label>
+          <Textarea name="observacion" rows={1} required />
+        </div>
+        <Button type="submit" variant="outline" className="self-end">Registrar</Button>
+      </form>
     </div>
   );
 }

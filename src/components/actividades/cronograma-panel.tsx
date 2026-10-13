@@ -40,13 +40,13 @@ export function CronogramaPanel({
   puedeEditar: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div id="cronograma" className="flex scroll-mt-4 flex-col gap-6">
       {hitos.length === 0 ? (
         <p className="text-sm text-muted-foreground">Ningún hito capturado todavía.</p>
       ) : (
         <div className="flex flex-col gap-3">
           {hitos.map((h) => (
-            <div key={h.id} className="rounded-xl border p-4">
+            <div key={h.id} id={`hito-${h.id}`} className="scroll-mt-4 rounded-xl border p-4">
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
                   <p className="font-medium">
@@ -82,10 +82,9 @@ export function CronogramaPanel({
       )}
 
       {puedeEditar ? (
-        <form
-          action={agregarHito}
-          className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-4"
-        >
+        <details className="rounded-xl border border-dashed" open={hitos.length === 0}>
+          <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">+ Agregar hito</summary>
+        <form action={agregarHito} className="flex flex-wrap items-end gap-3 border-t p-4">
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex w-28 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Código</label>
@@ -131,6 +130,7 @@ export function CronogramaPanel({
           </div>
           <Button type="submit" variant="outline">Agregar hito</Button>
         </form>
+        </details>
       ) : null}
     </div>
   );

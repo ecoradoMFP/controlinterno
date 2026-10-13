@@ -44,7 +44,7 @@ export function EquipoPanel({
   puedeCorregir: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div id="equipo" className="flex scroll-mt-4 flex-col gap-4">
       <ul className="divide-y rounded-xl border shadow-sm">
         {equipo.length === 0 ? (
           <li className="p-4 text-sm text-muted-foreground">Sin miembros de equipo asignados aún.</li>
@@ -68,7 +68,9 @@ export function EquipoPanel({
       </ul>
 
       {puedeEditar ? (
-        <form action={agregarMiembroEquipo} className="flex flex-wrap items-end gap-3">
+        <details className="group rounded-xl border border-dashed" open={equipo.length === 0}>
+          <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">+ Agregar al equipo</summary>
+        <form action={agregarMiembroEquipo} className="flex flex-wrap items-end gap-3 border-t p-3">
           <input type="hidden" name="actividad_id" value={actividadId} />
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Usuario</label>
@@ -105,6 +107,7 @@ export function EquipoPanel({
           </div>
           <Button type="submit">Agregar</Button>
         </form>
+        </details>
       ) : null}
     </div>
   );
@@ -113,7 +116,7 @@ export function EquipoPanel({
 // Flujograma institucional real: antes de cualquier trabajo, el equipo firma de recibido el
 // nombramiento y su Declaración de Independencia — se exige para poder cerrar Planificación
 // (ver el trigger `validar_avance_etapa`).
-function ConfirmacionEquipo({
+export function ConfirmacionEquipo({
   actividadId,
   miembro,
   puedeEditar,

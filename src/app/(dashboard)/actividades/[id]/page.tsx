@@ -1,4 +1,5 @@
 import { identificadorAuditoria } from "@/lib/auditoria";
+import { FileText, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -20,9 +21,18 @@ import { CronogramaPanel } from "@/components/actividades/cronograma-panel";
 import { DocumentosPanel } from "@/components/actividades/documentos-panel";
 import { ExpedientePanel } from "@/components/actividades/expediente-panel";
 import { BitacoraPanel } from "@/components/actividades/bitacora-panel";
-import { cerrarEtapa } from "./actions";
-import { ETAPA_ACTIVIDAD_LABELS, SIGUIENTE_ETAPA, type CargoEnum, type Movimiento } from "@/types/domain";
-import { UMBRAL_POR_DEFECTO, type UmbralSemaforo } from "@/lib/semaforo";
+import { SiguientePaso, type PendienteDocumento, type PendienteHito } from "@/components/actividades/siguiente-paso";
+import { PasosCiclo, type PasoCiclo } from "@/components/recomendaciones/pasos-ciclo";
+import {
+  ETAPA_ACTIVIDAD_LABELS,
+  SIGUIENTE_ETAPA,
+  type CargoEnum,
+  type EtapaActividadEnum,
+  type Movimiento,
+} from "@/types/domain";
+import { calcularSemaforo, UMBRAL_POR_DEFECTO, type UmbralSemaforo } from "@/lib/semaforo";
+
+const ORDEN_ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
 
 export default async function ActividadDetallePage({
   params,
@@ -32,7 +42,7 @@ export default async function ActividadDetallePage({
   searchParams: Promise<{ tab?: string; error?: string }>;
 }) {
   const { id } = await params;
-  const { tab = "equipo", error } = await searchParams;
+  const { tab = "documentos", error } = await searchParams;
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
@@ -156,21 +166,49 @@ export default async function ActividadDetallePage({
   const umbralHito: UmbralSemaforo = parametrosHito ?? UMBRAL_POR_DEFECTO;
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // Mismas condiciones que valida el trigger `validar_avance_etapa` en la base de datos — se
-  // recalculan aquí solo para mostrar un aviso antes de intentar cerrar, no como la validación
-  // real (esa vive en la base, sección 12.1/12.3).
-  const etapaSiguiente = SIGUIENTE_ETAPA[actividad.etapa_actual];
-  const docsPendientesEtapa = documentosSeguros.filter(
-    (d) => d.documentos_catalogo?.etapa === actividad.etapa_actual && d.fase_actual !== "finalizado",
-  ).length;
-  const hitosPendientesEtapa = (hitos ?? []).filter(
-    (h) => h.etapa === actividad.etapa_actual && h.estado !== "concluido",
-  ).length;
-  const equipoIncompleto =
-    actividad.etapa_actual === "planificacion"
-      ? (equipo ?? []).filter((m) => !m.fecha_recibido || !m.fecha_declaracion_independencia).length
-      : 0;
-  const pendientesEtapa = docsPendientesEtapa + hitosPendientesEtapa + equipoIncompleto;
+  // Pendientes de la etapa en curso: mismas condiciones que valida el trigger
+  // `validar_avance_etapa` en la base de datos (la validación real vive allá); aquí solo arman
+  // la tarjeta "Siguiente paso".
+  const etapa = actividad.etapa_actual;
+  const etapaSiguiente = SIGUIENTE_ETAPA[etapa];
+  const docsPendientes: PendienteDocumento[] = documentosSeguros
+    .filter((d) => d.documentos_catalogo?.etapa === etapa && d.fase_actual !== "finalizado")
+    .map((d) => ({
+      id: d.id,
+      nombre: d.documentos_catalogo?.nombre ?? "Documento",
+      orden: d.documentos_catalogo?.orden ?? null,
+      fase: d.fase_actual,
+      responsable: d.cargo_actual_responsable,
+    }));
+  const hitosPendientes: PendienteHito[] = (hitos ?? [])
+    .filter((h) => h.etapa === etapa && h.estado !== "concluido")
+    .map((h) => ({
+      id: h.id,
+      codigo: h.codigo_jerarquico,
+      nombre: h.nombre,
+      fechaFin: h.fecha_fin_esperada,
+      responsable: h.cargo_responsable,
+      color: calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriadosSet, umbralHito),
+    }));
+  const enPlanificacion = etapa === "planificacion";
+  const equipoPendiente = enPlanificacion
+    ? (equipo ?? []).filter((m) => !m.fecha_recibido || !m.fecha_declaracion_independencia)
+    : [];
+  const sinEquipo = enPlanificacion && (equipo ?? []).length === 0;
+
+  // Barra de etapas: documentos terminados de cada una.
+  const indiceEtapa = ORDEN_ETAPAS.indexOf(etapa);
+  const pasos: PasoCiclo[] = ORDEN_ETAPAS.map((e, i) => {
+    const docs = documentosSeguros.filter((d) => d.documentos_catalogo?.etapa === e);
+    const hechos = docs.filter((d) => d.fase_actual === "finalizado").length;
+    const estado: PasoCiclo["estado"] =
+      actividad.concluida || i < indiceEtapa ? "hecho" : i === indiceEtapa ? "actual" : "pendiente";
+    let detalle: string | null = null;
+    if (e === "expediente_cierre") detalle = actividad.concluida ? "Entregado al archivo" : "Notificaciones y archivo";
+    else if (docs.length > 0) detalle = `${hechos} de ${docs.length} documentos`;
+    return { titulo: ETAPA_ACTIVIDAD_LABELS[e], detalle, estado };
+  });
+
   const documentosConDetalle = documentosSeguros.map((d) => ({
     ...d,
     movimientos: d.movimientos as unknown as Movimiento[],
@@ -182,62 +220,33 @@ export default async function ActividadDetallePage({
       <BackLink href="/actividades" label="Volver a Auditorías (CAI)" />
 
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="codigo-expediente text-lg">{identificadorAuditoria(actividad)}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {actividad.cai ? `Nombramiento ${actividad.no_nombramiento} · ` : ""}
-                {actividad.dependencia_auditada}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex gap-2">
-                {actividad.concluida ? <Badge>Concluida</Badge> : null}
-                <Badge variant="secondary">{ETAPA_ACTIVIDAD_LABELS[actividad.etapa_actual]}</Badge>
-              </div>
-              <Link
-                href={`/actividades/${id}/hoja-de-ruta`}
-                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-              >
-                Exportar hoja de ruta completa
-              </Link>
-              {puedeCerrarEtapa && etapaSiguiente ? (
-                <div className="flex flex-col items-end gap-1">
-                  <form action={cerrarEtapa}>
-                    <input type="hidden" name="actividad_id" value={id} />
-                    <Button type="submit" variant="outline" size="sm">
-                      Cerrar etapa → {ETAPA_ACTIVIDAD_LABELS[etapaSiguiente]}
-                    </Button>
-                  </form>
-                  {pendientesEtapa > 0 ? (
-                    <p className="max-w-56 text-right text-xs text-muted-foreground">
-                      Faltan {docsPendientesEtapa > 0 ? `${docsPendientesEtapa} documento(s)` : null}
-                      {docsPendientesEtapa > 0 && hitosPendientesEtapa > 0 ? ", " : null}
-                      {hitosPendientesEtapa > 0 ? `${hitosPendientesEtapa} hito(s)` : null}
-                      {(docsPendientesEtapa > 0 || hitosPendientesEtapa > 0) && equipoIncompleto > 0 ? " y " : null}
-                      {equipoIncompleto > 0 ? `${equipoIncompleto} confirmación(es) de equipo` : null} por terminar en
-                      esta etapa.
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+        <CardHeader className="gap-1">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <CardTitle className="codigo-expediente text-xl">{identificadorAuditoria(actividad)}</CardTitle>
+            {actividad.concluida ? <Badge>Concluida</Badge> : null}
+          </div>
+          <div className="grid grid-cols-1 gap-x-10 gap-y-2 pt-1 sm:grid-cols-3">
+            <Info label="Dependencia auditada" value={actividad.dependencia_auditada} />
+            <Info label="Tipo de auditoría" value={actividad.tipo_auditoria} />
+            <Info label="Nombramiento" value={actividad.no_nombramiento} mono />
+            <Info label="Departamento" value={actividad.departamentos?.nombre} />
+            <Info label="Auditor principal" value={actividad.auditor_principal?.nombre} />
+            <Info label="Límite de notificación" value={actividad.fecha_notificacion} />
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
-          <Info label="Departamento" value={actividad.departamentos?.nombre} />
-          <Info label="Auditor principal" value={actividad.auditor_principal?.nombre} />
-          <Info label="Tipo de auditoría" value={actividad.tipo_auditoria} />
-          <Info label="Límite de notificación (plazo)" value={actividad.fecha_notificacion} />
-          <Info label="Período evaluado" value={`${actividad.periodo_evaluado_inicio} — ${actividad.periodo_evaluado_fin}`} />
-          <Info label="Inicio de plazo" value={actividad.fecha_inicio_plazo} />
-          <Info
-            label="Expedientes relacionados"
-            value={actividad.expedientes_relacionados.length > 0 ? actividad.expedientes_relacionados.join(", ") : "—"}
-          />
+        <CardContent className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href={`/actividades/${id}/hoja-de-ruta`} />}>
+            <FileText /> Hoja de ruta completa
+          </Button>
+          {informeVinculado ? (
+            <Button variant="outline" render={<Link href={`/recomendaciones/cai/${informeVinculado.id}`} />}>
+              <ListChecks /> Ver en Recomendaciones
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
+
+      <PasosCiclo pasos={pasos} etiqueta="Avance de la auditoría" />
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -245,22 +254,42 @@ export default async function ActividadDetallePage({
         </p>
       ) : null}
 
-      <Tabs defaultValue={tab}>
-        <TabsList>
-          <TabsTrigger value="equipo">Equipo</TabsTrigger>
-          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+      <SiguientePaso
+        actividadId={id}
+        etapa={etapa}
+        concluida={actividad.concluida}
+        cargoUsuario={usuario?.cargo ?? null}
+        documentos={docsPendientes}
+        hitos={hitosPendientes}
+        equipoPendiente={equipoPendiente}
+        sinEquipo={sinEquipo}
+        puedeEditar={puedeEditar}
+        puedeCerrarEtapa={puedeCerrarEtapa}
+        puedeCorregirFechasEquipo={puedeEditar && esJefaturaAuditoria(usuario)}
+        etapaSiguiente={etapaSiguiente}
+        informeId={informeVinculado?.id ?? null}
+        cierre={actividad}
+        puedeCorregirCierre={puedeCorregirHechoConsumado(usuario)}
+      />
+
+      {/* `key`: al llegar desde un enlace "Abrir" con otra pestaña, se vuelve a montar en esa. */}
+      <Tabs key={tab} defaultValue={tab}>
+        <TabsList className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          <TabsTrigger value="bitacora">Bitácora</TabsTrigger>
+          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+          <TabsTrigger value="equipo">Equipo</TabsTrigger>
           <TabsTrigger value="expediente">Nombramiento y cierre</TabsTrigger>
+          <TabsTrigger value="bitacora">Bitácora</TabsTrigger>
         </TabsList>
-        <TabsContent value="equipo">
-          <EquipoPanel
+        <TabsContent value="documentos">
+          <DocumentosPanel
             actividadId={id}
-            equipo={equipo ?? []}
-            candidatos={candidatosEquipo}
-            correcciones={correccionesEquipo ?? []}
+            documentos={documentosConDetalle}
+            catalogoDisponible={catalogoDisponible}
+            ordenRevisionPorDocumento={ordenRevisionPorDocumento}
+            usuario={usuario}
+            etapaActual={etapa}
             puedeEditar={puedeEditar}
-            puedeCorregir={puedeEditar && esJefaturaAuditoria(usuario)}
           />
         </TabsContent>
         <TabsContent value="cronograma">
@@ -274,27 +303,36 @@ export default async function ActividadDetallePage({
             puedeEditar={puedeEditar}
           />
         </TabsContent>
-        <TabsContent value="documentos">
-          <DocumentosPanel
+        <TabsContent value="equipo">
+          <EquipoPanel
             actividadId={id}
-            documentos={documentosConDetalle}
-            catalogoDisponible={catalogoDisponible}
-            ordenRevisionPorDocumento={ordenRevisionPorDocumento}
-            usuario={usuario}
-            etapaActual={actividad.etapa_actual}
+            equipo={equipo ?? []}
+            candidatos={candidatosEquipo}
+            correcciones={correccionesEquipo ?? []}
             puedeEditar={puedeEditar}
+            puedeCorregir={puedeEditar && esJefaturaAuditoria(usuario)}
           />
         </TabsContent>
         <TabsContent value="expediente">
-          <ExpedientePanel
-            actividad={actividad}
-            rutaCompleta={rutaCompletaExpediente(actividad.ruta_expediente)}
-            informeId={informeVinculado?.id ?? null}
-            fechaProyectoJefatura={primeraEntregaA("jefe")}
-            fechaProyectoDireccion={primeraEntregaA("director")}
-            puedeGestionar={puedeCerrarEtapa}
-            puedeCorregirCierre={puedeCorregirHechoConsumado(usuario)}
-          />
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 gap-x-10 gap-y-2 rounded-xl border p-4 text-sm sm:grid-cols-3">
+              <Info label="Período evaluado" value={`${actividad.periodo_evaluado_inicio} — ${actividad.periodo_evaluado_fin}`} />
+              <Info label="Inicio de plazo" value={actividad.fecha_inicio_plazo} />
+              <Info
+                label="Expedientes relacionados"
+                value={actividad.expedientes_relacionados.length > 0 ? actividad.expedientes_relacionados.join(", ") : "—"}
+              />
+            </div>
+            <ExpedientePanel
+              actividad={actividad}
+              rutaCompleta={rutaCompletaExpediente(actividad.ruta_expediente)}
+              informeId={informeVinculado?.id ?? null}
+              fechaProyectoJefatura={primeraEntregaA("jefe")}
+              fechaProyectoDireccion={primeraEntregaA("director")}
+              puedeGestionar={puedeCerrarEtapa}
+              puedeCorregirCierre={puedeCorregirHechoConsumado(usuario)}
+            />
+          </div>
         </TabsContent>
         <TabsContent value="bitacora">
           <div className="flex flex-col gap-4">
@@ -322,11 +360,11 @@ export default async function ActividadDetallePage({
   );
 }
 
-function Info({ label, value }: { label: string; value?: string | null }) {
+function Info({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p>{value ?? "—"}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className={mono ? "codigo-expediente" : undefined}>{value ?? "—"}</p>
     </div>
   );
 }
