@@ -1,6 +1,7 @@
 import { agregarHito, concluirHito, corregirPlazoCronograma } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { CronogramaSagUdaiForm } from "@/components/actividades/cronograma-sag-udai-form";
+import { GanttCronograma } from "@/components/actividades/gantt-cronograma";
 import { FechasHitoFields } from "@/components/actividades/fechas-hito-fields";
 import { SemaforoChip } from "@/components/semaforo-chip";
 import { Button } from "@/components/ui/button";
@@ -78,8 +79,8 @@ export function CronogramaPanel({
         <p className="font-medium">Cronograma de actividades</p>
         <p className="text-sm text-muted-foreground">
           Son los plazos que se registran en el SAG-UDAI-WEB y se reportan a la Contraloría General de Cuentas, por eso
-          deben respetarse. El semáforo indica, para cada actividad sin concluir, si va a tiempo. Una etapa no puede
-          cerrarse mientras tenga actividades sin concluir.
+          deben respetarse. El semáforo indica, para cada actividad sin concluir, si va a tiempo. Al cerrar una etapa,
+          sus actividades que sigan abiertas se concluyen con la fecha del cierre.
         </p>
       </div>
 
@@ -90,6 +91,8 @@ export function CronogramaPanel({
           <p className="text-muted-foreground">Todavía no se ha registrado el cronograma de esta auditoría.</p>
         )
       ) : (
+        <>
+        <GanttCronograma hitos={ordenadas} hoy={hoy} feriados={feriados} umbral={umbral} />
         <div className="overflow-x-auto rounded-xl border">
           <table className="w-full text-left">
             <thead className="bg-muted/50 text-sm text-muted-foreground">
@@ -172,6 +175,7 @@ export function CronogramaPanel({
             </tfoot>
           </table>
         </div>
+        </>
       )}
 
       {correcciones.length > 0 ? (

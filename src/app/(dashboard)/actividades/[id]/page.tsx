@@ -1,4 +1,5 @@
 import { identificadorAuditoria } from "@/lib/auditoria";
+import { hoyGuatemala } from "@/lib/recomendaciones";
 import { FileText, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -177,7 +178,7 @@ export default async function ActividadDetallePage({
   const puedeCerrarEtapa = await puedeCerrarEtapaActividad(usuario, id, supabase);
   const feriadosSet = new Set((feriadosRows ?? []).map((f) => f.fecha));
   const umbralHito: UmbralSemaforo = parametrosHito ?? UMBRAL_POR_DEFECTO;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyGuatemala();
 
   // Pendientes de la etapa en curso: mismas condiciones que valida el trigger
   // `validar_avance_etapa` en la base de datos (la validación real vive allá); aquí solo arman

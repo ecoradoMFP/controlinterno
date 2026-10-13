@@ -1,4 +1,5 @@
 import { identificadorAuditoria } from "@/lib/auditoria";
+import { hoyGuatemala } from "@/lib/recomendaciones";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
   const umbralPorAmbito = new Map((parametros ?? []).map((p) => [p.ambito, p as UmbralSemaforo]));
   const umbralHito = umbralPorAmbito.get("hito") ?? UMBRAL_POR_DEFECTO;
   const umbralOficio = umbralPorAmbito.get("oficio") ?? UMBRAL_POR_DEFECTO;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyGuatemala();
 
   const colorPorActividad = calcularColorPorActividad(
     hitosAbiertos ?? [],
