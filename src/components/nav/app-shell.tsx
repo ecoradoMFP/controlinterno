@@ -39,10 +39,10 @@ import { cn } from "@/lib/utils";
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/actividades", label: "Auditorías (CAI)", icon: ClipboardList },
+  { href: "/reportes", label: "Tablero", icon: BarChart3 },
   { href: "/documentos", label: "Mis pendientes", icon: Inbox },
+  { href: "/actividades", label: "Auditorías (CAI)", icon: ClipboardList },
   { href: "/oficios", label: "Oficios", icon: Mail },
-  { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/capacitaciones", label: "Capacitaciones", icon: GraduationCap },
   { href: "/recomendaciones", label: "Recomendaciones (CAI)", icon: ListChecks },
 ];

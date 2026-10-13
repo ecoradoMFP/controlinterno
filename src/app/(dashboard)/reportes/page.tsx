@@ -241,7 +241,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Reportes</h1>
+          <h1 className="text-xl font-semibold">Tablero</h1>
           <p className="text-sm text-muted-foreground">Cómo van las auditorías, qué requiere atención y dónde se detiene el trabajo.</p>
         </div>
         {departamentosConDatos.length > 1 ? (

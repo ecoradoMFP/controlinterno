@@ -199,7 +199,21 @@
  * cromo de la app, no parte del documento que un auditor va a imprimir/guardar como PDF. */
 @media print {
   header,
-  footer {
+  footer,
+  aside {
     display: none !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  /* Que el semáforo y las barras del Gantt salgan con su color al imprimir o guardar en PDF. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: letter;
+    margin: 12mm;
   }
 }

@@ -19,7 +19,8 @@ export async function login(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Credenciales inválidas")}`);
   }
 
-  redirect("/actividades");
+  // Página de inicio: el tablero (Reportes).
+  redirect("/reportes");
 }
 
 export async function logout() {

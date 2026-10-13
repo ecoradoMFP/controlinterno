@@ -1,6 +1,6 @@
 import { identificadorAuditoria } from "@/lib/auditoria";
 import { hoyGuatemala } from "@/lib/recomendaciones";
-import { FileText, ListChecks } from "lucide-react";
+import { FileText, ListChecks, Printer } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -249,6 +249,9 @@ export default async function ActividadDetallePage({
           </div>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href={`/actividades/${id}/ficha`} />}>
+            <Printer /> Ficha para imprimir
+          </Button>
           <Button variant="outline" render={<Link href={`/actividades/${id}/hoja-de-ruta`} />}>
             <FileText /> Hoja de ruta completa
           </Button>
