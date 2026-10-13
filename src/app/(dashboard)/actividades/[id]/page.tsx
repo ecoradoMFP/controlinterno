@@ -20,6 +20,7 @@ import { EquipoPanel } from "@/components/actividades/equipo-panel";
 import { CronogramaPanel } from "@/components/actividades/cronograma-panel";
 import { DocumentosPanel } from "@/components/actividades/documentos-panel";
 import { ExpedientePanel } from "@/components/actividades/expediente-panel";
+import { EditarDatosAuditoria } from "@/components/actividades/editar-datos-auditoria";
 import { BitacoraPanel } from "@/components/actividades/bitacora-panel";
 import { SiguientePaso, type PendienteDocumento, type PendienteHito } from "@/components/actividades/siguiente-paso";
 import { PasosCiclo, type PasoCiclo } from "@/components/recomendaciones/pasos-ciclo";
@@ -73,6 +74,8 @@ export default async function ActividadDetallePage({
     { data: etapaHistorial },
     { data: informeVinculado },
     { data: correccionesEquipo },
+    { data: correccionesPlazos },
+    { data: cambiosAuditoria },
   ] = await Promise.all([
     supabase
       .from("actividades_equipo")
@@ -108,6 +111,16 @@ export default async function ActividadDetallePage({
     supabase
       .from("actividades_equipo_correcciones")
       .select("*, registrado_por:usuarios!actividades_equipo_correcciones_registrado_por_nit_fkey(nombre)")
+      .eq("actividad_id", id)
+      .order("created_at"),
+    supabase
+      .from("hitos_cronograma_correcciones")
+      .select("*, registrado_por:usuarios!hitos_cronograma_correcciones_registrado_por_nit_fkey(nombre)")
+      .eq("actividad_id", id)
+      .order("created_at"),
+    supabase
+      .from("actividades_cambios")
+      .select("*, registrado_por:usuarios!actividades_cambios_registrado_por_nit_fkey(nombre)")
       .eq("actividad_id", id)
       .order("created_at"),
   ]);
@@ -302,6 +315,8 @@ export default async function ActividadDetallePage({
             umbral={umbralHito}
             hoy={hoy}
             puedeEditar={puedeEditar}
+            puedeCorregir={puedeEditar && esJefaturaAuditoria(usuario)}
+            correcciones={correccionesPlazos ?? []}
           />
         </TabsContent>
         <TabsContent value="equipo">
@@ -314,7 +329,19 @@ export default async function ActividadDetallePage({
             puedeCorregir={puedeEditar && esJefaturaAuditoria(usuario)}
           />
         </TabsContent>
-        <TabsContent value="expediente">
+        <TabsContent value="expediente" className="flex flex-col gap-6">
+          <EditarDatosAuditoria
+            actividad={actividad}
+            auditores={(candidatos ?? [])
+              .filter((u) => u.departamento_id === actividad.departamento_id || u.nit === actividad.auditor_principal_nit)
+              .map((u) => ({ nit: u.nit, nombre: u.nombre }))}
+            cambios={cambiosAuditoria ?? []}
+            puedeCorregir={
+              puedeEscribir(usuario) &&
+              esJefaturaAuditoria(usuario) &&
+              (!actividad.concluida || puedeCorregirHechoConsumado(usuario))
+            }
+          />
           <ExpedientePanel
               actividad={actividad}
               rutaCompleta={rutaCompletaExpediente(actividad.ruta_expediente)}

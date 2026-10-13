@@ -1,4 +1,5 @@
-import { agregarHito, concluirHito } from "@/app/(dashboard)/actividades/[id]/actions";
+import { agregarHito, concluirHito, corregirPlazoCronograma } from "@/app/(dashboard)/actividades/[id]/actions";
+import { Textarea } from "@/components/ui/textarea";
 import { CronogramaSagUdaiForm } from "@/components/actividades/cronograma-sag-udai-form";
 import { FechasHitoFields } from "@/components/actividades/fechas-hito-fields";
 import { SemaforoChip } from "@/components/semaforo-chip";
@@ -21,6 +22,18 @@ import {
 } from "@/types/domain";
 import { calcularSemaforo, cumplidoATiempo, COLOR_SEMAFORO_LABELS, type UmbralSemaforo } from "@/lib/semaforo";
 
+export type CorreccionPlazo = {
+  id: string;
+  hito_id: string;
+  inicio_anterior: string;
+  fin_anterior: string;
+  inicio_nuevo: string;
+  fin_nuevo: string;
+  motivo: string;
+  created_at: string;
+  registrado_por: { nombre: string } | null;
+};
+
 const ETAPAS: EtapaDocumentoEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados"];
 
 /** "2026-03-26" → "26/03/2026" */
@@ -39,6 +52,8 @@ export function CronogramaPanel({
   umbral,
   hoy,
   puedeEditar,
+  puedeCorregir,
+  correcciones,
 }: {
   actividadId: string;
   hitos: (HitoCronograma & { documentos_catalogo: Pick<DocumentoCatalogo, "nombre"> | null })[];
@@ -47,7 +62,11 @@ export function CronogramaPanel({
   umbral: UmbralSemaforo;
   hoy: string;
   puedeEditar: boolean;
+  /** Jefatura: corrige plazos ya registrados, con motivo. */
+  puedeCorregir: boolean;
+  correcciones: CorreccionPlazo[];
 }) {
+  const nombrePorHito = new Map(hitos.map((h) => [h.id, `${h.codigo_jerarquico}. ${h.nombre}`]));
   const ordenadas = [...hitos].sort((a, b) =>
     a.codigo_jerarquico.localeCompare(b.codigo_jerarquico, "es", { numeric: true }),
   );
@@ -113,6 +132,30 @@ export function CronogramaPanel({
                           </form>
                         </details>
                       ) : null}
+                      {puedeCorregir && !h.fecha_fin_real ? (
+                        <details>
+                          <summary className="cursor-pointer text-sm text-primary">Corregir plazo (jefatura)</summary>
+                          <form action={corregirPlazoCronograma} className="mt-2 flex w-72 flex-col gap-2 rounded-lg border bg-background p-3">
+                            <input type="hidden" name="actividad_id" value={actividadId} />
+                            <input type="hidden" name="hito_id" value={h.id} />
+                            <label className="flex flex-col gap-1 text-sm">
+                              Del
+                              <Input name="fecha_inicio" type="date" required defaultValue={h.fecha_inicio_esperada} className="h-9" />
+                            </label>
+                            <label className="flex flex-col gap-1 text-sm">
+                              Al
+                              <Input name="fecha_fin" type="date" required defaultValue={h.fecha_fin_esperada} className="h-9" />
+                            </label>
+                            <label className="flex flex-col gap-1 text-sm">
+                              Motivo de la corrección
+                              <Textarea name="motivo" required minLength={10} rows={2} />
+                            </label>
+                            <Button type="submit" size="sm" variant="outline" className="w-fit">
+                              Guardar corrección
+                            </Button>
+                          </form>
+                        </details>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -130,6 +173,23 @@ export function CronogramaPanel({
           </table>
         </div>
       )}
+
+      {correcciones.length > 0 ? (
+        <section className="flex flex-col gap-2 rounded-xl border p-4">
+          <h3 className="font-medium">Correcciones de plazos ({correcciones.length})</h3>
+          <ul className="flex flex-col gap-2 text-sm">
+            {correcciones.map((c) => (
+              <li key={c.id} className="border-l-2 pl-3">
+                <span className="font-medium">{nombrePorHito.get(c.hito_id) ?? "Actividad"}</span>: del {fecha(c.inicio_anterior)} al{" "}
+                {fecha(c.fin_anterior)} pasó a del {fecha(c.inicio_nuevo)} al {fecha(c.fin_nuevo)}.{" "}
+                <span className="text-muted-foreground">
+                  {c.registrado_por?.nombre ?? "—"}, {fecha(c.created_at.slice(0, 10))}. Motivo: {c.motivo}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {puedeEditar && ordenadas.length > 0 ? (
         <details className="rounded-xl border border-dashed">

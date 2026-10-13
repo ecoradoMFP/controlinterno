@@ -45,6 +45,21 @@ export function diasHabilesEntre(inicioISO: string, finISO: string, feriados: Re
 }
 
 /**
+ * Fecha que resulta de contar `dias` hábiles después de `desdeISO` (sin contar ese día), saltando
+ * fines de semana y `feriados`. Para el vencimiento de un oficio con plazo en días hábiles.
+ */
+export function sumarDiasHabiles(desdeISO: string, dias: number, feriados: ReadonlySet<string>): string {
+  let d = new Date(`${desdeISO}T00:00:00Z`);
+  let cuenta = 0;
+  while (cuenta < dias) {
+    d = new Date(d.getTime() + 86400000);
+    const iso = d.toISOString().slice(0, 10);
+    if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !feriados.has(iso)) cuenta++;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * Clasifica un hito/oficio abierto (sin fecha de conclusión/respuesta) según el % de plazo
  * hábil restante. Si el rango esperado tiene 0 días hábiles (p. ej. cae todo en feriado), se
  * trata como "sin margen": verde si aún no arrancó, rojo si ya debería haber concluido.

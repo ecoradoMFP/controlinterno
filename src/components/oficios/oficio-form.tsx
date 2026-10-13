@@ -10,17 +10,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FechasOficioFields } from "@/components/oficios/fechas-oficio-fields";
 import type { Usuario } from "@/types/domain";
 
 export function OficioForm({
   actividades,
   responsable,
+  asuetos,
   error,
   fieldErrors,
 }: {
   /** `etiqueta`: el identificador visible de la auditoría (su CAI). */
   actividades: { id: string; etiqueta: string }[];
   responsable: Usuario;
+  asuetos: string[];
   error?: string;
   fieldErrors?: Record<string, string>;
 }) {
@@ -87,32 +90,11 @@ export function OficioForm({
         <Textarea id="asunto" name="asunto" required />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Fecha de emisión" htmlFor="fecha_emision" error={fieldErrors?.fecha_emision}>
-          <Input id="fecha_emision" name="fecha_emision" type="date" required />
-        </Field>
-        <Field label="Medio de envío (opcional)" htmlFor="medio_envio">
-          <Input id="medio_envio" name="medio_envio" placeholder="Correo, físico, ..." />
-        </Field>
-      </div>
+      <FechasOficioFields asuetos={asuetos} errores={fieldErrors} />
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field
-          label="Plazo de respuesta en días (opcional)"
-          htmlFor="plazo_respuesta_dias"
-          error={fieldErrors?.plazo_respuesta_dias}
-        >
-          <Input id="plazo_respuesta_dias" name="plazo_respuesta_dias" type="number" min={1} step={1} />
-        </Field>
-        <Field
-          label="Fecha de vencimiento (opcional)"
-          htmlFor="fecha_vencimiento"
-          error={fieldErrors?.fecha_vencimiento}
-        >
-          <Input id="fecha_vencimiento" name="fecha_vencimiento" type="date" />
-        </Field>
-      </div>
-
+      <Field label="Medio de envío (opcional)" htmlFor="medio_envio">
+        <Input id="medio_envio" name="medio_envio" placeholder="Correo, físico, ..." />
+      </Field>
 
       <Field label="Observaciones (opcional)" htmlFor="observaciones">
         <Textarea id="observaciones" name="observaciones" />

@@ -77,7 +77,8 @@ export function SiguientePaso({
   cierre: DatosCierre;
   puedeCorregirCierre: boolean;
 }) {
-  const pendientes = documentos.length + hitos.length + equipoPendiente.length + (sinEquipo ? 1 : 0) + (sinCronograma ? 1 : 0);
+  // Las actividades del cronograma no bloquean: al cerrar la etapa se concluyen con esa fecha.
+  const pendientes = documentos.length + equipoPendiente.length + (sinEquipo ? 1 : 0) + (sinCronograma ? 1 : 0);
   const etapaLabel = ETAPA_ACTIVIDAD_LABELS[etapa];
 
   let titulo: string;
@@ -109,7 +110,7 @@ export function SiguientePaso({
 
         {!concluida && pendientes > 0 ? (
           <p>
-            Pendiente para cerrar {etapaLabel}: {resumenPendientes(documentos.length, hitos.length, equipoPendiente.length + (sinEquipo ? 1 : 0), sinCronograma)}.
+            Pendiente para cerrar {etapaLabel}: {resumenPendientes(documentos.length, 0, equipoPendiente.length + (sinEquipo ? 1 : 0), sinCronograma)}.
           </p>
         ) : null}
 
@@ -197,6 +198,13 @@ export function SiguientePaso({
               </Fila>
             ))}
           </Grupo>
+        ) : null}
+
+        {!concluida && hitos.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Las actividades del cronograma de {etapaLabel} que sigan abiertas se concluyen solas, con la fecha del
+            cierre, al cerrar la etapa.
+          </p>
         ) : null}
 
         {!concluida && (otrosDocs.length > 0 || otrosHitos > 0) ? (

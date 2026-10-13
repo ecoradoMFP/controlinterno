@@ -14,7 +14,6 @@ import { cierreExpedienteSchema, nombramientoSchema } from "@/lib/validations/ac
 import { ACTIVIDADES_SAG_UDAI } from "@/lib/cronograma";
 import { diasHabilesEntre } from "@/lib/semaforo";
 import {
-  SIGUIENTE_ETAPA,
   ETAPA_ACTIVIDAD_LABELS,
   type CargoEnum,
   type EtapaActividadEnum,
@@ -67,7 +66,7 @@ export async function agregarDocumentoActividad(formData: FormData) {
     fail(
       actividadId,
       "documentos",
-      `"${documentoCatalogo.nombre}" pertenece a la etapa "${ETAPA_ACTIVIDAD_LABELS[documentoCatalogo.etapa as EtapaActividadEnum]}" — cierra la etapa actual antes de iniciarlo.`,
+      `"${documentoCatalogo.nombre}" pertenece a la etapa "${ETAPA_ACTIVIDAD_LABELS[documentoCatalogo.etapa as EtapaActividadEnum]}" — cierre la etapa actual antes de iniciarlo.`,
     );
   }
 
@@ -268,48 +267,67 @@ export async function cerrarEtapa(formData: FormData) {
 
   // Defensa en profundidad (sección 12.3): `puedeEscribir` solo mira `permiso_sistema`, no el
   // alcance de cargo que exige la política RLS de `actividades` (jefe/subjefe/subdirector/
-  // director, nunca Auditor) — sin este chequeo, un Auditor veía el botón habilitado y, al
-  // hacer clic, el único error que le llegaba era el mensaje crudo de Postgres/RLS.
+  // director, nunca Auditor).
   if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
     fail(actividadId, "documentos", "Su cargo no tiene permiso para cerrar la etapa de esta auditoría.");
   }
 
-  const { data: actividad } = await supabase
-    .from("actividades")
-    .select("etapa_actual")
-    .eq("id", actividadId)
-    .maybeSingle();
-  if (!actividad) fail(actividadId, "documentos", "No se encontró la auditoría.");
-
-  const etapaCerrada = actividad.etapa_actual;
-  const etapaSiguiente = SIGUIENTE_ETAPA[etapaCerrada];
-  if (!etapaSiguiente) fail(actividadId, "documentos", "El expediente ya está en Expediente / Cierre.");
-
-  // El UPDATE es la escritura que de verdad cuenta — el trigger `validar_avance_etapa` (sección
-  // 12.1/12.3, defensa en profundidad) es quien valida que no queden documentos ni hitos de la
-  // etapa actual sin terminar, y que el equipo haya confirmado recibido/declaración si aplica.
-  // El historial se inserta después, solo si el avance fue real: al revés dejaría constancia de
-  // un cierre que en realidad no ocurrió.
-  const { error: updateError } = await supabase
-    .from("actividades")
-    .update({ etapa_actual: etapaSiguiente })
-    .eq("id", actividadId);
-
-  if (updateError) fail(actividadId, "documentos", updateError.message);
-
-  const { error: historialError } = await supabase.from("actividades_etapa_historial").insert({
-    actividad_id: actividadId,
-    etapa_cerrada: etapaCerrada,
-    etapa_siguiente: etapaSiguiente,
-    cerrado_por_nit: usuario.nit,
-  });
-
-  if (historialError) {
-    fail(actividadId, "documentos", "La etapa se cerró, pero no se pudo registrar en el historial.");
-  }
+  // Un solo paso en la base (`cerrar_etapa_actividad`): concluye con la fecha de hoy las
+  // actividades del cronograma de la etapa que sigan abiertas, avanza la etapa (los triggers
+  // validan documentos, equipo y cronograma) y deja el historial. Si algo falla, no queda nada a
+  // medias, y el mensaje de la base ya dice qué falta.
+  const { error } = await supabase.rpc("cerrar_etapa_actividad", { p_actividad_id: actividadId });
+  if (error) fail(actividadId, "documentos", error.message);
 
   revalidatePath(`/actividades/${actividadId}`);
   redirect(`/actividades/${actividadId}?tab=documentos`);
+}
+
+/** Jefatura: corrige un plazo del cronograma con motivo (queda en su bitácora). */
+export async function corregirPlazoCronograma(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const usuario = await getUsuarioActual();
+  if (!usuario || !puedeEscribir(usuario) || !esJefaturaAuditoria(usuario)) {
+    fail(actividadId, "cronograma", "Los plazos del cronograma solo los corrige la jefatura.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("corregir_plazo_cronograma", {
+    p_hito_id: String(formData.get("hito_id")),
+    p_inicio: String(formData.get("fecha_inicio") ?? ""),
+    p_fin: String(formData.get("fecha_fin") ?? ""),
+    p_motivo: String(formData.get("motivo") ?? ""),
+  });
+  if (error) fail(actividadId, "cronograma", error.message);
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=cronograma`);
+}
+
+/** Jefatura: corrige los datos generales de la auditoría con motivo (queda en su bitácora). */
+export async function editarDatosAuditoria(formData: FormData) {
+  const actividadId = String(formData.get("actividad_id"));
+  const usuario = await getUsuarioActual();
+  if (!usuario || !puedeEscribir(usuario) || !esJefaturaAuditoria(usuario)) {
+    fail(actividadId, "expediente", "Los datos de la auditoría solo los corrige la jefatura.");
+  }
+
+  const campo = (k: string) => String(formData.get(k) ?? "").trim();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("editar_datos_auditoria", {
+    p_actividad_id: actividadId,
+    p_dependencia: campo("dependencia_auditada"),
+    p_periodo_inicio: campo("periodo_evaluado_inicio"),
+    p_periodo_fin: campo("periodo_evaluado_fin"),
+    p_auditor_principal_nit: campo("auditor_principal_nit"),
+    p_fecha_inicio_plazo: campo("fecha_inicio_plazo"),
+    p_fecha_notificacion: campo("fecha_notificacion"),
+    p_motivo: campo("motivo"),
+  });
+  if (error) fail(actividadId, "expediente", error.message);
+
+  revalidatePath(`/actividades/${actividadId}`);
+  redirect(`/actividades/${actividadId}?tab=expediente`);
 }
 
 export async function actualizarConfirmacionEquipo(formData: FormData) {

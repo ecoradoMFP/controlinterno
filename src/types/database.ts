@@ -170,6 +170,51 @@ export type Database = {
           },
         ]
       }
+      actividades_cambios: {
+        Row: {
+          actividad_id: string
+          anterior: Json
+          created_at: string
+          id: string
+          motivo: string
+          nuevo: Json
+          registrado_por_nit: string
+        }
+        Insert: {
+          actividad_id: string
+          anterior: Json
+          created_at?: string
+          id?: string
+          motivo: string
+          nuevo: Json
+          registrado_por_nit: string
+        }
+        Update: {
+          actividad_id?: string
+          anterior?: Json
+          created_at?: string
+          id?: string
+          motivo?: string
+          nuevo?: Json
+          registrado_por_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actividades_cambios_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actividades_cambios_registrado_por_nit_fkey"
+            columns: ["registrado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
       actividades_equipo_correcciones: {
         Row: {
           actividad_id: string
@@ -753,6 +798,67 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "informes_auditoria"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      hitos_cronograma_correcciones: {
+        Row: {
+          actividad_id: string
+          created_at: string
+          fin_anterior: string
+          fin_nuevo: string
+          hito_id: string
+          id: string
+          inicio_anterior: string
+          inicio_nuevo: string
+          motivo: string
+          registrado_por_nit: string
+        }
+        Insert: {
+          actividad_id: string
+          created_at?: string
+          fin_anterior: string
+          fin_nuevo: string
+          hito_id: string
+          id?: string
+          inicio_anterior: string
+          inicio_nuevo: string
+          motivo: string
+          registrado_por_nit: string
+        }
+        Update: {
+          actividad_id?: string
+          created_at?: string
+          fin_anterior?: string
+          fin_nuevo?: string
+          hito_id?: string
+          id?: string
+          inicio_anterior?: string
+          inicio_nuevo?: string
+          motivo?: string
+          registrado_por_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hitos_cronograma_correcciones_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hitos_cronograma_correcciones_hito_id_fkey"
+            columns: ["hito_id"]
+            isOneToOne: false
+            referencedRelation: "hitos_cronograma"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hitos_cronograma_correcciones_registrado_por_nit_fkey"
+            columns: ["registrado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
           },
         ]
       }
@@ -1562,6 +1668,31 @@ export type Database = {
           p_fase_esperada?: Database["public"]["Enums"]["fase_documento_enum"]
           p_observacion?: string
           p_responsable_esperado?: Database["public"]["Enums"]["cargo_enum"]
+        }
+        Returns: undefined
+      }
+      cerrar_etapa_actividad: {
+        Args: { p_actividad_id: string }
+        Returns: Database["public"]["Enums"]["etapa_actividad_enum"]
+      }
+      corregir_plazo_cronograma: {
+        Args: { p_fin: string; p_hito_id: string; p_inicio: string; p_motivo: string }
+        Returns: undefined
+      }
+      dias_habiles: {
+        Args: { p_desde: string; p_hasta: string }
+        Returns: number
+      }
+      editar_datos_auditoria: {
+        Args: {
+          p_actividad_id: string
+          p_auditor_principal_nit: string
+          p_dependencia: string
+          p_fecha_inicio_plazo: string
+          p_fecha_notificacion: string
+          p_motivo: string
+          p_periodo_fin: string
+          p_periodo_inicio: string
         }
         Returns: undefined
       }
