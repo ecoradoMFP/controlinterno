@@ -1,3 +1,4 @@
+import { FileDown } from "lucide-react";
 import { agregarHito, concluirHito, corregirPlazoCronograma } from "@/app/(dashboard)/actividades/[id]/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { CronogramaSagUdaiForm } from "@/components/actividades/cronograma-sag-udai-form";
@@ -92,6 +93,9 @@ export function CronogramaPanel({
         )
       ) : (
         <>
+        <Button variant="outline" className="w-fit" nativeButton={false} render={<a href={`/actividades/${actividadId}/cronograma`} download />}>
+          <FileDown /> Descargar cronograma en Excel
+        </Button>
         <GanttCronograma hitos={ordenadas} hoy={hoy} feriados={feriados} umbral={umbral} />
         <div className="overflow-x-auto rounded-xl border">
           <table className="w-full text-left">
