@@ -5,6 +5,7 @@ import {
   registrarCierreExpediente,
 } from "@/app/(dashboard)/actividades/[id]/actions";
 import { RutaExpediente } from "@/components/actividades/ruta-expediente";
+import { MOSTRAR_RUTAS_EXPEDIENTE } from "@/lib/expediente-digital";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,10 +92,12 @@ export function ExpedientePanel({
           <Dato label="Proyecto de informe entregado a la jefatura" valor={fechaProyectoJefatura} ayuda="Se toma de la bitácora del Informe de Auditoría" />
           <Dato label="Proyecto de informe entregado a Dirección" valor={fechaProyectoDireccion} ayuda="Se toma de la bitácora del Informe de Auditoría" />
         </div>
-        <div className="flex flex-col gap-1">
-          <p className="text-sm text-muted-foreground">Carpeta del expediente digital (la asigna el sistema)</p>
-          <RutaExpediente ruta={rutaCompleta} etiqueta="Ruta completa" />
-        </div>
+        {MOSTRAR_RUTAS_EXPEDIENTE ? (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">Carpeta del expediente digital (la asigna el sistema)</p>
+            <RutaExpediente ruta={rutaCompleta} etiqueta="Ruta completa" />
+          </div>
+        ) : null}
         {actividad.observaciones ? (
           <div>
             <p className="text-sm text-muted-foreground">Observaciones</p>

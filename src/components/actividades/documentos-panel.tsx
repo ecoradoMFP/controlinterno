@@ -275,7 +275,6 @@ function DocumentoCard({
           </Link>
 
           {generaDocumento && !d.no_aplica ? <RutaExpediente ruta={d.ruta_completa} etiqueta="Archivo" /> : null}
-          {!generaDocumento ? <p className="text-xs text-muted-foreground">Este paso no genera un archivo.</p> : null}
 
           {puedeEditar && puedeVistoBueno && !d.no_aplica ? (
             <form action={avanzarDocumento} className="flex flex-wrap items-end gap-2">

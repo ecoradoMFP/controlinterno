@@ -8,6 +8,12 @@
 // Las rutas relativas las asigna la base de datos por correlativo (triggers de actividades,
 // documentos y oficios): nadie las escribe a mano. Aquí solo se arma la ruta completa para mostrar.
 
+/**
+ * Mientras no se adquiera el almacenamiento, las rutas no se muestran en pantalla (decisión de la
+ * DAI, 2026-10-13). La base las sigue asignando: para volver a mostrarlas basta con cambiar esto.
+ */
+export const MOSTRAR_RUTAS_EXPEDIENTE = false;
+
 export function rutaBaseExpedientes(): string | null {
   const base = process.env.SCIDAI_RUTA_BASE_EXPEDIENTES?.trim();
   return base ? base : null;

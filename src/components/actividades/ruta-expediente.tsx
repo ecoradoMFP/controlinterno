@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MOSTRAR_RUTAS_EXPEDIENTE } from "@/lib/expediente-digital";
 
 /**
  * Muestra la ruta de un archivo o carpeta del expediente digital con un botón para copiarla.
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 export function RutaExpediente({ ruta, etiqueta }: { ruta: string | null; etiqueta?: string }) {
   const [copiada, setCopiada] = useState(false);
 
+  if (!MOSTRAR_RUTAS_EXPEDIENTE) return null;
   if (!ruta) {
     return <p className="text-xs text-muted-foreground">{etiqueta ? `${etiqueta}: ` : ""}sin ruta registrada</p>;
   }

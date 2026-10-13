@@ -195,10 +195,6 @@ export function ActividadForm({
         </Field>
       </div>
 
-      <p className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-        La carpeta del expediente digital se asigna sola al crear la auditoría
-        (Auditorias/año/departamento/tipo/correlativo).
-      </p>
 
       <Field
         label="Expedientes relacionados (opcional, separados por coma)"
