@@ -26,7 +26,7 @@ export function CronogramaSagUdaiForm({ actividadId, asuetos }: { actividadId: s
   return (
     <FormAccion action={registrarCronogramaSagUdai} className="flex flex-col gap-4">
       <input type="hidden" name="actividad_id" value={actividadId} />
-      <div className="overflow-x-auto rounded-xl border">
+      <div className="overflow-x-auto tarjeta">
         <table className="w-full text-left">
           <thead className="bg-muted/50 text-sm text-muted-foreground">
             <tr>

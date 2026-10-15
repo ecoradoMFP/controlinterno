@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, ListChecks, Mail, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { identificadorAuditoria } from "@/lib/auditoria";
@@ -9,7 +9,6 @@ import { SemaforoChip, type TonoSemaforo } from "@/components/semaforo-chip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/ui/stat-card";
-import { cn } from "@/lib/utils";
 import { sinTildes } from "@/lib/texto";
 import { calcularSemaforo, cumplidoATiempo, UMBRAL_POR_DEFECTO, COLOR_SEMAFORO_LABELS, type UmbralSemaforo } from "@/lib/semaforo";
 import type { Oficio } from "@/types/domain";
@@ -85,14 +84,14 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
     const params = new URLSearchParams(Object.entries({ vista: v === "pendientes" ? "" : v, q: qParam ?? "" }).filter(([, x]) => x));
     return `${RUTA}${params.size ? `?${params}` : ""}`;
   };
-  const kpi = (clave: string, label: string, detail: string, valor: number, icon: LucideIcon, tone: "accent" | "naranja" | "verde") => (
+  const kpi = (clave: string, label: string, detail: string, valor: number, tone: "neutral" | "naranja" | "verde") => (
     <Link
       key={clave}
       href={urlCon(vista === clave ? "pendientes" : clave)}
       aria-pressed={vista === clave}
-      className={cn("block h-full rounded-2xl", vista === clave && "ring-2 ring-primary")}
+      className={"block h-full rounded-2xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"}
     >
-      <StatCard icon={icon} tone={tone} label={label} value={String(valor)} detail={detail} className="h-full" />
+      <StatCard tone={tone} label={label} value={String(valor)} detail={detail} destacada={vista === clave} enlace className="h-full hover:border-primary/40" />
     </Link>
   );
 
@@ -113,13 +112,13 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
       {error ? <p className="text-destructive">No se pudieron cargar los oficios.</p> : null}
 
       <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpi("pendientes", "Sin respuesta", "Esperan respuesta de la dependencia", base.filter((o) => !o.fecha_respuesta).length, Mail, "accent")}
-        {kpi("atencion", "Requieren atención", "Plazo por vencer o vencido", base.filter((o) => o.estado.atencion).length, AlertTriangle, "naranja")}
-        {kpi("respondidos", "Respondidos", "Ya tienen respuesta", base.filter((o) => !!o.fecha_respuesta).length, CheckCircle2, "verde")}
-        {kpi("todos", "Todos", "Sin importar el estado", base.length, ListChecks, "accent")}
+        {kpi("pendientes", "Sin respuesta", "Esperan respuesta de la dependencia", base.filter((o) => !o.fecha_respuesta).length, "neutral")}
+        {kpi("atencion", "Requieren atención", "Plazo por vencer o vencido", base.filter((o) => o.estado.atencion).length, "naranja")}
+        {kpi("respondidos", "Respondidos", "Ya tienen respuesta", base.filter((o) => !!o.fecha_respuesta).length, "verde")}
+        {kpi("todos", "Todos", "Sin importar el estado", base.length, "neutral")}
       </div>
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <FiltrosAutomaticos ruta={RUTA} className="flex flex-wrap items-center gap-3 border-b p-4">
           <input type="hidden" name="vista" value={vista === "pendientes" ? "" : vista} />
           <Input

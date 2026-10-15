@@ -22,10 +22,7 @@ export default async function NotificacionesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Notificaciones</h1>
-          <p className="text-sm text-muted-foreground">
-            Alertas de semáforo (sección 9): se generan cuando una auditoría dentro de su alcance
-            entra o cambia a naranja/rojo, vía el job diario.
-          </p>
+          <p className="text-sm text-muted-foreground">Avisos de auditorías que pasan a naranja o rojo.</p>
         </div>
         {hayNoLeidas ? (
           <form action={marcarTodasLeidas}>
@@ -41,7 +38,7 @@ export default async function NotificacionesPage() {
           notificaciones.map((n) => (
             <div
               key={n.id}
-              className={`flex items-center justify-between gap-4 rounded-xl border shadow-sm p-4 ${n.leido ? "opacity-60" : ""}`}
+              className={`flex items-center justify-between gap-4 tarjeta p-4 ${n.leido ? "opacity-60" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <SemaforoBadge color={n.color as ColorSemaforo} />

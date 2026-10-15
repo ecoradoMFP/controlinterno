@@ -46,7 +46,7 @@ export function GanttCronograma({
   const hoyPct = pct(hoy) + (100 / ((hasta - desde) / DIA)) / 2;
 
   return (
-    <section className={`flex flex-col rounded-xl border ${compacto ? "gap-1 p-3" : "gap-3 p-4"}`} aria-label="Diagrama de Gantt del cronograma">
+    <section className={`flex flex-col tarjeta ${compacto ? "gap-1 p-3" : "gap-3 p-4"}`} aria-label="Diagrama de Gantt del cronograma">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-medium">Línea de tiempo: planificado contra real</h3>
         <ul className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground ${compacto ? "text-xs" : "text-sm"}`}>

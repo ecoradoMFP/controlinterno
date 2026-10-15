@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { CapacitacionKpiCards } from "@/components/capacitaciones/kpi-cards";
+import { Pastel } from "@/components/reportes/pastel";
 import { DepartamentoCapacitacionChart, type FilaDepartamentoCapacitacion } from "@/components/capacitaciones/departamento-chart";
 import { PersonalCapacitacionTable, type FilaPersonalCapacitacion } from "@/components/capacitaciones/personal-table";
 import { HORAS_OBJETIVO_ANUAL } from "@/lib/capacitacion";
@@ -19,9 +20,7 @@ export default async function CapacitacionesPage({
 
   const supabase = await createClient();
 
-  // Sin filtro de departamento en ninguna consulta: RLS (usuarios_select, capacitaciones_select)
-  // ya devuelve solo lo que está dentro del alcance del usuario actual, igual que /documentos
-  // y /reportes.
+  // RLS ya limita las consultas al alcance de quien consulta.
   const [{ data: personal }, { data: capacitaciones }] = await Promise.all([
     supabase
       .from("usuarios")
@@ -69,9 +68,7 @@ export default async function CapacitacionesPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Capacitaciones</h1>
-          <p className="text-sm text-muted-foreground">
-            Cumplimiento de la norma de {HORAS_OBJETIVO_ANUAL} horas de capacitación anual por persona.
-          </p>
+          <p className="text-sm text-muted-foreground">Meta: {HORAS_OBJETIVO_ANUAL} horas por persona al año</p>
         </div>
         <div className="flex gap-2">
           {anios.map((a) => (
@@ -91,11 +88,23 @@ export default async function CapacitacionesPage({
         horasPromedio={horasPromedio}
       />
 
-      <div className="rounded-xl border shadow-sm">
-        <div className="border-b p-4">
-          <h2 className="font-medium">Horas promedio por departamento</h2>
-        </div>
-        <DepartamentoCapacitacionChart datos={datosDepartamento} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="flex flex-col gap-4 tarjeta p-5">
+          <h2 className="font-semibold">Avance del personal</h2>
+          <Pastel
+            centro="personas"
+            vacio="Sin personal registrado."
+            porciones={[
+              { clave: "cumplen", etiqueta: "Cumplen la meta", valor: personasCumplidas, color: "var(--status-verde)" },
+              { clave: "en_proceso", etiqueta: "En proceso", valor: totalPersonas - personasCumplidas - personasSinRegistro, color: "var(--status-amarillo)" },
+              { clave: "sin_registro", etiqueta: "Sin capacitaciones", valor: personasSinRegistro, color: "var(--status-rojo)" },
+            ]}
+          />
+        </section>
+        <section className="tarjeta">
+          <h2 className="border-b px-5 py-4 font-semibold">Horas promedio por departamento</h2>
+          <DepartamentoCapacitacionChart datos={datosDepartamento} />
+        </section>
       </div>
 
       <PersonalCapacitacionTable filas={filas} />

@@ -281,7 +281,7 @@ function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{titulo}</h3>
-      <ul className="divide-y rounded-xl border">{children}</ul>
+      <ul className="divide-y tarjeta">{children}</ul>
     </section>
   );
 }

@@ -294,7 +294,7 @@ export default async function CaiPage({
             const delBucket = filas.filter((f) => f.bucket === bucket);
             if (delBucket.length === 0) return null;
             return (
-              <div key={bucket} className="rounded-xl border">
+              <div key={bucket} className="tarjeta">
                 <h3 className="p-4 pb-3 text-sm font-medium">
                   {titulo} ({delBucket.length})
                 </h3>

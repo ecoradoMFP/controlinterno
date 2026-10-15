@@ -98,7 +98,7 @@ export function CronogramaPanel({
           <FileDown /> Descargar cronograma en Excel
         </Button>
         <GanttCronograma hitos={ordenadas} hoy={hoy} feriados={feriados} umbral={umbral} />
-        <div className="overflow-x-auto rounded-xl border">
+        <div className="overflow-x-auto tarjeta">
           <table className="w-full text-left">
             <thead className="bg-muted/50 text-sm text-muted-foreground">
               <tr>
@@ -184,7 +184,7 @@ export function CronogramaPanel({
       )}
 
       {correcciones.length > 0 ? (
-        <section className="flex flex-col gap-2 rounded-xl border p-4">
+        <section className="flex flex-col gap-2 tarjeta p-4">
           <h3 className="font-medium">Correcciones de plazos ({correcciones.length})</h3>
           <ul className="flex flex-col gap-2 text-sm">
             {correcciones.map((c) => (

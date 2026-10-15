@@ -107,7 +107,7 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         </div>
       </section>
 
-      <section className="grid grid-cols-3 gap-x-6 gap-y-2 rounded-xl border p-4 text-sm print:gap-y-1 print:p-3 print:text-xs">
+      <section className="grid grid-cols-3 gap-x-6 gap-y-2 tarjeta p-4 text-sm print:gap-y-1 print:p-3 print:text-xs">
         <Dato label="Departamento" valor={a.departamentos?.nombre} />
         <Dato label="Tipo de auditoría" valor={a.tipo_auditoria} />
         <Dato label="Nombramiento" valor={a.no_nombramiento} />
@@ -155,7 +155,7 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
           <GanttCronograma hitos={hitosOrdenados} hoy={hoy} feriados={feriados} umbral={umbral.get("hito") ?? UMBRAL_POR_DEFECTO} compacto />
         </div>
       ) : (
-        <p className="rounded-xl border p-4 text-sm text-muted-foreground">Todavía no se ha registrado el cronograma de actividades.</p>
+        <p className="tarjeta p-4 text-sm text-muted-foreground">Todavía no se ha registrado el cronograma de actividades.</p>
       )}
 
       {/* Documentos en curso: en la impresión, desde la segunda hoja */}

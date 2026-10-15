@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, FolderOpen, Hand, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { identificadorAuditoria } from "@/lib/auditoria";
@@ -155,17 +155,16 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     label: string,
     detail: string,
     valor: number,
-    icon: LucideIcon,
-    tone: "accent" | "primary" | "naranja" | "verde",
+    tone: "neutral" | "naranja" | "verde",
   ) => (
     // Volver a hacer clic en la tarjeta activa regresa a "En curso".
     <Link
       key={clave}
       href={urlCon({ vista: vista === clave ? "" : clave })}
       aria-pressed={vista === clave}
-      className={cn("block h-full rounded-2xl", vista === clave && "ring-2 ring-primary")}
+      className={"block h-full rounded-2xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"}
     >
-      <StatCard icon={icon} tone={tone} label={label} value={String(valor)} detail={detail} className="h-full" />
+      <StatCard tone={tone} label={label} value={String(valor)} detail={detail} destacada={vista === clave} enlace className="h-full hover:border-primary/40" />
     </Link>
   );
 
@@ -187,14 +186,14 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
 
       <div className={cn("grid auto-rows-fr grid-cols-2 gap-3", cargo ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
         {cargo
-          ? kpi("te_toca", "Pendientes a su cargo", `Documentos que esperan al ${CARGO_LABELS[cargo]}`, base.filter((f) => f.meTocan > 0).length, Hand, "primary")
+          ? kpi("te_toca", "Pendientes a su cargo", `Documentos que esperan al ${CARGO_LABELS[cargo]}`, base.filter((f) => f.meTocan > 0).length, "neutral")
           : null}
-        {kpi("riesgo", "Requieren atención", "Plazo por vencer o vencido", base.filter((f) => f.enRiesgo).length, AlertTriangle, "naranja")}
-        {kpi("en_curso", "En curso", "Auditorías sin concluir", base.filter((f) => !f.concluida).length, FolderOpen, "accent")}
-        {kpi("concluidas", "Concluidas", "Entregadas al archivo", base.filter((f) => f.concluida).length, CheckCircle2, "verde")}
+        {kpi("riesgo", "Requieren atención", "Plazo por vencer o vencido", base.filter((f) => f.enRiesgo).length, "naranja")}
+        {kpi("en_curso", "En curso", "Auditorías sin concluir", base.filter((f) => !f.concluida).length, "neutral")}
+        {kpi("concluidas", "Concluidas", "Entregadas al archivo", base.filter((f) => f.concluida).length, "verde")}
       </div>
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <FiltrosAutomaticos ruta={RUTA} className="flex flex-wrap items-center gap-3 border-b p-4">
           <input type="hidden" name="vista" value={aplicados.vista ?? ""} />
           <Input

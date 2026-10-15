@@ -64,15 +64,12 @@ export default async function RecomendacionesPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Todos los CAI</h1>
-          <p className="text-sm text-muted-foreground">
-            Todos los CAI registrados, incluidos los que no tienen recomendaciones activas. Entra a uno para
-            ver y darle seguimiento.
-          </p>
+          <p className="text-sm text-muted-foreground">Incluye los que ya no tienen recomendaciones activas.</p>
         </div>
         <Button render={<Link href="/recomendaciones/informes/nuevo" />}>Nuevo CAI</Button>
       </div>
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <div className="flex items-center justify-between border-b p-4">
           <h2 className="font-medium">Listado</h2>
           <Link

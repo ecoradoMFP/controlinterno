@@ -49,7 +49,7 @@ export function EditarDatosAuditoria({
   if (!puedeCorregir && cambios.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border p-4">
+    <section className="flex flex-col gap-4 tarjeta p-4">
       <div>
         <h3 className="font-medium">Datos generales de la auditoría</h3>
         <p className="text-sm text-muted-foreground">

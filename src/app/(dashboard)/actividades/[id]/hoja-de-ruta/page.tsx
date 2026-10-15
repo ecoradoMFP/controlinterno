@@ -105,7 +105,7 @@ export default async function HojaDeRutaPage({
             const correccionDe = new Map(movimientos.filter((m) => m.corrige_movimiento_id).map((m) => [m.corrige_movimiento_id!, m]));
 
             return (
-              <div key={d.id} className="break-inside-avoid rounded-xl border shadow-sm p-4">
+              <div key={d.id} className="break-inside-avoid tarjeta p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="font-medium">{d.documentos_catalogo?.nombre ?? "Documento"}</p>
                   <Badge variant={d.fase_actual === "finalizado" ? "default" : "secondary"}>

@@ -34,8 +34,8 @@ export default async function EstructuraPage({ searchParams }: { searchParams: P
       <div>
         <h1 className="text-xl font-semibold">Estructura organizacional del Ministerio</h1>
         <p className="text-sm text-muted-foreground">
-          Alimenta el selector &quot;Dependencia auditada&quot;. Si una unidad cambia de nombre, edítala aquí; si deja de existir,
-          desactívala. Los informes ya registrados conservan el nombre con el que se auditó.
+          Si una unidad cambia de nombre, edítela aquí; si deja de existir, desactívela. Los informes ya registrados
+          conservan el nombre con el que se auditó.
         </p>
       </div>
 
@@ -45,7 +45,7 @@ export default async function EstructuraPage({ searchParams }: { searchParams: P
         </p>
       ) : null}
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <div className="border-b p-4">
           <h2 className="font-medium">Agregar unidad</h2>
         </div>
@@ -72,7 +72,7 @@ export default async function EstructuraPage({ searchParams }: { searchParams: P
         </form>
       </div>
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <div className="flex flex-col divide-y">
           {filas.map(({ unidad, nivel }) => (
             <div key={unidad.id} className="flex flex-wrap items-center gap-3 p-3" style={{ paddingLeft: `${0.75 + nivel * 1.5}rem` }}>

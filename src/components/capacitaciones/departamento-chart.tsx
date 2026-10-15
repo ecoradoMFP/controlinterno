@@ -36,7 +36,7 @@ export function DepartamentoCapacitacionChart({ datos }: { datos: FilaDepartamen
             contentStyle={{ background: "var(--popover)", color: "var(--popover-foreground)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
             formatter={(value, name, item) => [`${value} horas`, `${name} (${item.payload.personas} personas)`] as [string, string]}
           />
-          <Bar dataKey="Horas promedio" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={48} />
+          <Bar dataKey="Horas promedio" fill="var(--chart-1)" radius={[10, 10, 10, 10]} maxBarSize={44} />
         </BarChart>
       </ResponsiveContainer>
       <p className="mt-1 text-center text-[11px] text-muted-foreground">Meta anual: {HORAS_OBJETIVO_ANUAL} horas por persona</p>

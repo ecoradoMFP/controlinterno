@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ClipboardList, FileClock, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { identificadorAuditoria } from "@/lib/auditoria";
 import { hoyGuatemala } from "@/lib/recomendaciones";
-import { SemaforoBadge } from "@/components/semaforo-chip";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FiltrosAutomaticos } from "@/components/recomendaciones/filtros-automaticos";
-import { BarraSemaforo, BarrasHorizontales, Medidor, PlanContraReal } from "@/components/reportes/graficas";
+import { BarrasHorizontales, PlanContraReal } from "@/components/reportes/graficas";
+import { Pastel, type PorcionPastel } from "@/components/reportes/pastel";
+import { COLOR_SEMAFORO_CSS_VAR, SemaforoBadge } from "@/components/semaforo-chip";
 import {
   calcularSemaforo,
+  COLOR_SEMAFORO_LABELS,
   semaforoConMotivoPorActividad,
   SEVERIDAD,
   UMBRAL_POR_DEFECTO,
@@ -27,15 +28,13 @@ import {
 import { construirMapaOrganizacional, responsablesPorCargo } from "@/lib/organizacion";
 import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, ETAPA_DOCUMENTO_LABELS, type CargoEnum, type EtapaActividadEnum } from "@/types/domain";
 
-const SELECT_CLASES = "h-9 rounded-lg border border-input bg-background px-3 text-sm";
+const SELECT_CLASES = "h-9 w-auto max-w-xs rounded-full border border-input bg-card px-3 text-sm";
 const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
 
-/**
- * Tablero de Reportes. Responde, en este orden, lo que Dirección y jefaturas preguntan: ¿cómo
- * vamos? (indicadores), ¿qué hay que atender? (auditorías en riesgo con su motivo), ¿cumplimos los
- * plazos?, ¿dónde se detiene el trabajo? y ¿cómo está repartida la carga? RLS ya limita todo al
- * alcance de quien consulta; el filtro de departamento solo acota dentro de ese alcance.
- */
+const COLORES_ETAPA = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
+const ORDEN_SEMAFORO: ColorSemaforo[] = ["verde", "amarillo", "naranja", "rojo"];
+
+// RLS limita todo al alcance de quien consulta; el filtro de departamento acota dentro de ese alcance.
 export default async function ReportesPage({ searchParams }: { searchParams: Promise<{ dep?: string }> }) {
   const { dep } = await searchParams;
   const supabase = await createClient();
@@ -139,12 +138,23 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const cumplimientoOficios = calcularCumplimiento(oficiosConcluidos.map((o) => ({ esperada: o.fecha_vencimiento!, real: o.fecha_respuesta! })));
   const enRevision = documentos.filter((d) => d.fase_actual === "revision").length;
 
-  // ── Por etapa ──
-  const porEtapa = ETAPAS.map((e) => ({
+  // ── Gráficas de pie ──
+  const porSemaforo: PorcionPastel[] = ORDEN_SEMAFORO.map((c) => ({
+    clave: c,
+    etiqueta: COLOR_SEMAFORO_LABELS[c],
+    valor: conteo[c],
+    color: COLOR_SEMAFORO_CSS_VAR[c],
+  }));
+  const porEtapa: PorcionPastel[] = ETAPAS.map((e, i) => ({
     clave: e,
     etiqueta: ETAPA_ACTIVIDAD_LABELS[e],
     valor: enCurso.filter((a) => a.etapa_actual === e).length,
-  })).map((f) => ({ ...f, texto: String(f.valor) }));
+    color: COLORES_ETAPA[i],
+  }));
+  const aTiempoContraTarde = (c: { aTiempo: number; tarde: number }): PorcionPastel[] => [
+    { clave: "a_tiempo", etiqueta: "A tiempo", valor: c.aTiempo, color: "var(--status-verde)" },
+    { clave: "tarde", etiqueta: "Tarde", valor: c.tarde, color: "var(--status-rojo)" },
+  ];
 
   // ── Plazos: plan contra real por etapa ──
   const planVsReal = calcularPlanVsReal(
@@ -245,12 +255,9 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const cargoMasLento = porCargo[0];
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Tablero</h1>
-          <p className="text-sm text-muted-foreground">Cómo van las auditorías, qué requiere atención y dónde se detiene el trabajo.</p>
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Tablero</h1>
         {departamentosConDatos.length > 1 ? (
           <FiltrosAutomaticos ruta="/reportes" className="flex items-center gap-2">
             <label htmlFor="dep" className="text-sm text-muted-foreground">
@@ -268,230 +275,193 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         ) : null}
       </div>
 
-      {/* ── Indicadores ── */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard icon={ClipboardList} label="Auditorías en curso" value={enCurso.length} detail={`${concluidas} concluida(s)`} />
+        <StatCard destacada label="Auditorías en curso" value={enCurso.length} detail={`Concluidas: ${concluidas}`} />
+        <StatCard tone="rojo" label="En riesgo" value={enRiesgo.length} detail={`de ${peorPorActividad.size} con plazos abiertos`} />
+        <StatCard tone="naranja" label="Oficios vencidos" value={oficiosVencidos} detail={`${oficiosAbiertos.length} sin respuesta`} />
         <StatCard
-          icon={AlertTriangle}
-          tone="rojo"
-          label="En riesgo"
-          value={enRiesgo.length}
-          detail={`de ${peorPorActividad.size} con plazos en proceso`}
-        />
-        <StatCard icon={Mail} tone="naranja" label="Oficios vencidos" value={oficiosVencidos} detail={`${oficiosAbiertos.length} esperando respuesta`} />
-        <StatCard
-          icon={CheckCircle2}
           tone="verde"
           label="Cronograma a tiempo"
           value={cumplimientoHitos.pct === null ? "—" : `${Math.round(cumplimientoHitos.pct)}%`}
-          detail={`${cumplimientoHitos.aTiempo} de ${cumplimientoHitos.aTiempo + cumplimientoHitos.tarde} concluidos`}
+          detail={`${cumplimientoHitos.aTiempo} de ${cumplimientoHitos.aTiempo + cumplimientoHitos.tarde} concluidas`}
         />
         <StatCard
-          icon={FileClock}
           label="Documentos en revisión"
           value={enRevision}
-          detail={cargoMasLento ? `Más tiempo con: ${cargoMasLento.etiqueta}` : "Sin historial todavía"}
+          detail={cargoMasLento ? `Más demora: ${cargoMasLento.etiqueta}` : undefined}
           className="col-span-2 lg:col-span-1"
         />
       </div>
 
-      {/* ── ¿Cómo van? ── */}
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-5 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
-          <div>
-            <h2 className="font-semibold">Semáforo de auditorías</h2>
-            <p className="text-sm text-muted-foreground">Auditorías en curso. Cada una toma el color de su actividad del cronograma más atrasada.</p>
-          </div>
-          <BarraSemaforo conteo={conteo} />
-          <div className="flex flex-col gap-2 border-t pt-4">
-            <h3 className="text-sm font-semibold">Requieren atención ({enRiesgo.length})</h3>
-            {enRiesgo.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ninguna auditoría en riesgo moderado o grave.</p>
-            ) : (
-              <ul className="divide-y">
-                {enRiesgo.map(([id, p]) => {
-                  const a = actividadPorId.get(id)!;
-                  return (
-                    <li key={id} className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                      <div className="min-w-0">
-                        <Link href={`/actividades/${id}`} className="codigo-expediente font-medium text-primary hover:underline">
-                          {identificadorAuditoria(a)}
-                        </Link>
-                        <span className="text-sm text-muted-foreground"> · {a.dependencia_auditada}</span>
-                        <p className="text-sm">{p.motivo}</p>
-                      </div>
-                      <div className="shrink-0 sm:pt-0.5">
-                        <SemaforoBadge color={p.color} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-          <div className="flex flex-col gap-2 border-t pt-4">
-            <h3 className="text-sm font-semibold">Oficios por atender ({oficiosPorAtender.length})</h3>
-            <p className="text-xs text-muted-foreground">Sin respuesta y con el plazo por vencer o vencido.</p>
-            {oficiosPorAtender.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ningún oficio con el plazo por vencer.</p>
-            ) : (
-              <ul className="divide-y">
-                {oficiosPorAtender.map((o) => {
-                  const a = o.actividad_id ? actividadPorId.get(o.actividad_id) : undefined;
-                  return (
-                    <li key={o.no_oficio} className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                      <div className="min-w-0">
-                        <span className="codigo-expediente font-medium">Oficio {o.no_oficio}</span>
-                        {a ? (
-                          <span className="text-sm text-muted-foreground">
-                            {" · "}
-                            <Link href={`/actividades/${a.id}`} className="text-primary hover:underline">
-                              {identificadorAuditoria(a)}
-                            </Link>
-                          </span>
-                        ) : null}
-                        <p className="text-sm">
-                          Sin respuesta; {o.fecha_vencimiento! < hoy ? "venció" : "vence"} el {o.fecha_vencimiento}
-                        </p>
-                      </div>
-                      <div className="shrink-0 sm:pt-0.5">
-                        <SemaforoBadge color={o.color} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
-          <div>
-            <h2 className="font-semibold">Auditorías en curso por etapa</h2>
-            <p className="text-sm text-muted-foreground">{enCurso.length} en total.</p>
-          </div>
-          <BarrasHorizontales filas={porEtapa} vacio="No hay auditorías en curso." />
-        </div>
+      <section className="grid gap-4 md:grid-cols-2">
+        <Panel titulo="Semáforo de auditorías en curso">
+          <Pastel porciones={porSemaforo} centro="auditorías" vacio="No hay auditorías con plazos abiertos." />
+        </Panel>
+        <Panel titulo="Auditorías en curso por etapa">
+          <Pastel porciones={porEtapa} centro="en curso" vacio="No hay auditorías en curso." />
+        </Panel>
       </section>
 
-      {/* ── ¿Cumplimos los plazos? ── */}
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-5 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
-          <div>
-            <h2 className="font-semibold">Cumplimiento de plazos</h2>
-            <p className="text-sm text-muted-foreground">De lo ya cerrado, cuánto se cerró a tiempo.</p>
-          </div>
-          <Medidor titulo="Actividades del cronograma" aTiempo={cumplimientoHitos.aTiempo} tarde={cumplimientoHitos.tarde} />
-          <Medidor titulo="Oficios respondidos" aTiempo={cumplimientoOficios.aTiempo} tarde={cumplimientoOficios.tarde} />
-        </div>
-        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm lg:col-span-2">
-          <div>
-            <h2 className="font-semibold">Planeado contra real, por etapa</h2>
-            <p className="text-sm text-muted-foreground">Días hábiles promedio de las etapas ya concluidas.</p>
-          </div>
-          <PlanContraReal filas={planVsReal} />
-        </div>
-      </section>
-
-      {/* ── ¿Dónde se detiene el trabajo? ── */}
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
-          <div>
-            <h2 className="font-semibold">¿Con quién se detienen los documentos?</h2>
-            <p className="text-sm text-muted-foreground">
-              {cargoMasLento
-                ? `En promedio, un documento pasa ${cargoMasLento.texto} con el ${cargoMasLento.etiqueta} antes de avanzar.`
-                : "Tiempo promedio que un documento pasa con cada cargo antes de avanzar."}{" "}
-              Solo cuenta el horario hábil: de 8:00 a 16:30, de lunes a viernes, sin asuetos.
-            </p>
-          </div>
-          <BarrasHorizontales filas={porCargo} resaltar vacio="Todavía no hay documentos que hayan cambiado de manos." />
-        </div>
-        <div className="flex flex-col gap-4 min-w-0 rounded-2xl border bg-card p-5 shadow-sm">
-          <div>
-            <h2 className="font-semibold">Documentos que más tardan</h2>
-            <p className="text-sm text-muted-foreground">Tiempo promedio en cada paso de la revisión, en horario hábil.</p>
-          </div>
-          <BarrasHorizontales filas={documentosLentos} resaltar vacio="Todavía no hay documentos que hayan cambiado de manos." />
-        </div>
+        <Panel titulo={`Auditorías que requieren atención (${enRiesgo.length})`}>
+          {enRiesgo.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ninguna.</p>
+          ) : (
+            <ul className="divide-y">
+              {enRiesgo.map(([id, p]) => {
+                const a = actividadPorId.get(id)!;
+                return (
+                  <li key={id} className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
+                      <Link href={`/actividades/${id}`} className="codigo-expediente font-medium text-primary hover:underline">
+                        {identificadorAuditoria(a)}
+                      </Link>
+                      <span className="text-sm text-muted-foreground"> · {a.dependencia_auditada}</span>
+                      <p className="text-sm">{p.motivo}</p>
+                    </div>
+                    <div className="shrink-0">
+                      <SemaforoBadge color={p.color} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+        <Panel titulo={`Oficios por vencer o vencidos (${oficiosPorAtender.length})`}>
+          {oficiosPorAtender.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ninguno.</p>
+          ) : (
+            <ul className="divide-y">
+              {oficiosPorAtender.map((o) => {
+                const a = o.actividad_id ? actividadPorId.get(o.actividad_id) : undefined;
+                return (
+                  <li key={o.no_oficio} className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
+                      <span className="codigo-expediente font-medium">Oficio {o.no_oficio}</span>
+                      {a ? (
+                        <span className="text-sm text-muted-foreground">
+                          {" · "}
+                          <Link href={`/actividades/${a.id}`} className="text-primary hover:underline">
+                            {identificadorAuditoria(a)}
+                          </Link>
+                        </span>
+                      ) : null}
+                      <p className="text-sm">
+                        {o.fecha_vencimiento! < hoy ? "Venció" : "Vence"} el {fecha(o.fecha_vencimiento!)}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <SemaforoBadge color={o.color} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
       </section>
 
-      {/* ── Carga ── */}
-      <section className="flex flex-col gap-4">
-        <div className="rounded-2xl border bg-card shadow-sm">
-          <div className="border-b p-5">
-            <h2 className="font-semibold">Carga por departamento</h2>
-            <p className="text-sm text-muted-foreground">Lo que tiene en proceso cada departamento hoy.</p>
-          </div>
-          <Table>
-            <TableHeader>
+      <section className="grid gap-4 md:grid-cols-2">
+        <Panel titulo="Cronograma cerrado a tiempo">
+          <Pastel porciones={aTiempoContraTarde(cumplimientoHitos)} centro="cerradas" vacio="Todavía no hay actividades cerradas." />
+        </Panel>
+        <Panel titulo="Oficios respondidos a tiempo">
+          <Pastel porciones={aTiempoContraTarde(cumplimientoOficios)} centro="respondidos" vacio="Todavía no hay oficios respondidos." />
+        </Panel>
+      </section>
+
+      <Panel titulo="Días hábiles planeados y reales por etapa">
+        <PlanContraReal filas={planVsReal} />
+      </Panel>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Panel titulo="Tiempo promedio con cada cargo" nota="Horas hábiles: de 8:00 a 16:30, de lunes a viernes, sin asuetos.">
+          <BarrasHorizontales filas={porCargo} resaltar vacio="Sin datos todavía." />
+        </Panel>
+        <Panel titulo="Documentos que más tardan" nota="Tiempo promedio por paso, en horas hábiles.">
+          <BarrasHorizontales filas={documentosLentos} resaltar vacio="Sin datos todavía." />
+        </Panel>
+      </section>
+
+      <section className="tarjeta">
+        <h2 className="border-b px-5 py-4 font-semibold">Carga por departamento</h2>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Departamento</TableHead>
+              <TableHead className="text-right">En curso</TableHead>
+              <TableHead className="text-right">En riesgo</TableHead>
+              <TableHead className="text-right">Documentos pendientes</TableHead>
+              <TableHead className="text-right">Oficios sin respuesta</TableHead>
+              <TableHead className="text-right">Tiempo por paso</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cargaDepartamento.length === 0 ? (
               <TableRow>
-                <TableHead>Departamento</TableHead>
-                <TableHead className="text-right">En curso</TableHead>
-                <TableHead className="text-right">En riesgo</TableHead>
-                <TableHead className="text-right">Documentos pendientes</TableHead>
-                <TableHead className="text-right">Oficios sin respuesta</TableHead>
-                <TableHead className="text-right">Tiempo por paso</TableHead>
+                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                  Sin auditorías registradas.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {cargaDepartamento.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    No hay auditorías dentro de su alcance todavía.
+            ) : (
+              cargaDepartamento.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-medium whitespace-normal">{d.nombre}</TableCell>
+                  <TableCell className="text-right tabular-nums">{d.enCurso}</TableCell>
+                  <TableCell className={d.enRiesgo > 0 ? "text-right font-semibold text-[var(--status-rojo)] tabular-nums" : "text-right tabular-nums"}>
+                    {d.enRiesgo}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">{d.documentos}</TableCell>
+                  <TableCell className="text-right tabular-nums">{d.oficios}</TableCell>
+                  <TableCell className="text-right tabular-nums">{d.tiempo === null ? "—" : formatearHoras(d.tiempo)}</TableCell>
                 </TableRow>
-              ) : (
-                cargaDepartamento.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-medium whitespace-normal">{d.nombre}</TableCell>
-                    <TableCell className="text-right tabular-nums">{d.enCurso}</TableCell>
-                    <TableCell className={d.enRiesgo > 0 ? "text-right font-semibold text-[var(--status-rojo)] tabular-nums" : "text-right tabular-nums"}>
-                      {d.enRiesgo}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{d.documentos}</TableCell>
-                    <TableCell className="text-right tabular-nums">{d.oficios}</TableCell>
-                    <TableCell className="text-right tabular-nums">{d.tiempo === null ? "—" : formatearHoras(d.tiempo)}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <details className="rounded-2xl border bg-card shadow-sm">
-          <summary className="cursor-pointer p-5 font-semibold">
-            Carga por persona ({cargaPersonas.length} con trabajo asignado)
-            <span className="block text-sm font-normal text-muted-foreground">
-              Solo quienes tienen auditorías, documentos u oficios en proceso; los que más pendientes tienen, primero.
-            </span>
-          </summary>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Persona</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Departamento</TableHead>
-                <TableHead className="text-right">Auditorías</TableHead>
-                <TableHead className="text-right">Documentos</TableHead>
-                <TableHead className="text-right">Oficios</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {cargaPersonas.map((p) => (
-                <TableRow key={p.nit}>
-                  <TableCell className="font-medium whitespace-normal">{p.nombre}</TableCell>
-                  <TableCell>{CARGO_LABELS[p.cargo]}</TableCell>
-                  <TableCell className="whitespace-normal text-muted-foreground">{p.departamento ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{p.auditorias}</TableCell>
-                  <TableCell className="text-right tabular-nums">{p.documentos}</TableCell>
-                  <TableCell className="text-right tabular-nums">{p.oficios}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </details>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </section>
+
+      <details className="tarjeta">
+        <summary className="cursor-pointer px-5 py-4 font-semibold">Carga por persona ({cargaPersonas.length})</summary>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Persona</TableHead>
+              <TableHead>Cargo</TableHead>
+              <TableHead>Departamento</TableHead>
+              <TableHead className="text-right">Auditorías</TableHead>
+              <TableHead className="text-right">Documentos</TableHead>
+              <TableHead className="text-right">Oficios</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cargaPersonas.map((p) => (
+              <TableRow key={p.nit}>
+                <TableCell className="font-medium whitespace-normal">{p.nombre}</TableCell>
+                <TableCell>{CARGO_LABELS[p.cargo]}</TableCell>
+                <TableCell className="whitespace-normal text-muted-foreground">{p.departamento ?? "—"}</TableCell>
+                <TableCell className="text-right tabular-nums">{p.auditorias}</TableCell>
+                <TableCell className="text-right tabular-nums">{p.documentos}</TableCell>
+                <TableCell className="text-right tabular-nums">{p.oficios}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </details>
     </div>
+  );
+}
+
+/** "2026-03-26" → "26/03/2026" */
+const fecha = (iso: string) => iso.split("-").reverse().join("/");
+
+function Panel({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-4 tarjeta p-5">
+      <h2 className="font-semibold">{titulo}</h2>
+      {children}
+      {nota ? <p className="text-xs text-muted-foreground">{nota}</p> : null}
+    </section>
   );
 }

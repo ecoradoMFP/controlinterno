@@ -40,12 +40,10 @@ export default async function ConfiguracionPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold">Configuración del semáforo</h1>
-        <p className="text-sm text-muted-foreground">
-          Umbrales (sección 5) y calendario de asuetos (sección 4.12) — exclusivo de Dirección.
-        </p>
+        <p className="text-sm text-muted-foreground">Umbrales y calendario de asuetos. Solo Dirección puede modificarlos.</p>
       </div>
 
-      <Link href="/configuracion/estructura" className="rounded-xl border p-4 shadow-sm hover:bg-muted/40">
+      <Link href="/configuracion/estructura" className="tarjeta p-4 shadow-sm hover:bg-muted/40">
         <p className="font-medium">Estructura organizacional del Ministerio →</p>
         <p className="text-xs text-muted-foreground">Direcciones y viceministerios que aparecen al elegir la dependencia auditada.</p>
       </Link>
@@ -56,7 +54,7 @@ export default async function ConfiguracionPage({
         </p>
       ) : null}
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <div className="border-b p-4">
           <h2 className="font-medium">Umbrales por ámbito</h2>
           <p className="text-xs text-muted-foreground">
@@ -112,7 +110,7 @@ export default async function ConfiguracionPage({
         </div>
       </div>
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <div className="border-b p-4">
           <h2 className="font-medium">Calendario de asuetos</h2>
           <p className="text-xs text-muted-foreground">

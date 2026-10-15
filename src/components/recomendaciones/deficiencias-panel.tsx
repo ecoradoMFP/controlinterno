@@ -76,7 +76,7 @@ export function DeficienciasPanel({
             if (soloPendientes && recomendacionesVisibles.length === 0) return null;
 
             return (
-              <div key={d.id} className="rounded-xl border p-4">
+              <div key={d.id} className="tarjeta p-4">
                 <p className="font-medium">
                   Deficiencia {d.numero} · {d.titulo}
                 </p>
@@ -332,7 +332,7 @@ function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: Deficien
 function HistorialCambios({ historial }: { historial: CambioRecomendacion[] }) {
   if (historial.length === 0) return null;
   return (
-    <details className="rounded-xl border p-4">
+    <details className="tarjeta p-4">
       <summary className="cursor-pointer text-sm font-medium">
         Historial de correcciones y eliminaciones ({historial.length})
       </summary>

@@ -1,69 +1,69 @@
-import type { LucideIcon } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Mismos 4 tonos del semáforo (sección 5) más "accent"/"primary"/"destructive" — para que el
- * ícono de una tarjeta de métrica pueda hacer eco del mismo color que ya usa un badge/chip
- * relacionado en la misma página (p. ej. "Pendientes" en rojo, igual que su SemaforoChip). */
-type StatCardTone = "accent" | "primary" | "destructive" | "verde" | "amarillo" | "naranja" | "rojo";
+type StatCardTone = "neutral" | "verde" | "amarillo" | "naranja" | "rojo";
 
-const TONE_CLASSES: Record<StatCardTone, string> = {
-  // Azul vivo institucional (--ring, #0099cc) — tono por defecto de las tarjetas de métrica.
-  // Da más vida que el navy de --primary, que ya está reservado para el sidebar y los CTA.
-  accent: "bg-[var(--ring)]/10 text-[var(--ring)]",
-  primary: "bg-primary/10 text-primary",
-  destructive: "bg-destructive/10 text-destructive",
-  verde: "bg-[var(--status-verde)]/10 text-[var(--status-verde)]",
-  amarillo: "bg-[var(--status-amarillo)]/10 text-[var(--status-amarillo)]",
-  naranja: "bg-[var(--status-naranja)]/10 text-[var(--status-naranja)]",
-  rojo: "bg-[var(--status-rojo)]/10 text-[var(--status-rojo)]",
+const TONE_PUNTO: Record<StatCardTone, string> = {
+  neutral: "bg-primary text-primary-foreground",
+  verde: "bg-[var(--status-verde)] text-white",
+  amarillo: "bg-[var(--status-amarillo)] text-[#3d2f00]",
+  naranja: "bg-[var(--status-naranja)] text-white",
+  rojo: "bg-[var(--status-rojo)] text-white",
 };
 
 /**
- * Tarjeta de métrica reutilizable: número grande + label en versalitas + ícono de acento con
- * fondo tenue (10% de opacidad, nunca un bloque plano saturado). Es la unidad base de los
- * dashboards de Capacitaciones, Recomendaciones y Reportes.
+ * Indicador: etiqueta, número y detalle. `destacada` la rellena con el azul institucional (la
+ * tarjeta activa de un filtro, o la principal del tablero). `enlace` muestra la flecha de "ver".
  */
 export function StatCard({
-  icon: Icon,
-  tone = "accent",
+  tone = "neutral",
   label,
   value,
   detail,
+  destacada = false,
+  enlace = false,
   children,
   className,
 }: {
-  icon?: LucideIcon;
   tone?: StatCardTone;
   label: string;
   value: React.ReactNode;
   detail?: React.ReactNode;
+  destacada?: boolean;
+  enlace?: boolean;
   children?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md md:p-5",
+        "flex flex-col rounded-2xl border p-4 transition-colors md:p-5",
+        destacada ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{label}</p>
-        {Icon ? (
+        <p className={cn("text-sm font-medium", destacada ? "text-primary-foreground/85" : "text-muted-foreground")}>{label}</p>
+        {enlace ? (
           <span
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-xl",
-              TONE_CLASSES[tone],
+              "flex size-7 shrink-0 items-center justify-center rounded-full",
+              destacada ? "bg-primary-foreground text-primary" : TONE_PUNTO[tone],
             )}
+            aria-hidden
           >
-            <Icon className="size-4" aria-hidden />
+            <ArrowUpRight className="size-4" />
           </span>
+        ) : tone !== "neutral" ? (
+          <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", TONE_PUNTO[tone])} aria-hidden />
         ) : null}
       </div>
-      <p className="mt-1.5 font-heading text-2xl font-bold md:text-3xl">{value}</p>
+      <p className="mt-3 text-4xl font-bold tracking-tight tabular-nums">{value}</p>
       {children}
-      {detail ? <p className="mt-1.5 text-xs text-muted-foreground">{detail}</p> : null}
+      {detail ? (
+        <p className={cn("mt-auto pt-2 text-sm", destacada ? "text-primary-foreground/75" : "text-muted-foreground")}>{detail}</p>
+      ) : null}
     </div>
   );
 }

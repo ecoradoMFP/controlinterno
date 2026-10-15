@@ -23,7 +23,7 @@ export function EquipoInformePanel({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <ul className="divide-y rounded-xl border shadow-sm">
+      <ul className="divide-y tarjeta">
         {equipo.length === 0 ? (
           <li className="p-4 text-sm text-muted-foreground">Sin auditores asignados aún.</li>
         ) : (

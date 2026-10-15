@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, ClipboardCheck, ClipboardList, FileSpreadsheet, FileText, Hourglass, ListChecks } from "lucide-react";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual, puedeEscribir } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { FiltrosAutomaticos } from "@/components/recomendaciones/filtros-automat
 import { ListaRecomendaciones } from "@/components/recomendaciones/lista-recomendaciones";
 import { cargarFlujoPorCai, cargarRecomendaciones } from "@/lib/recomendaciones-datos";
 import { ESTADO_RECOMENDACION_LABELS, ESTADOS_RECOMENDACION } from "@/types/domain";
-import { cn } from "@/lib/utils";
 
 export type FiltrosVista = {
   etapa?: string;
@@ -140,12 +139,12 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
     return `/recomendaciones/reporte?${params.toString()}`;
   };
 
-  const kpi = (clave: string, label: string, detail: string, valor: number, icon: typeof ClipboardList, tone: "amarillo" | "naranja" | "accent" | "verde") => {
+  const kpi = (clave: string, label: string, detail: string, valor: number, tone: "amarillo" | "naranja" | "neutral" | "verde") => {
     // Volver a hacer clic en la tarjeta activa regresa a lo que requiere seguimiento.
     const href = urlCon({ etapa: etapa === clave ? "" : clave });
     return (
-      <Link key={clave} href={href} aria-pressed={etapa === clave} className={cn("block h-full rounded-2xl", etapa === clave && "ring-2 ring-primary")}>
-        <StatCard icon={icon} tone={tone} label={label} value={String(valor)} detail={detail} className="h-full" />
+      <Link key={clave} href={href} aria-pressed={etapa === clave} className={"block h-full rounded-2xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"}>
+        <StatCard tone={tone} label={label} value={String(valor)} detail={detail} destacada={etapa === clave} enlace className="h-full hover:border-primary/40" />
       </Link>
     );
   };
@@ -184,9 +183,6 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Seguimiento a recomendaciones (CAI)</h1>
-          <p className="text-sm text-muted-foreground">
-            Cada recomendación se sigue, informe tras informe, hasta que queda cumplida.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {/* Reporte como el de SAG-UDAI, con lo que se está viendo (mismos filtros). */}
@@ -201,14 +197,14 @@ export async function VistaRecomendaciones({ filtros }: { filtros: FiltrosVista 
       </div>
 
       <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-5">
-        {kpi("por_evaluar", "Por evaluar", "Falta completar la cédula", cuenta("por_evaluar"), ClipboardList, "naranja")}
-        {kpi("evaluada", "Evaluadas", "Falta la emisión del informe", cuenta("evaluada"), ClipboardCheck, "amarillo")}
-        {kpi("en_seguimiento", "En seguimiento", "Evaluadas este año", cuenta("en_seguimiento"), Hourglass, "accent")}
-        {kpi("atendida", "Atendidas", "Cumplidas, histórico", cuenta("atendida"), CheckCircle2, "verde")}
-        {kpi("todas", "Todas", "Sin filtro de etapa", base.length, ListChecks, "accent")}
+        {kpi("por_evaluar", "Por evaluar", "Falta completar la cédula", cuenta("por_evaluar"), "naranja")}
+        {kpi("evaluada", "Evaluadas", "Falta la emisión del informe", cuenta("evaluada"), "amarillo")}
+        {kpi("en_seguimiento", "En seguimiento", "Evaluadas este año", cuenta("en_seguimiento"), "neutral")}
+        {kpi("atendida", "Atendidas", "Cumplidas, histórico", cuenta("atendida"), "verde")}
+        {kpi("todas", "Todas", "Sin filtro de etapa", base.length, "neutral")}
       </div>
 
-      <div className="rounded-xl border shadow-sm">
+      <div className="tarjeta">
         <FiltrosAutomaticos ruta={ruta} className="flex flex-wrap items-center gap-2 border-b p-4">
           <input type="hidden" name="etapa" value={aplicados.etapa ?? ""} />
           <select key={`estado-${aplicados.estado}`} name="estado" defaultValue={aplicados.estado ?? ""} className={SELECT_CLASES} aria-label="Estado">

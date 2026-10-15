@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, ChevronRight, FileText, ListChecks, Mail, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { esJefaturaAuditoria, getUsuarioActual } from "@/lib/auth";
 import { identificadorAuditoria } from "@/lib/auditoria";
@@ -199,10 +199,10 @@ export default async function MisPendientesPage() {
       </div>
 
       <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
-        <Resumen href="#documentos" icon={FileText} label="Documentos" detail="Entregar, revisar o aprobar" valor={pendDocumentos.length} />
-        <Resumen href="#oficios" icon={Mail} label="Oficios" detail="Esperan respuesta" valor={pendOficios.length} />
-        <Resumen href="#cronograma" icon={CalendarClock} label="Cronograma" detail="Plazos por vencer o vencidos" valor={pendCronograma.length} />
-        <Resumen href="#seguimiento" icon={ListChecks} label="Recomendaciones" detail="Cédulas e informes" valor={pendSeguimiento.length} />
+        <Resumen href="#documentos" label="Documentos" detail="Entregar, revisar o aprobar" valor={pendDocumentos.length} />
+        <Resumen href="#oficios" label="Oficios" detail="Esperan respuesta" valor={pendOficios.length} />
+        <Resumen href="#cronograma" label="Cronograma" detail="Plazos por vencer o vencidos" valor={pendCronograma.length} />
+        <Resumen href="#seguimiento" label="Recomendaciones" detail="Cédulas e informes" valor={pendSeguimiento.length} />
       </div>
 
       <Seccion id="documentos" titulo="Documentos a su cargo" vacio="No tiene documentos por entregar ni revisar." items={pendDocumentos} />
@@ -228,17 +228,17 @@ export default async function MisPendientesPage() {
   );
 }
 
-function Resumen({ href, icon, label, detail, valor }: { href: string; icon: LucideIcon; label: string; detail: string; valor: number }) {
+function Resumen({ href, label, detail, valor }: { href: string; label: string; detail: string; valor: number }) {
   return (
     <a href={href} className="block h-full rounded-2xl">
-      <StatCard icon={icon} tone={valor > 0 ? "primary" : "verde"} label={label} value={String(valor)} detail={detail} className="h-full" />
+      <StatCard tone={valor > 0 ? "neutral" : "verde"} label={label} value={String(valor)} detail={detail} enlace className="h-full hover:border-primary/40" />
     </a>
   );
 }
 
 function Seccion({ id, titulo, vacio, items }: { id: string; titulo: string; vacio: string; items: Pendiente[] }) {
   return (
-    <section id={id} className="scroll-mt-4 rounded-xl border shadow-sm">
+    <section id={id} className="scroll-mt-4 tarjeta">
       <h2 className="border-b p-4 font-medium">
         {titulo} ({items.length})
       </h2>

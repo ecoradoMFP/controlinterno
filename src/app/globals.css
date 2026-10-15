@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-montserrat);
+  --font-sans: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-heading: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,120 +48,131 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/*
- * Paleta alineada al portal institucional real de MINFIN (minfin.gob.gt), tomada con cuentagotas
- * de capturas del sitio: navy #001f52 (header/footer/marca), azul vivo #0099cc (acento/enlaces/
- * foco), celeste #e5f9ff (fondos tenues) y naranja #ff6500 (alertas — mismo espíritu que el
- * "naranja" del semáforo, sección 5). No es una paleta inventada: es la del Ministerio.
- */
+/* Colores del portal de MINFIN: marino #001f52, celeste #0099cc, celeste claro #e5f9ff, naranja #ff6500. */
 :root {
-  --background: #ffffff;
-  --foreground: #10203a;
+  --background: #f3f5f8;
+  --foreground: #0d1d38;
   --card: #ffffff;
-  --card-foreground: #10203a;
+  --card-foreground: #0d1d38;
   --popover: #ffffff;
-  --popover-foreground: #10203a;
+  --popover-foreground: #0d1d38;
   --primary: #001f52;
   --primary-foreground: #ffffff;
   --secondary: #e5f9ff;
   --secondary-foreground: #001f52;
-  --muted: #eef2f7;
-  --muted-foreground: #5b6b82;
-  --accent: #ddf3fb;
+  --muted: #eaeef3;
+  --muted-foreground: #586880;
+  --accent: #e5f9ff;
   --accent-foreground: #00435c;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #d7dee6;
-  --input: #d7dee6;
+  --destructive: #9e1c2c;
+  --border: #e0e6ed;
+  --input: #d3dbe5;
   --ring: #0099cc;
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #4a3aa7;
-  /* Esquinas grandes y consistentes (línea Tasko): --radius sube de 0.65rem a 0.75rem y todo el
-   * resto de la escala (rounded-lg/xl/2xl/…) se deriva de acá, así que un solo número redondea
-   * tarjetas, botones e inputs de forma pareja en toda la app. */
-  --radius: 0.75rem;
+  /* Categorías (etapas, series): validadas para daltonismo, siempre con etiqueta. */
+  --chart-1: #1d4f91;
+  --chart-2: #0099cc;
+  --chart-3: #6a5bb5;
+  --chart-4: #c98a12;
+  --chart-5: #586880;
+  --radius: 0.65rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #10203a;
+  --sidebar-foreground: #0d1d38;
   --sidebar-primary: #001f52;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ddf3fb;
-  --sidebar-accent-foreground: #00435c;
-  --sidebar-border: #d7dee6;
+  --sidebar-accent: #e5f9ff;
+  --sidebar-accent-foreground: #001f52;
+  --sidebar-border: #e0e6ed;
   --sidebar-ring: #0099cc;
-  /* Rampa secuencial para mapas de calor (carga de trabajo, sección 7): un solo tono, de
-   * "casi nada" (claro, cercano al fondo) a "mucho" (oscuro) — nunca identidad, solo magnitud. */
+  /* Mapa de calor: un solo tono, de poco (claro) a mucho (oscuro). */
   --heat-0: transparent;
-  --heat-1: #cde2fb;
-  --heat-2: #86b6ef;
-  --heat-3: #3987e5;
-  --heat-4: #1c5cab;
-  --heat-5: #0d366b;
+  --heat-1: #d6e6f7;
+  --heat-2: #93b9e3;
+  --heat-3: #3f7cc4;
+  --heat-4: #1d4f91;
+  --heat-5: #001f52;
   --heat-text-1: #001f52;
   --heat-text-2: #001f52;
   --heat-text-3: #ffffff;
   --heat-text-4: #ffffff;
   --heat-text-5: #ffffff;
-  /* Paleta de estado del semáforo (sección 5): escala fija de 4 pasos, significado reservado
-   * — nunca se reutiliza como paleta categórica genérica. Mismos tonos que ya usan los puntos
-   * de color de SemaforoChip (emerald/amber/orange/red), expuestos aquí como variables para
-   * que las gráficas (SVG) los puedan referenciar directamente. */
-  --status-verde: #059669;
-  --status-amarillo: #f59e0b;
-  --status-naranja: #ea580c;
-  --status-rojo: #dc2626;
+  /* Semáforo: solo para estado, nunca como color de serie. Fondo y texto para las etiquetas. */
+  --status-verde: #227a55;
+  --status-amarillo: #f0c419;
+  --status-naranja: #e2580b;
+  --status-rojo: #9e1c2c;
+  --status-verde-bg: #e3f1ea;
+  --status-verde-fg: #175c3f;
+  --status-amarillo-bg: #fcf3cf;
+  --status-amarillo-fg: #6b5200;
+  --status-naranja-bg: #fde7da;
+  --status-naranja-fg: #9a3a05;
+  --status-rojo-bg: #f6e0e3;
+  --status-rojo-fg: #85162a;
 }
 
 .dark {
-  --background: #0b1526;
-  --foreground: #eef3f8;
-  --card: #101f36;
-  --card-foreground: #eef3f8;
-  --popover: #101f36;
-  --popover-foreground: #eef3f8;
-  --primary: #2fb8ea;
-  --primary-foreground: #06192c;
+  --background: #0a1424;
+  --foreground: #eaf0f7;
+  --card: #111e33;
+  --card-foreground: #eaf0f7;
+  --popover: #111e33;
+  --popover-foreground: #eaf0f7;
+  --primary: #3fb6e6;
+  --primary-foreground: #04172b;
   --secondary: #16283f;
-  --secondary-foreground: #eef3f8;
+  --secondary-foreground: #eaf0f7;
   --muted: #16283f;
-  --muted-foreground: #8ea3bd;
+  --muted-foreground: #93a5bd;
   --accent: #123249;
-  --accent-foreground: #7fd4f2;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
+  --accent-foreground: #8fd8f3;
+  --destructive: #f07080;
+  --border: oklch(1 0 0 / 11%);
   --input: oklch(1 0 0 / 15%);
-  --ring: #2fb8ea;
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #9085e9;
-  --sidebar: #101f36;
-  --sidebar-foreground: #eef3f8;
-  --sidebar-primary: #2fb8ea;
-  --sidebar-primary-foreground: #06192c;
+  --ring: #3fb6e6;
+  --chart-1: #6c9ee0;
+  --chart-2: #3fb6e6;
+  --chart-3: #9a8de0;
+  --chart-4: #e0a83a;
+  --chart-5: #93a5bd;
+  --sidebar: #111e33;
+  --sidebar-foreground: #eaf0f7;
+  --sidebar-primary: #3fb6e6;
+  --sidebar-primary-foreground: #04172b;
   --sidebar-accent: #123249;
-  --sidebar-accent-foreground: #7fd4f2;
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: #2fb8ea;
-  /* Mismo mapa de calor, ancla invertida: en modo oscuro "casi nada" se hunde hacia el fondo
-   * oscuro y "mucho" resalta claro, en vez de al revés como en modo claro. */
+  --sidebar-accent-foreground: #8fd8f3;
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: #3fb6e6;
   --heat-0: transparent;
   --heat-1: #14335c;
-  --heat-2: #1c5cab;
-  --heat-3: #256abf;
-  --heat-4: #3987e5;
-  --heat-5: #86b6ef;
-  --heat-text-1: #eef3f8;
-  --heat-text-2: #eef3f8;
-  --heat-text-3: #eef3f8;
-  --heat-text-4: #06192c;
-  --heat-text-5: #06192c;
-  --status-verde: #34d399;
-  --status-amarillo: #fbbf24;
-  --status-naranja: #fb923c;
-  --status-rojo: #f87171;
+  --heat-2: #1d4f91;
+  --heat-3: #3f7cc4;
+  --heat-4: #6c9ee0;
+  --heat-5: #a9c8f0;
+  --heat-text-1: #eaf0f7;
+  --heat-text-2: #eaf0f7;
+  --heat-text-3: #eaf0f7;
+  --heat-text-4: #04172b;
+  --heat-text-5: #04172b;
+  --status-verde: #4fbf8c;
+  --status-amarillo: #f5cf4a;
+  --status-naranja: #ff7a33;
+  --status-rojo: #f06a78;
+  --status-verde-bg: #12352a;
+  --status-verde-fg: #8ee0b9;
+  --status-amarillo-bg: #3a3112;
+  --status-amarillo-fg: #f7dc7a;
+  --status-naranja-bg: #3d2112;
+  --status-naranja-fg: #ffb185;
+  --status-rojo-bg: #3d1820;
+  --status-rojo-fg: #f7a3ad;
+}
+
+/* Bloque blanco sobre el fondo gris, como las tarjetas del Tablero. */
+@utility tarjeta {
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(13 29 56 / 0.04);
 }
 
 @layer base {
@@ -173,13 +184,7 @@
   }
   html {
     @apply font-sans;
-    /* Buena parte del personal que usa el sistema no es técnico y trabaja en monitores/
-     * resoluciones variadas de oficina — el tamaño base de Tailwind (16px) se veía chico en
-     * la práctica (reportado desde una PC institucional, necesitaba zoom manual al 150% para
-     * leerse bien). En vez de eso, todo el sistema de diseño (que usa rem) escala desde acá:
-     * un solo número sube texto, espaciados y radios de forma proporcional en toda la app.
-     * Porcentaje, no px, para seguir respetando el tamaño de fuente que el usuario ya
-     * configuró en su propio navegador. */
+    /* Letra base más grande: buena parte del personal la necesitaba con zoom. */
     font-size: 118.75%;
   }
   h1, h2, h3 {
@@ -187,16 +192,14 @@
   }
 }
 
-/* Códigos de expediente/oficio (NAI-001-2026, DAI-AF-001-2026): tratados como un número
- * timbrado, no como texto corrido — es el identificador único de un expediente real. */
+/* Códigos de expediente y oficio (NAI-001-2026). */
 .codigo-expediente {
   font-family: var(--font-mono);
-  letter-spacing: 0.04em;
+  letter-spacing: -0.01em;
   font-weight: 600;
 }
 
-/* Vistas imprimibles (hoja de ruta, sección 12.7): la barra de navegación y el pie navy son
- * cromo de la app, no parte del documento que un auditor va a imprimir/guardar como PDF. */
+/* Al imprimir solo sale el documento, sin menú ni encabezado. */
 @media print {
   header,
   footer,

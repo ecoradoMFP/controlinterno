@@ -114,7 +114,7 @@ export function DocumentosPanel({
             {lista}
           </section>
         ) : (
-          <details key={etapa} className="rounded-xl border">
+          <details key={etapa} className="tarjeta">
             <summary className="flex cursor-pointer items-baseline gap-3 p-3">{encabezado}</summary>
             <div className="border-t p-3">{lista}</div>
           </details>
@@ -201,7 +201,7 @@ function DocumentoCard({
   return (
     <div
       id={`doc-${d.id}`}
-      className={cn("scroll-mt-4 rounded-xl border p-4", meToca && "border-primary/40 bg-primary/5")}
+      className={cn("scroll-mt-4 tarjeta p-4", meToca && "border-primary/40 bg-primary/5")}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1.5">

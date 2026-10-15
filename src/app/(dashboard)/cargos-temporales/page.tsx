@@ -64,7 +64,7 @@ export default async function CargosTemporalesPage({ searchParams }: { searchPar
           <p className="text-sm text-muted-foreground">Nadie está cubriendo un cargo temporal ahora.</p>
         ) : (
           activos.map((r) => (
-            <div key={r.id} className="flex flex-col gap-3 rounded-xl border p-4">
+            <div key={r.id} className="flex flex-col gap-3 tarjeta p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-medium">
@@ -158,7 +158,7 @@ export default async function CargosTemporalesPage({ searchParams }: { searchPar
       </form>
 
       {historial.length > 0 ? (
-        <details className="rounded-xl border p-4">
+        <details className="tarjeta p-4">
           <summary className="cursor-pointer text-sm font-medium">Historial ({historial.length})</summary>
           <ul className="mt-3 flex flex-col gap-3 text-sm">
             {historial.map((r) => (

@@ -167,7 +167,7 @@ export default async function InformeDetallePage({
           ) : null}
         </div>
       ) : puedeOperar ? (
-        <details className="rounded-xl border p-4 text-sm">
+        <details className="tarjeta p-4 text-sm">
           <summary className="flex cursor-pointer items-center gap-2 font-medium">
             <Lock className="size-4" aria-hidden /> Bloquear este CAI (cerrar la captura)
           </summary>

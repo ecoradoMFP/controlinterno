@@ -104,10 +104,10 @@ function NavRow({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+        "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors",
         active
-          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20"
-          : "text-sidebar-foreground/70 hover:translate-x-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+          : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       )}
     >
       <Icon className="size-4 shrink-0" aria-hidden />
@@ -125,22 +125,29 @@ function SidebarNav({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  // Ampliaciones de nombramiento: Director y Subdirector, y Jefe o Subjefe para su departamento
+  // (por su cargo real, como `departamentosCargoTemporal`).
+  const cargoReal = usuario.cargo_temporal ? usuario.cargo_temporal.cargo_original : usuario.cargo;
+  const verCargosTemporales = ["director", "subdirector", "jefe", "subjefe"].includes(cargoReal ?? "") && usuario.permiso_sistema !== "consulta";
+  const verConfiguracion = usuario.permiso_sistema === "control_total";
+
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+      <p className="px-4 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Menú</p>
       {NAV_ITEMS.map((item) => (
         <NavRow key={item.href} item={item} active={pathname.startsWith(item.href)} onNavigate={onNavigate} />
       ))}
-      {/* Ampliaciones de nombramiento: Director y Subdirector, y Jefe o Subjefe para su departamento
-          (por su cargo real, como `departamentosCargoTemporal`). */}
-      {["director", "subdirector", "jefe", "subjefe"].includes((usuario.cargo_temporal ? usuario.cargo_temporal.cargo_original : usuario.cargo) ?? "") &&
-      usuario.permiso_sistema !== "consulta" ? (
+      {verCargosTemporales || verConfiguracion ? (
+        <p className="px-4 pt-5 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">General</p>
+      ) : null}
+      {verCargosTemporales ? (
         <NavRow
           item={{ href: "/cargos-temporales", label: "Cargos temporales", icon: UserCog }}
           active={pathname.startsWith("/cargos-temporales")}
           onNavigate={onNavigate}
         />
       ) : null}
-      {usuario.permiso_sistema === "control_total" ? (
+      {verConfiguracion ? (
         <NavRow
           item={{ href: "/configuracion", label: "Configuración", icon: Settings }}
           active={pathname.startsWith("/configuracion")}

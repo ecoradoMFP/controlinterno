@@ -45,7 +45,7 @@ export function PanelSeguimientoCai({
         const evaluadas = grupo.filter((f) => f.evaluacion);
 
         return (
-          <section key={informe.id} className="flex flex-col gap-3 rounded-xl border p-4">
+          <section key={informe.id} className="flex flex-col gap-3 tarjeta p-4">
             <header>
               <h3 className="codigo-expediente text-base font-semibold">{etiquetaCai(informe.cai, informe.anio_cai) ?? informe.no_nombramiento}</h3>
               <p className="text-sm text-muted-foreground">

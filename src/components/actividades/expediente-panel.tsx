@@ -66,7 +66,7 @@ export function ExpedientePanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-4 rounded-xl border p-4">
+      <section className="flex flex-col gap-4 tarjeta p-4">
         <div>
           <h3 className="font-medium">Datos del nombramiento</h3>
           <p className="text-sm text-muted-foreground">
@@ -133,7 +133,7 @@ export function ExpedientePanel({
         ) : null}
       </section>
 
-      <section className="flex flex-col gap-4 rounded-xl border p-4">
+      <section className="flex flex-col gap-4 tarjeta p-4">
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-medium">Cierre del expediente</h3>
           {actividad.concluida ? <Badge>Concluida</Badge> : <Badge variant="secondary">En curso</Badge>}
@@ -172,7 +172,7 @@ export function ExpedientePanel({
         )}
       </section>
 
-      <section id="recomendaciones" className="flex scroll-mt-4 flex-col gap-3 rounded-xl border p-4">
+      <section id="recomendaciones" className="flex scroll-mt-4 flex-col gap-3 tarjeta p-4">
         <h3 className="font-medium">Inventario de recomendaciones</h3>
         {informeId ? (
           <p className="text-sm">

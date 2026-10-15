@@ -1,47 +1,6 @@
-import { COLOR_SEMAFORO_CSS_VAR } from "@/components/semaforo-chip";
-import { COLOR_SEMAFORO_LABELS, type ColorSemaforo } from "@/lib/semaforo";
 import { cn } from "@/lib/utils";
 
-// Gráficas del tablero de Reportes en HTML simple: barras con su etiqueta y su valor escritos al
-// lado (nunca solo color), y `title` como tooltip. Sin librería: son pocas barras y así se leen
-// igual en claro, oscuro e impresión.
-
-const ORDEN_SEMAFORO: ColorSemaforo[] = ["verde", "amarillo", "naranja", "rojo"];
-
-/** Parte de un todo: cuántas auditorías hay en cada color, en una sola barra. */
-export function BarraSemaforo({ conteo }: { conteo: Record<ColorSemaforo, number> }) {
-  const total = ORDEN_SEMAFORO.reduce((s, c) => s + conteo[c], 0);
-  if (total === 0) {
-    return <p className="text-sm text-muted-foreground">Ninguna auditoría tiene actividades del cronograma u oficios con plazo abierto.</p>;
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex h-4 w-full gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Auditorías por color del semáforo">
-        {ORDEN_SEMAFORO.filter((c) => conteo[c] > 0).map((c) => (
-          <div
-            key={c}
-            title={`${COLOR_SEMAFORO_LABELS[c]}: ${conteo[c]}`}
-            style={{ width: `${(conteo[c] / total) * 100}%`, background: COLOR_SEMAFORO_CSS_VAR[c] }}
-          />
-        ))}
-      </div>
-      <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-4">
-        {ORDEN_SEMAFORO.map((c) => (
-          <li key={c} className="flex items-center gap-2">
-            <span className="size-2.5 shrink-0 rounded-full" style={{ background: COLOR_SEMAFORO_CSS_VAR[c] }} aria-hidden />
-            <span className="text-muted-foreground">{COLOR_SEMAFORO_LABELS[c]}</span>
-            <span className="ml-auto font-semibold tabular-nums sm:ml-0">{conteo[c]}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * Barras horizontales de una sola medida. `resaltar` pinta solo la mayor en el color de acento y
- * el resto en gris: la pregunta es "¿cuál es el más alto?", no distinguir series.
- */
+/** Barras horizontales de una sola medida. `resaltar` pinta solo la mayor en color. */
 export function BarrasHorizontales({
   filas,
   resaltar = false,
@@ -76,32 +35,7 @@ export function BarrasHorizontales({
   );
 }
 
-/** Proporción contra la meta (100%): cuántos se cerraron a tiempo. */
-export function Medidor({ titulo, aTiempo, tarde }: { titulo: string; aTiempo: number; tarde: number }) {
-  const total = aTiempo + tarde;
-  const pct = total > 0 ? Math.round((aTiempo / total) * 100) : null;
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm text-muted-foreground">{titulo}</span>
-        <span className="text-2xl font-bold tabular-nums">{pct === null ? "—" : `${pct}%`}</span>
-      </div>
-      <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted">
-        {total > 0 ? (
-          <>
-            <div style={{ width: `${(aTiempo / total) * 100}%`, background: "var(--status-verde)" }} title={`A tiempo: ${aTiempo}`} />
-            <div style={{ width: `${(tarde / total) * 100}%`, background: "var(--status-rojo)" }} title={`Tarde: ${tarde}`} />
-          </>
-        ) : null}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {total > 0 ? `${aTiempo} a tiempo · ${tarde} tarde` : "Todavía no hay registros cerrados."}
-      </p>
-    </div>
-  );
-}
-
-/** Antes -> después por etapa: días planeados contra días reales, con la diferencia escrita. */
+/** Días planeados contra días reales por etapa. */
 export function PlanContraReal({ filas }: { filas: { etapa: string; plan: number; real: number; n: number }[] }) {
   if (filas.length === 0) {
     return <p className="text-sm text-muted-foreground">Todavía no hay etapas concluidas para comparar.</p>;

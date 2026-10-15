@@ -45,7 +45,7 @@ export function EquipoPanel({
 }) {
   return (
     <div id="equipo" className="flex scroll-mt-4 flex-col gap-4">
-      <ul className="divide-y rounded-xl border shadow-sm">
+      <ul className="divide-y tarjeta">
         {equipo.length === 0 ? (
           <li className="p-4 text-sm text-muted-foreground">Sin miembros de equipo asignados aún.</li>
         ) : (

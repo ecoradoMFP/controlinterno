@@ -82,7 +82,7 @@ export function SeguimientoOficio({
       </Card>
 
       {oficio.fecha_envio ? (
-        <section className="flex flex-col gap-3 rounded-xl border p-4">
+        <section className="flex flex-col gap-3 tarjeta p-4">
           <h3 className="font-medium">Lo registrado</h3>
           <ul className="flex flex-col gap-3">
             <Registro
