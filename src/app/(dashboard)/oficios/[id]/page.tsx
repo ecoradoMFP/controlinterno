@@ -15,9 +15,6 @@ export default async function OficioDetallePage({ params }: { params: Promise<{ 
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  // Hint explícito en `usuarios`: sin él, PostgREST no puede elegir entre el FK directo
-  // (responsable_elaboracion_nit) y los caminos many-to-many vía oficios_revisores/
-  // oficios_firmantes, y falla con PGRST201 (mismo caso que actividades/actividades_equipo).
   const { data: oficio } = await supabase
     .from("oficios")
     .select(

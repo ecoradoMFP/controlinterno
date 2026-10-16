@@ -12,10 +12,6 @@ const TONE_PUNTO: Record<StatCardTone, string> = {
   rojo: "bg-[var(--status-rojo)] text-white",
 };
 
-/**
- * Indicador: etiqueta, número y detalle. `destacada` la rellena con el azul institucional (la
- * tarjeta activa de un filtro, o la principal del tablero). `enlace` muestra la flecha de "ver".
- */
 export function StatCard({
   tone = "neutral",
   label,

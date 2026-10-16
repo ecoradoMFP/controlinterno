@@ -24,12 +24,10 @@ export function ActividadForm({
   departamentos: Departamento[];
   unidades: UnidadMinisterio[];
   usuarios: Usuario[];
-  /** Si el usuario solo puede crear en su propio departamento (Jefe/Subjefe), se fija y no se muestra el selector. */
   departamentoFijo?: Departamento;
   error?: string;
   fieldErrors?: Record<string, string>;
 }) {
-  // El número de CAI se reinicia cada año; por defecto, el año en curso (Guatemala).
   const anioActual = Number(hoyGuatemala().slice(0, 4));
 
   return (
@@ -88,10 +86,6 @@ export function ActividadForm({
 
       <Field label="Auditor principal" htmlFor="auditor_principal_nit" error={fieldErrors?.auditor_principal_nit}>
         {usuarios.length === 1 ? (
-          // Con un solo auditor candidato, el Select de Base UI puede abrir y cerrar el
-          // popup en el mismo gesto (click o Enter) sin llegar a confirmar la selección,
-          // dejando el input oculto vacío y bloqueando el submit silenciosamente. Con una
-          // sola opción no hay nada que elegir, así que se fija igual que departamentoFijo.
           <>
             <Input
               id="auditor_principal_nit_display"
@@ -194,7 +188,6 @@ export function ActividadForm({
           <Input id="fecha_notificacion_dependencia" name="fecha_notificacion_dependencia" type="date" />
         </Field>
       </div>
-
 
       <Field
         label="Expedientes relacionados (opcional, separados por coma)"

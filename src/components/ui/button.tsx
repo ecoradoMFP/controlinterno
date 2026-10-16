@@ -51,9 +51,6 @@ function Button({
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      // Base UI asume nativeButton=true por defecto; cuando `render` sustituye el <button> por
-      // otro elemento (p. ej. un <Link>), eso ya no es cierto y hay que decirlo explícitamente
-      // o el propio Base UI advierte en consola por perder semántica nativa.
       nativeButton={nativeButton ?? !props.render}
       {...props}
     />

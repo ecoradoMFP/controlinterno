@@ -1,5 +1,3 @@
--- Prompt maestro, sección 4.7: instancia real de un documento del catálogo dentro de una
--- actividad específica.
 create table documentos_actividad (
   id uuid primary key default gen_random_uuid(),
   actividad_id uuid not null references actividades(id) on delete cascade,
@@ -18,5 +16,3 @@ alter table documentos_actividad enable row level security;
 
 revoke all on documentos_actividad from anon, authenticated;
 grant select, insert, update on documentos_actividad to authenticated;
--- Sin delete: el historial de fases de un documento vive en `movimientos` (bitácora
--- inmutable); borrar la fila rompería la trazabilidad que es el propósito del sistema.

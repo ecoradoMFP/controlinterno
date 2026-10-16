@@ -53,7 +53,6 @@ export function EquipoInformePanel({
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Auditor</label>
             {candidatos.length === 1 ? (
-              // Mismo bug de Base UI con un solo candidato — ver equipo-panel.tsx de actividades.
               <>
                 <Input value={`${candidatos[0].nombre} — ${candidatos[0].puesto ?? candidatos[0].cargo}`} disabled />
                 <input type="hidden" name="usuario_nit" value={candidatos[0].nit} />

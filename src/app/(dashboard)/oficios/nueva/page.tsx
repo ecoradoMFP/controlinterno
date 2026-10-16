@@ -21,7 +21,6 @@ export default async function NuevoOficioPage({
 
   const supabase = await createClient();
 
-  // RLS (`actividades_select`) ya acota esto al alcance real de quien elabora el oficio.
   const [{ data: actividades }, { data: asuetos }, { data: unidades }] = await Promise.all([
     supabase.from("actividades").select("id, cai, anio_cai, no_nombramiento").order("created_at", { ascending: false }),
     supabase.from("calendario_feriados").select("fecha"),

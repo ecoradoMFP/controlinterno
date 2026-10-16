@@ -1,12 +1,5 @@
--- "Eliminar" una deficiencia (captura por error) SIN perder trazabilidad, igual que una
--- recomendación: anulación lógica (anulada_en), motivo obligatorio y bitácora append-only escrita
--- por el trigger. Al eliminarla también se eliminan sus recomendaciones, cada una con su propia
--- entrada en la bitácora. Solo se puede mientras ninguna recomendación suya tenga seguimientos
--- evaluados y el CAI no esté bloqueado.
-
 alter table deficiencias add column anulada_en timestamptz;
 
--- Una deficiencia anulada libera su número dentro del informe.
 alter table deficiencias drop constraint deficiencias_informe_id_numero_key;
 create unique index deficiencias_informe_numero_vigente_idx
   on deficiencias (informe_id, numero) where anulada_en is null;
@@ -15,7 +8,6 @@ alter table deficiencias_historial
   add column accion text not null default 'editada' check (accion in ('editada', 'anulada'));
 alter table deficiencias_historial alter column datos_nuevos drop not null;
 
--- Las deficiencias anuladas no se ven ni se editan.
 drop policy deficiencias_select on deficiencias;
 create policy deficiencias_select on deficiencias for select to authenticated
 using (anulada_en is null and authz.puede_ver_informe(informe_id));
@@ -82,10 +74,6 @@ begin
 end;
 $$;
 
--- Anular no puede ser un UPDATE directo (la fila anulada deja de cumplir la policy de select).
--- Esta función valida el permiso, elimina las recomendaciones de la deficiencia (el trigger de
--- cada una exige el motivo, rechaza si hay seguimientos y escribe su bitácora) y luego la
--- deficiencia, todo en una sola transacción.
 create or replace function anular_deficiencia(p_id uuid, p_motivo text)
 returns void
 language plpgsql

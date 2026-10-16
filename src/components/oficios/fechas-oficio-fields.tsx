@@ -5,11 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sumarDiasHabiles } from "@/lib/semaforo";
 
-/**
- * Emisión, plazo en días hábiles y vencimiento del oficio. El vencimiento se calcula solo con la
- * emisión y el plazo (sin fines de semana ni asuetos); se puede cambiar si hay una excepción, y en
- * cuanto se escribe a mano ya no se recalcula encima.
- */
 export function FechasOficioFields({ asuetos, errores }: { asuetos: string[]; errores?: Record<string, string> }) {
   const emision = useRef<HTMLInputElement>(null);
   const plazo = useRef<HTMLInputElement>(null);

@@ -1,16 +1,3 @@
--- Cierre del flujo de Auditorías (CAI):
---
--- 1. Plazos del cronograma (SAG-UDAI-WEB, se reportan a la CGC): una vez registrados solo los
---    corrige la jefatura, con motivo, y cada corrección queda en una bitácora inalterable.
--- 2. Datos generales de la auditoría (dependencia, período, auditor principal, plazos): los
---    corrige la jefatura con motivo, con la misma bitácora. El CAI, el departamento y el tipo no
---    cambian (de ellos dependen el identificador y la carpeta del expediente).
--- 3. No se cierra Planificación sin cronograma registrado.
--- 4. Cerrar una etapa es un solo paso: concluye con la fecha del cierre las actividades del
---    cronograma de esa etapa que sigan abiertas, avanza la etapa y deja el historial.
-
--- Días hábiles entre dos fechas (inclusive), sin fines de semana ni asuetos: mismo cálculo que
--- `diasHabilesEntre` en la app.
 create or replace function dias_habiles(p_desde date, p_hasta date)
 returns integer
 language sql stable
@@ -22,7 +9,6 @@ as $$
     and not exists (select 1 from calendario_feriados f where f.fecha = d::date);
 $$;
 
--- Jefatura que puede corregir: Subjefe, Jefe, Subdirector, Director o control total.
 create or replace function authz.es_jefatura_auditoria()
 returns boolean
 language sql stable security definer set search_path = public
@@ -34,7 +20,6 @@ $$;
 revoke execute on function authz.es_jefatura_auditoria() from public, anon;
 grant execute on function authz.es_jefatura_auditoria() to authenticated;
 
--- ── 1. Correcciones de plazos del cronograma ──
 create table hitos_cronograma_correcciones (
   id uuid primary key default gen_random_uuid(),
   hito_id uuid not null references hitos_cronograma(id) on delete cascade,
@@ -133,7 +118,6 @@ $$;
 revoke execute on function corregir_plazo_cronograma(uuid, date, date, text) from public, anon;
 grant execute on function corregir_plazo_cronograma(uuid, date, date, text) to authenticated;
 
--- ── 2. Datos generales de la auditoría ──
 create table actividades_cambios (
   id uuid primary key default gen_random_uuid(),
   actividad_id uuid not null references actividades(id) on delete cascade,
@@ -263,7 +247,6 @@ $$;
 revoke execute on function editar_datos_auditoria(uuid, text, date, date, text, date, date, text) from public, anon;
 grant execute on function editar_datos_auditoria(uuid, text, date, date, text, date, date, text) to authenticated;
 
--- ── 3. Cronograma obligatorio para cerrar Planificación ──
 create or replace function exigir_cronograma_planificacion()
 returns trigger
 language plpgsql
@@ -285,10 +268,6 @@ create trigger actividades_exigir_cronograma
   before update of etapa_actual on actividades
   for each row execute function exigir_cronograma_planificacion();
 
--- ── 4. Cerrar etapa en un solo paso ──
--- SECURITY INVOKER: RLS de `actividades`, `hitos_cronograma` y el historial deciden quién puede;
--- los triggers de `actividades` validan documentos, equipo y cronograma. Si algo falla, nada queda
--- a medias (las actividades concluidas se revierten con el error).
 create or replace function cerrar_etapa_actividad(p_actividad_id uuid)
 returns etapa_actividad_enum
 language plpgsql

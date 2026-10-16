@@ -34,7 +34,6 @@ const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacio
 const COLORES_ETAPA = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
 const ORDEN_SEMAFORO: ColorSemaforo[] = ["verde", "amarillo", "naranja", "rojo"];
 
-// RLS limita todo al alcance de quien consulta; el filtro de departamento acota dentro de ese alcance.
 export default async function ReportesPage({ searchParams }: { searchParams: Promise<{ dep?: string }> }) {
   const { dep } = await searchParams;
   const supabase = await createClient();
@@ -65,8 +64,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       .not("fecha_vencimiento", "is", null),
     supabase.from("parametros_semaforo").select("*"),
     supabase.from("calendario_feriados").select("fecha"),
-    // Cuellos de botella y carga: se reconstruyen desde la bitácora (movimientos), la única fuente
-    // confiable de "quién tuvo esto y cuánto tiempo".
     supabase
       .from("documentos_actividad")
       .select(
@@ -92,7 +89,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     supabase.from("subdirecciones").select("id, subdirector_nit"),
   ]);
 
-  // ── Alcance: departamento elegido (si lo hay) ──
   const departamentosConDatos = (departamentos ?? []).filter((d) => (actividadesTodas ?? []).some((a) => a.departamento_id === d.id));
   const depFiltro = dep && departamentosConDatos.some((d) => d.id === dep) ? dep : null;
   const actividades = (actividadesTodas ?? []).filter((a) => !depFiltro || a.departamento_id === depFiltro);
@@ -110,8 +106,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const umbralOficio = umbralPorAmbito.get("oficio") ?? UMBRAL_POR_DEFECTO;
   const hoy = hoyGuatemala();
 
-  // ── Semáforo por auditoría EN CURSO, con el motivo (la actividad del cronograma que la pone en
-  // ese color). Los oficios no cuentan aquí: van en su propia lista, más abajo. ──
   const peorPorActividad = semaforoConMotivoPorActividad(
     hitosAbiertos.filter((h) => actividadPorId.get(h.actividad_id)?.concluida === false),
     hoy,
@@ -124,13 +118,11 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     .filter(([, p]) => p.color === "rojo" || p.color === "naranja")
     .sort(([, a], [, b]) => SEVERIDAD[b.color] - SEVERIDAD[a.color] || a.fecha.localeCompare(b.fecha));
 
-  // ── Oficios por atender: sin respuesta y en naranja o rojo, cada uno con su propio color ──
   const oficiosPorAtender = oficiosAbiertos
     .map((o) => ({ ...o, color: calcularSemaforo(o.fecha_emision, o.fecha_vencimiento!, hoy, feriados, umbralOficio) }))
     .filter((o) => o.color === "rojo" || o.color === "naranja")
     .sort((a, b) => SEVERIDAD[b.color] - SEVERIDAD[a.color] || a.fecha_vencimiento!.localeCompare(b.fecha_vencimiento!));
 
-  // ── Indicadores ──
   const enCurso = actividades.filter((a) => !a.concluida);
   const concluidas = actividades.length - enCurso.length;
   const oficiosVencidos = oficiosAbiertos.filter((o) => o.fecha_vencimiento! < hoy).length;
@@ -138,7 +130,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const cumplimientoOficios = calcularCumplimiento(oficiosConcluidos.map((o) => ({ esperada: o.fecha_vencimiento!, real: o.fecha_respuesta! })));
   const enRevision = documentos.filter((d) => d.fase_actual === "revision").length;
 
-  // ── Gráficas de pie ──
   const porSemaforo: PorcionPastel[] = ORDEN_SEMAFORO.map((c) => ({
     clave: c,
     etiqueta: COLOR_SEMAFORO_LABELS[c],
@@ -156,7 +147,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     { clave: "tarde", etiqueta: "Tarde", valor: c.tarde, color: "var(--status-rojo)" },
   ];
 
-  // ── Plazos: plan contra real por etapa ──
   const planVsReal = calcularPlanVsReal(
     hitosConcluidos.map((h) => ({
       etapa: h.etapa,
@@ -167,7 +157,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     feriados,
   ).map((p) => ({ etapa: ETAPA_DOCUMENTO_LABELS[p.etapa], plan: p.planPromedio, real: p.realPromedio, n: p.n }));
 
-  // ── Cuellos de botella: cuánto tiempo pasa un documento con cada cargo antes de avanzar ──
   const departamentoDeActividad = new Map(actividades.map((a) => [a.id, a.departamentos?.nombre ?? null]));
   const segmentos = calcularSegmentosPermanencia(
     documentos.map((d) => ({
@@ -190,9 +179,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     .map((r) => ({ clave: r.clave, etiqueta: r.clave, valor: r.horasPromedio, texto: formatearHoras(r.horasPromedio), detalle: `Promedio de ${r.n} paso(s)` }));
   const tiempoPorDepartamento = new Map(promediarPorClave(segmentos, (s) => s.departamentoNombre).map((r) => [r.clave, r.horasPromedio]));
 
-  // ── Carga: por departamento y por persona ──
-  // Un documento pendiente se atribuye a quien responde por su cargo: al equipo de la auditoría si
-  // está con el Auditor, o a la jefatura del departamento si está con un cargo de jefatura.
   const mapaOrg = construirMapaOrganizacional(
     (usuariosEquipo ?? []).map((u) => ({ nit: u.nit, cargo: u.cargo, departamento_id: u.departamento_id })),
     departamentos ?? [],
@@ -453,7 +439,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   );
 }
 
-/** "2026-03-26" → "26/03/2026" */
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
 
 function Panel({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {

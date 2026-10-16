@@ -11,24 +11,7 @@ import {
 } from "@/lib/semaforo";
 import { construirMapaOrganizacional, responsablesPorCargo } from "@/lib/organizacion";
 
-/**
- * Job diario de alertas de semáforo (sección 9). No calcula nada que /reportes no calcule ya
- * (misma función `calcularColorPorActividad` de `lib/semaforo.ts`, para que ambos coincidan
- * siempre) — lo que agrega es la parte "activa": persistir una notificación in-app cuando una
- * actividad ENTRA o CAMBIA de color naranja/rojo, dirigida a quien le corresponde (equipo de la
- * actividad, jefatura del departamento, subdirección y Dirección), en vez de depender de que
- * alguien abra el dashboard.
- *
- * Sección 12.2: usa el cliente de service role porque necesita ver las actividades de los 3
- * departamentos para decidir a quién avisar, no el alcance de un usuario autenticado — por eso
- * vive en una Route Handler server-only, nunca en una Server Action que resuelve algo por
- * cuenta de un usuario. Pensado para dispararse vía Vercel Cron (`vercel.json`, diario), y
- * protegido con `CRON_SECRET` — Vercel agrega automáticamente `Authorization: Bearer
- * $CRON_SECRET` a sus propias invocaciones cuando esa variable de entorno existe.
- */
 export async function GET(request: NextRequest) {
-  // Falla cerrado: en producción sin CRON_SECRET el endpoint no responde (antes quedaba abierto).
-  // En desarrollo, sin la variable, se permite para poder probarlo a mano.
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret && process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Cron no configurado" }, { status: 503 });
@@ -72,9 +55,6 @@ export async function GET(request: NextRequest) {
 
   const colorPorActividad = calcularColorPorActividad(hitosAbiertos ?? [], hoy, feriados, umbralHito);
 
-  // Ya notificados por (actividad, color, destinatario) — no por actividad+color solamente:
-  // si alguien se suma al equipo/jefatura mientras el color no cambia, esa persona todavía no
-  // tiene ese par en el set y sí debe recibir la alerta, aunque sus compañeros no se renotifiquen.
   const yaNotificado = new Set(
     (notificacionesPrevias ?? []).map((n) => `${n.actividad_id}|${n.color}|${n.usuario_nit}`),
   );

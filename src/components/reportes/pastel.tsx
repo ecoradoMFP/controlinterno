@@ -12,7 +12,6 @@ export type PorcionPastel = {
 const pct = (valor: number, total: number) =>
   `${Math.round((valor / total) * 100)}%`;
 
-/** Gráfica de pie con el porcentaje de cada parte escrito en la leyenda. */
 export function Pastel({
   porciones,
   centro,

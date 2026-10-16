@@ -10,11 +10,8 @@ const textoOpcional = z.string().trim().optional().transform((v) => v || null);
 
 export const actividadFormSchema = z
   .object({
-    // El CAI (número + año) identifica la auditoría; el número se reinicia cada año.
     cai: z.string().trim().min(1, "Requerido").max(20, "Máximo 20 caracteres"),
     anio_cai: z.coerce.number().int().min(2000, "Año inválido").max(2100, "Año inválido"),
-    // Formato abierto: los nombramientos de la DAI no siguen un único patrón (ver
-    // `src/lib/validations/formatos.ts`, donde se agregará la validación cuando se defina).
     no_nombramiento: z
       .string()
       .trim()
@@ -60,7 +57,6 @@ export const actividadFormSchema = z
 
 export type ActividadFormValues = z.infer<typeof actividadFormSchema>;
 
-/** Datos del nombramiento que se completan o corrigen después de crear la auditoría. */
 export const nombramientoSchema = z
   .object({
     area: textoOpcional,
@@ -81,7 +77,6 @@ export const nombramientoSchema = z
     { error: "La notificación a la dependencia no puede ser anterior a la emisión del nombramiento" },
   );
 
-/** Cierre del expediente: la auditoría concluye con la entrega al archivo. */
 export const cierreExpedienteSchema = z
   .object({
     fecha_notificacion_informe: fechaOpcional,
@@ -102,7 +97,6 @@ export const cierreExpedienteSchema = z
     error: "La entrega al archivo no puede ser anterior a la notificación del informe",
   });
 
-/** "a, b, c" -> ["a", "b", "c"], filtrando vacíos. */
 export function parseExpedientesRelacionados(raw: string | undefined): string[] {
   if (!raw) return [];
   return raw

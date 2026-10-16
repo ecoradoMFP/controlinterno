@@ -13,9 +13,6 @@ export default async function DashboardLayout({
   const usuario = await getUsuarioActual();
 
   if (!usuario) {
-    // Sesión válida de Supabase Auth pero sin perfil de negocio vinculado (sección 12.4: el
-    // alta de usuarios es un flujo administrativo, no un CRUD de aplicación). No es un error
-    // del usuario, así que se explica en vez de solo redirigir de vuelta a /login.
     return (
       <div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
         <h1 className="text-lg font-semibold">Su cuenta aún no está vinculada</h1>
@@ -34,9 +31,6 @@ export default async function DashboardLayout({
   }
 
   if (!usuario.activo) {
-    // Sesión de Supabase Auth vigente pero usuario desactivado en `usuarios`: se cierra la
-    // sesión explícitamente en vez de solo redirigir, para no dejarlo "autenticado" en el
-    // limbo con una sesión que ningún flujo de la app va a honrar.
     const supabase = await createClient();
     await supabase.auth.signOut();
     redirect(`/login?error=${encodeURIComponent("Su cuenta está desactivada.")}`);

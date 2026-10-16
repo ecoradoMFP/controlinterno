@@ -4,11 +4,6 @@ import { useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-/**
- * Formulario de filtros que se aplica solo: al elegir una opción o marcar una casilla actualiza la
- * lista al instante, y al escribir espera un momento a que termines. No hay botón de "Filtrar".
- * Mantiene los campos ocultos (p. ej. la etapa elegida con un KPI) y no recarga la página.
- */
 export function FiltrosAutomaticos({
   ruta,
   className,

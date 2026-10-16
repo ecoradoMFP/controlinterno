@@ -3,7 +3,6 @@ import { z } from "zod";
 const fechaOpcional = z.iso.date().optional().or(z.literal(""));
 const estadoRecomendacion = z.enum(["pendiente", "en_proceso", "no_cumplida", "cumplida"]);
 
-// El módulo da seguimiento solo a CAI, y todo CAI se emite con su nombramiento: ambos son obligatorios.
 export const informeFormSchema = z
   .object({
     no_nombramiento: z.string().trim().min(1, "Requerido"),
@@ -35,32 +34,24 @@ export const deficienciaFormSchema = z.object({
   descripcion: z.string().trim().optional(),
 });
 
-// Deficiencia y su única recomendación, capturadas en un solo paso.
 export const deficienciaConRecomendacionSchema = deficienciaFormSchema.extend({
   texto: z.string().trim().min(1, "Escriba la recomendación"),
   responsables: z.string().trim().optional(),
   fecha_implementacion: z.iso.date({ error: "La fecha de implementación es obligatoria" }),
 });
 
-// Al cargar el informe toda recomendación nace "Pendiente"; los seguimientos posteriores se
-// registran en el desglose de la recomendación. La fecha de implementación es obligatoria.
 export const recomendacionFormSchema = z.object({
   texto: z.string().trim().min(1, "Requerido"),
   responsables: z.string().trim().optional(),
   fecha_implementacion: z.iso.date({ error: "La fecha de implementación es obligatoria" }),
 });
 
-// Nombramiento de seguimiento: lo emite la jefatura, es por UN informe (CAI) y nombra a uno o
-// varios auditores. Cubre todas las recomendaciones del informe, también las que se agreguen
-// después. El número del informe resultante se registra al emitirse, y con eso se cierra su
-// cédula. (Un oficio, la excepción sin nombramiento, no se crea desde aquí.)
 export const nombramientoFormSchema = z
   .object({
     departamento_id: z.string().trim().min(1, "Requerido"),
     informe_id: z.uuid({ error: "Elija un informe" }),
     no_nombramiento: z.string().trim().min(1, "Requerido"),
     fecha_nombramiento: z.iso.date({ error: "Requerida" }),
-    // Todo nombramiento de seguimiento lleva coordinador (jefaturas, 2026-10-13).
     coordinador_nit: z.string().trim().min(1, "Seleccione al coordinador"),
     fecha_limite_informe: z.iso.date({ error: "Requerida" }),
     no_documento: z.string().trim().optional(),
@@ -81,14 +72,12 @@ export const seguimientoFormSchema = z.object({
   comentario_auditoria: z.string().trim().optional(),
 });
 
-// Corregir una deficiencia ya capturada: igual que la recomendación, siempre con motivo.
 export const edicionDeficienciaSchema = z.object({
   titulo: z.string().trim().min(1, "Requerido"),
   descripcion: z.string().trim().optional(),
   motivo: z.string().trim().min(5, "Explica brevemente el motivo (mínimo 5 caracteres)"),
 });
 
-// Corregir una recomendación ya capturada: siempre con motivo (queda en el historial).
 export const edicionRecomendacionSchema = z.object({
   texto: z.string().trim().min(1, "Requerido"),
   responsables: z.string().trim().optional(),

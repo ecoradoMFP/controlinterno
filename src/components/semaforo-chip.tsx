@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { COLOR_SEMAFORO_LABELS, type ColorSemaforo } from "@/lib/semaforo";
 
-/** "neutral": estados fuera del semáforo, como un oficio sin plazo todavía. */
 export type TonoSemaforo = ColorSemaforo | "neutral";
 
 const TONO_CLASSES: Record<TonoSemaforo, string> = {
@@ -20,7 +19,6 @@ const TONO_DOT_CLASSES: Record<TonoSemaforo, string> = {
   neutral: "bg-muted-foreground/50",
 };
 
-/** Los mismos colores como variable CSS, para gráficas que no usan clases. */
 export const COLOR_SEMAFORO_CSS_VAR: Record<ColorSemaforo, string> = {
   verde: "var(--status-verde)",
   amarillo: "var(--status-amarillo)",

@@ -15,11 +15,9 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    // Mensaje genérico: no confirmar ni negar si el correo existe (evita enumeración de usuarios).
     redirect(`/login?error=${encodeURIComponent("Credenciales inválidas")}`);
   }
 
-  // Página de inicio: el tablero (Reportes).
   redirect("/reportes");
 }
 

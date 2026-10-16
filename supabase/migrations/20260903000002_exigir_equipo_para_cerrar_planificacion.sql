@@ -1,11 +1,3 @@
--- Bug real encontrado en la prueba de integración de flujo completo (2026-09-03): el trigger
--- `validar_avance_etapa` (20260903000001) exige que "ningún integrante del equipo tenga
--- recibido/declaración sin confirmar", pero ese conteo se cumple de forma vacía cuando el
--- equipo está vacío — así que una actividad recién creada, SIN equipo, SIN documentos y SIN
--- hitos, podía cerrar Planificación con un solo clic. Confirmado en vivo contra la base local
--- (NAI-004-2026 avanzó a Ejecución sin nada capturado). Se agrega la condición que faltaba:
--- al menos un integrante de equipo debe existir, además de que ninguno tenga confirmaciones
--- pendientes.
 create or replace function validar_avance_etapa()
 returns trigger
 language plpgsql

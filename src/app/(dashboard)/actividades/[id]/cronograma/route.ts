@@ -4,8 +4,6 @@ import { identificadorAuditoria } from "@/lib/auditoria";
 import { generarCronogramaXlsx } from "@/lib/cronograma-excel";
 import { hoyGuatemala } from "@/lib/recomendaciones";
 
-// Descarga el cronograma de actividades de una auditoría en Excel (formato DAI). Usa el cliente
-// del usuario: si RLS no le deja ver la auditoría, no hay nada que descargar.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);

@@ -23,7 +23,6 @@ import { RotuloRecomendacion } from "@/components/recomendaciones/rotulo-recomen
 type RecomendacionConSeguimientos = Recomendacion & { seguimientos_recomendacion: SeguimientoRecomendacion[] };
 export type CambioRecomendacion = {
   id: string
-  /** "deficiencia" o "recomendacion": las dos bitácoras se muestran juntas. */
   entidad: "deficiencia" | "recomendacion"
   accion: string
   motivo: string
@@ -168,8 +167,6 @@ export function DeficienciasPanel({
   );
 }
 
-// En la captura del informe solo se resume el ciclo: el seguimiento completo (línea de tiempo y
-// registro de nuevos seguimientos) vive en el desglose de cada recomendación.
 function RecomendacionItem({
   recomendacion,
   informeId,
@@ -278,8 +275,6 @@ const CAMPOS_CAMBIO: Record<CambioRecomendacion["entidad"], [string, string][]> 
   ],
 };
 
-// Corregir el título o la descripción de una deficiencia: igual que la recomendación, con motivo
-// obligatorio y bitácora. Si alguna de sus recomendaciones ya tiene seguimientos evaluados, no.
 function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: DeficienciaConRecomendaciones; informeId: string }) {
   const conSeguimientos = deficiencia.recomendaciones.some((r) =>
     r.seguimientos_recomendacion.some((s) => s.numero_seguimiento > 0),
@@ -328,7 +323,6 @@ function CorregirDeficiencia({ deficiencia, informeId }: { deficiencia: Deficien
   );
 }
 
-// Bitácora de correcciones y eliminaciones: la escribe la base de datos, no se puede alterar.
 function HistorialCambios({ historial }: { historial: CambioRecomendacion[] }) {
   if (historial.length === 0) return null;
   return (

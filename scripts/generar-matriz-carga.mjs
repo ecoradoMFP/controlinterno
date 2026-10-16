@@ -1,13 +1,4 @@
-// Genera la matriz de carga de SCIDAI (Excel, UNA hoja por etapas) para que los departamentos
-// entreguen CAI nuevos o históricos en un formato estándar y completo: listas desplegables, fechas
-// validadas, columnas obligatorias marcadas y celdas obligatorias vacías resaltadas en rojo.
-//
-// Uso:
-//   node scripts/generar-matriz-carga.mjs --salida "Matriz.xlsx"                 # plantilla en blanco
-//   node scripts/generar-matriz-carga.mjs --salida "Matriz.xlsx" --datos d.json  # precargada con lo que ya se conoce
-//
-// d.json: { "cai": [...], "def": [...], "seg": [...] } (fechas "aaaa-mm-dd"; `seg` con no_seguimiento 1..3).
-// Lo que falte queda en blanco y resaltado: nunca se inventa.
+// Uso: node scripts/generar-matriz-carga.mjs --salida "Matriz.xlsx" [--datos d.json]
 
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
@@ -40,7 +31,6 @@ const L = (n) => {
 const wb = new ExcelJS.Workbook();
 wb.creator = "SCIDAI";
 
-// ── Instrucciones ──
 const ins = wb.addWorksheet("Instrucciones", { properties: { tabColor: { argb: "FF2E75B6" } } });
 ins.columns = [{ width: 125 }];
 const lineas = [
@@ -76,7 +66,6 @@ for (const [texto, estilo] of lineas) {
   if (estilo === "sub") f.getCell(1).font = { bold: true, size: 12, color: { argb: AZUL } };
 }
 
-// ── Listas ──
 const listas = wb.addWorksheet("Listas", { properties: { tabColor: { argb: "FF7F7F7F" } } });
 const rango = {};
 [["Departamentos", DEPARTAMENTOS], ["Dependencias", DEPENDENCIAS], ["Tipos", TIPOS_AUDITORIA], ["TiposDocumento", TIPOS_DOCUMENTO], ["Estados", ESTADOS]].forEach(([nombre, valores], i) => {
@@ -87,10 +76,9 @@ const rango = {};
   rango[nombre] = `Listas!$${L(i + 1)}$2:$${L(i + 1)}$${valores.length + 1}`;
 });
 
-// ── Hoja de captura ──
 const ultima = PRIMERA_FILA_DATOS + FILAS_FORMATEADAS - 1;
 const ws = wb.addWorksheet(NOMBRE_HOJA, { views: [{ state: "frozen", xSplit: 3, ySplit: FILA_AYUDA }] });
-const colDe = new Map(); // k -> nº de columna
+const colDe = new Map();
 let n = 0;
 for (const b of BLOQUES) {
   const inicio = n + 1;
@@ -108,7 +96,7 @@ for (const b of BLOQUES) {
     a.alignment = { wrapText: true, vertical: "top" };
     ws.getColumn(n).width = c.ancho;
     if (c.tipo === "texto") ws.getColumn(n).numFmt = "@";
-    if (b.seg && b.seg > 1) ws.getColumn(n).outlineLevel = 1; // los seguimientos 2 y 3 se pueden contraer
+    if (b.seg && b.seg > 1) ws.getColumn(n).outlineLevel = 1;
   }
   const banda = ws.getCell(FILA_BANDA, inicio);
   banda.value = b.titulo;
@@ -122,7 +110,6 @@ ws.getRow(FILA_ENCABEZADO).height = 44;
 ws.getRow(FILA_AYUDA).height = 42;
 const ULT = L(n);
 
-// Validaciones y formato por celda.
 COLUMNAS.forEach((c) => {
   const i = colDe.get(c.k);
   for (let r = PRIMERA_FILA_DATOS; r <= ultima; r++) {
@@ -143,7 +130,6 @@ COLUMNAS.forEach((c) => {
   }
 });
 
-// Resaltado en rojo de obligatorios vacíos, según quién los escribe.
 const P = PRIMERA_FILA_DATOS;
 const filaConDatos = `COUNTA($A${P}:$${ULT}${P})>0`;
 const primeraDelCai = `OR(ROW()=${P},$A${P}&"|"&$B${P}<>$A${P - 1}&"|"&$B${P - 1})`;
@@ -167,7 +153,6 @@ for (const b of BLOQUES) {
   }
 }
 
-// ── Datos precargados ──
 const fecha = (iso) => (iso ? new Date(`${iso}T12:00:00`) : null);
 const claveNum = (k) => String(k ?? "").split("-")[0];
 const claveAnio = (k) => String(k ?? "").split("-")[1] || null;

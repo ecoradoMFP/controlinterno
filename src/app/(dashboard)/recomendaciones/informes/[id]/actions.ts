@@ -12,17 +12,11 @@ import {
   recomendacionFormSchema,
 } from "@/lib/validations/recomendacion";
 
-// Estas acciones se usan con `FormAccion`: no redirigen, así la página del informe se actualiza en
-// su lugar sin saltar arriba. Ver lib/actions/resultado.ts.
-
 async function verificarAlcance(informeId: string) {
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
-  // Sección 12.3: defensa en profundidad además de RLS (informes_auditoria_equipo/
-  // deficiencias/recomendaciones/seguimientos_recomendacion insert policies).
   if (!(await puedeOperarInforme(usuario, informeId, supabase))) {
     return fail("No tiene permiso para modificar este informe.");
   }
-  // Un CAI bloqueado ya no admite cambios de captura (la base de datos también lo exige).
   const { data: informe } = await supabase.from("informes_auditoria").select("bloqueado_en").eq("id", informeId).maybeSingle();
   if (informe?.bloqueado_en) {
     return fail("El CAI está bloqueado: ya no se pueden agregar ni modificar deficiencias, recomendaciones ni el equipo.");
@@ -30,7 +24,6 @@ async function verificarAlcance(informeId: string) {
   return { usuario: usuario!, supabase };
 }
 
-// Cerrar la captura del CAI. Lo hace quien puede operar el informe; desbloquear es de la jefatura.
 export async function bloquearInforme(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   if (!informeId) return fail("Falta identificar el informe.");
@@ -38,7 +31,6 @@ export async function bloquearInforme(formData: FormData): Promise<ResultadoAcci
   if ("error" in alcance) return alcance;
   const { supabase } = alcance;
 
-  // El trigger informes_auditoria_bloqueo asigna quién y cuándo.
   const { error } = await supabase.from("informes_auditoria").update({ bloqueado_en: new Date().toISOString() }).eq("id", informeId);
   if (error) return fail("No se pudo bloquear el CAI.");
 
@@ -60,8 +52,6 @@ export async function desbloquearInforme(formData: FormData): Promise<ResultadoA
   revalidatePath("/recomendaciones", "layout");
 }
 
-// Corregir un error de captura de la deficiencia. El trigger exige el motivo, rechaza el cambio si
-// alguna de sus recomendaciones ya tiene seguimientos evaluados y guarda el valor anterior.
 export async function editarDeficiencia(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const deficienciaId = String(formData.get("deficiencia_id") ?? "");
@@ -161,7 +151,6 @@ export async function agregarDeficiencia(formData: FormData): Promise<ResultadoA
   revalidatePath(`/recomendaciones/informes/${informeId}`);
 }
 
-// Cada deficiencia de un CAI lleva UNA recomendación: se capturan juntas, en un solo paso.
 export async function agregarDeficienciaConRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   if (!informeId) return fail("Falta identificar el informe.");
@@ -179,7 +168,6 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData): Pr
   });
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Revise los campos de la deficiencia.");
 
-  // Siguiente número entre las deficiencias vigentes (las eliminadas ya no se ven ni cuentan).
   const { data: ultima } = await supabase
     .from("deficiencias")
     .select("numero")
@@ -206,8 +194,6 @@ export async function agregarDeficienciaConRecomendacion(formData: FormData): Pr
     fecha_implementacion: parsed.data.fecha_implementacion,
     creado_por_nit: usuario.nit,
   });
-  // La deficiencia no se puede borrar: si falla la recomendación queda visible con su propio
-  // formulario para volver a capturarla.
   if (errorRec) return fail("La deficiencia se guardó, pero no su recomendación: captúrela en la deficiencia.");
 
   revalidatePath(`/recomendaciones/informes/${informeId}`);
@@ -229,14 +215,12 @@ export async function agregarRecomendacion(formData: FormData): Promise<Resultad
   });
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Revise el texto de la recomendación.");
 
-  // Cada deficiencia de un CAI lleva una sola recomendación (se cierra una a una).
   const { count: vigentes } = await supabase
     .from("recomendaciones")
     .select("id", { count: "exact", head: true })
     .eq("deficiencia_id", deficienciaId);
   if ((vigentes ?? 0) > 0) return fail("Esta deficiencia ya tiene su recomendación.");
 
-  // Siguiente número entre las recomendaciones vigentes (las eliminadas ya no se ven ni cuentan).
   const { data: ultima } = await supabase
     .from("recomendaciones")
     .select("numero")
@@ -257,8 +241,6 @@ export async function agregarRecomendacion(formData: FormData): Promise<Resultad
   revalidatePath(`/recomendaciones/informes/${informeId}`);
 }
 
-// Corregir un error de captura. El trigger de la base exige el motivo, rechaza el cambio si la
-// recomendación ya tiene seguimientos evaluados y guarda el valor anterior en el historial.
 export async function editarRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const recomendacionId = String(formData.get("recomendacion_id") ?? "");
@@ -290,8 +272,6 @@ export async function editarRecomendacion(formData: FormData): Promise<Resultado
   revalidatePath(`/recomendaciones/informes/${informeId}`);
 }
 
-// "Eliminar" una deficiencia = anularla junto con su recomendación: dejan de verse pero quedan en
-// la bitácora con su motivo, quién y cuándo.
 export async function eliminarDeficiencia(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const deficienciaId = String(formData.get("deficiencia_id") ?? "");
@@ -311,7 +291,6 @@ export async function eliminarDeficiencia(formData: FormData): Promise<Resultado
   revalidatePath("/recomendaciones", "layout");
 }
 
-// "Eliminar" = anular: la recomendación deja de verse pero queda en el historial con su motivo.
 export async function eliminarRecomendacion(formData: FormData): Promise<ResultadoAccion> {
   const informeId = String(formData.get("informe_id") ?? "");
   const recomendacionId = String(formData.get("recomendacion_id") ?? "");
@@ -331,8 +310,6 @@ export async function eliminarRecomendacion(formData: FormData): Promise<Resulta
   revalidatePath("/recomendaciones");
 }
 
-// Los mensajes de las reglas de la base (motivo, seguimientos evaluados, permisos) ya están
-// redactados para el usuario; cualquier otro error se reemplaza por uno genérico.
 function mensajeDeCambio(mensaje: string, generico: string) {
   return /motivo del cambio|seguimientos evaluados|No tiene permiso|bloqueado/.test(mensaje) ? mensaje : generico;
 }

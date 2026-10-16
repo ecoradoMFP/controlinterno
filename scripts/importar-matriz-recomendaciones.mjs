@@ -1,35 +1,4 @@
-// Importa una matriz de seguimiento a recomendaciones de Excel. Entiende los dos formatos que
-// hoy usan los departamentos (ambos fuera del repo, *.xlsx está en .gitignore):
-//
-//   - DAF ("DATOS DAF. PARA CARGAR EN EL SISTEMA.xlsx"): bloques "1 era etapa" / "2da etapa
-//     (seguimientos)" / "3ra etapa (seguimiento no. 2)", cada uno con su fila de encabezados.
-//   - DAAP ("SEGUIMIENTO INFORMES DE CAI.xlsx", Anexo 4): un solo bloque, una fila por
-//     recomendación, identificada por CAI, con el No. de informe de seguimiento y su estado.
-//
-// Las columnas se ubican por el texto del encabezado (no por posición) y una fila es de
-// encabezados si trae a la vez una columna de deficiencias y una de recomendaciones.
-//
-// Modelo que se genera por cada informe/CAI:
-//   - deficiencias y recomendaciones;
-//   - un documento de seguimiento (documentos_seguimiento) por cada número distinto que aparezca
-//     en la columna "OFICIO O INFORME No." / "No. de Informe" — compartido entre CAI si el mismo
-//     número se repite, y reutilizado si ya existía en la base — con una evaluación por cada
-//     recomendación que ese documento evaluó. El ciclo de cada recomendación se ordena por la
-//     fecha de sus documentos (el correlativo lo asigna el trigger de la base);
-//   - si una fila trae estado pero ningún documento, ese es el estado de la recomendación al
-//     informe final (evaluación sin documento).
-// Cada documento se carga como "informe" (lo normal); los oficios (la excepción: plazo corto,
-// mismo año) se indican con --oficios. Las matrices no traen el nombramiento de cada
-// seguimiento: queda vacío y se completa después desde la interfaz.
-//
-// Supervisor/coordinador/auditores se ligan solo si ya existe un usuario con ese nombre exacto;
-// si no, se reportan y se dejan vacíos (no se crean usuarios).
-//
-// SOLO instancia local (Docker), mismo criterio de seguridad que scripts/poblar-demo.mjs.
-// Uso:
-//   node scripts/importar-matriz-recomendaciones.mjs "<ruta.xlsx>" --departamento "<nombre>"
-//        [--oficios DOC1,DOC2] [--registrado-por <nit>] [--simular]
-// --simular solo lee y valida el archivo, sin escribir nada.
+// Uso (solo local): node scripts/importar-matriz-recomendaciones.mjs "<ruta.xlsx>" --departamento "<nombre>" [--oficios DOC1,DOC2] [--registrado-por <nit>] [--simular]
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -49,8 +18,6 @@ function cargarEnv(archivo) {
   }
   return env;
 }
-
-// ── argumentos ──
 
 const args = process.argv.slice(2);
 function opcion(nombre) {
@@ -72,8 +39,6 @@ if (!rutaArchivo || !nombreDepartamento) {
   );
   process.exit(1);
 }
-
-// ── utilidades de texto/fecha ──
 
 const normalizar = (v) =>
   String(v ?? "")
@@ -113,16 +78,11 @@ function periodoDeTexto(t) {
   return partes.length === 2 && partes[0] && partes[1] ? { inicio: partes[0], fin: partes[1] } : null;
 }
 
-// "CAI 00036" / "00036" -> "00036"
 const limpiarCai = (t) => t.replace(/^cai\s*/i, "").trim();
 
 const advertencias = [];
 const advertir = (msg) => advertencias.push(msg);
 
-// ── lectura ──
-
-// Encabezado conocido -> clave interna; se busca por prefijo, en este orden (las frases más
-// específicas primero: "no cumplida" antes que "cumplida", "no. cai" antes que "cai"...).
 const ENCABEZADOS = [
   ["no. de nombramiento", "nombramiento"],
   ["nombramiento no", "nombramiento"],
@@ -157,8 +117,6 @@ function mapearEncabezados(fila) {
     const t = normalizar(textoCelda(celda.value));
     if (!t) return;
     if (t === "fecha" || t === "fecha de nombramiento") {
-      // La primera "FECHA" del bloque es la del nombramiento; la que viene después de la columna
-      // del documento de seguimiento es la de ese documento.
       columnas[columnas.documento ? "fecha_documento" : "fecha_nombramiento"] ??= col;
       return;
     }
@@ -186,8 +144,6 @@ function parseDeficiencia(texto) {
   return m ? { numero: Number(m[1]), titulo: m[2].trim() } : { numero: null, titulo: texto.trim() };
 }
 
-// Una celda "esclava" de un rango combinado repite el valor de la principal: para deficiencia
-// y recomendación eso duplicaría filas, así que se ignora.
 const esContinuacionCombinada = (celda) => celda.isMerged && celda.master.address !== celda.address;
 
 const libro = new ExcelJS.Workbook();
@@ -206,7 +162,7 @@ hoja.eachRow({ includeEmpty: false }, (fila, n) => {
   const cols = bloque.columnas;
   const celdaDeficiencia = fila.getCell(cols.deficiencia);
   const deficiencia = textoCelda(celdaDeficiencia.value);
-  if (!deficiencia || esContinuacionCombinada(celdaDeficiencia)) return; // títulos, separadores, "AÑO 2023"...
+  if (!deficiencia || esContinuacionCombinada(celdaDeficiencia)) return;
 
   const valor = (clave) => (cols[clave] ? fila.getCell(cols[clave]).value : null);
   bloque.filas.push({
@@ -241,7 +197,6 @@ const CAMPOS_INFORME = [
   "auditores", "dependencia", "riesgo", "fecha_informe_final",
 ];
 
-// Arrastra los datos del informe hacia abajo cuando una fila no los repite.
 for (const bloque of bloques) {
   let previa = null;
   for (const f of bloque.filas) {
@@ -252,10 +207,7 @@ for (const bloque of bloques) {
   }
 }
 
-// Un informe se identifica por nombramiento y, si no hay, por CAI.
 const claveInforme = (f) => (f.nombramiento ? `n:${claveTexto(f.nombramiento)}` : f.cai ? `c:${claveTexto(f.cai)}` : null);
-
-// ── armado del modelo ──
 
 const informes = new Map();
 
@@ -348,8 +300,6 @@ for (const bloque of bloques.slice(1)) {
   }
 }
 
-// Orden del ciclo: por fecha del documento (los que no tienen fecha, al final en orden de
-// aparición), igual que se emitieron.
 for (const informe of informes.values()) {
   const docs = [...informe.documentos.values()].sort(
     (a, b) => (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999") || a.orden - b.orden,
@@ -360,9 +310,6 @@ for (const informe of informes.values()) {
     if (!d.fecha) advertir(`${informe.nombramiento || `CAI ${informe.cai}`}: el documento ${d.no_documento} no trae fecha.`);
   });
 }
-
-// ── reglas de captura que exige la base (supabase/migrations/20261002000005): un informe que no
-// las cumpla no se carga, se reporta para corregir la matriz ──
 
 function incumplimientos(informe) {
   const faltas = [];
@@ -381,8 +328,6 @@ for (const informe of informes.values()) {
   const faltas = incumplimientos(informe);
   if (faltas.length) advertir(`${informe.nombramiento || `CAI ${informe.cai}`}: NO se cargará — ${faltas.join("; ")}.`);
 }
-
-// ── validaciones de coherencia (no bloquean, solo se reportan) ──
 
 for (const informe of informes.values()) {
   const nombre = informe.nombramiento || `CAI ${informe.cai}`;
@@ -407,8 +352,6 @@ for (const informe of informes.values()) {
   }
 }
 
-// ── resumen ──
-
 console.log(`Archivo: ${rutaArchivo}`);
 console.log(`Bloques detectados: ${bloques.length} (${bloques.map((b) => `${b.etapa}: ${b.filas.length} fila(s)`).join(", ")})`);
 for (const informe of informes.values()) {
@@ -430,8 +373,6 @@ if (simular) {
   console.log("\n--simular: no se escribió nada.");
   process.exit(0);
 }
-
-// ── escritura (solo local) ──
 
 const env = cargarEnv(".env.development.local");
 const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -478,8 +419,6 @@ const existentes = await ok(
 );
 const yaCargados = new Set(existentes.map((i) => claveInforme({ nombramiento: i.no_nombramiento, cai: i.cai })));
 
-// Documentos ya registrados (de cargas anteriores u otros departamentos): mismo número = mismo
-// documento, se reutiliza en vez de duplicarlo.
 const documentosPorNumero = new Map(
   (await ok(sb.from("documentos_seguimiento").select("id, no_documento"), "documentos existentes")).map((d) => [
     claveTexto(d.no_documento),
@@ -551,8 +490,6 @@ for (const [clave, informe] of informes) {
     documentosPorNumero.set(clave, doc.id);
   }
 
-  // El documento cubre este informe (requisito para evaluar sus recomendaciones). Las matrices
-  // no traen quién fue el auditor nombrado: se completa desde la interfaz.
   if (informe.documentos.size) {
     await ok(
       sb
@@ -581,8 +518,6 @@ for (const [clave, informe] of informes) {
         }),
         `recomendación ${d.numero}.${r.numero} de ${nombre}`,
       );
-      // En orden cronológico: el trigger asigna el correlativo del ciclo y deja como
-      // estado_actual el del último seguimiento.
       const filas = [
         ...(r.estado_inicial ? [{ documento_id: null, estado: r.estado_inicial }] : []),
         ...r.evaluaciones

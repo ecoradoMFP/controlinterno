@@ -17,7 +17,6 @@ import { SemaforoChip } from "@/components/semaforo-chip";
 import { StatCard } from "@/components/ui/stat-card";
 import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, FASE_DOCUMENTO_LABELS } from "@/types/domain";
 
-/** "2026-03-26" → "26/03/2026" */
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
 
 type Pendiente = {
@@ -28,19 +27,11 @@ type Pendiente = {
   href: string;
   boton: string;
   color?: ColorSemaforo | null;
-  /** Para ordenar: lo más urgente primero (mayor = más urgente). */
   urgencia: number;
 };
 
 const URGENCIA: Record<ColorSemaforo, number> = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
 
-/**
- * Mis pendientes: todo lo que espera a quien entra, de todos los módulos, en una sola pantalla —
- * documentos a su cargo, oficios suyos sin respuesta (y, para la jefatura, los que están en
- * riesgo), actividades del cronograma en riesgo, seguimientos de recomendaciones donde está
- * nombrado y, para el Director, informes por cargar al SAG-UDAI. Cada fila lleva a donde se hace.
- * RLS ya limita todo al alcance del usuario.
- */
 export default async function MisPendientesPage() {
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
   const cargo = usuario?.cargo ?? null;
@@ -91,7 +82,6 @@ export default async function MisPendientesPage() {
   const umbralHito = umbral.get("hito") ?? UMBRAL_POR_DEFECTO;
   const umbralOficio = umbral.get("oficio") ?? UMBRAL_POR_DEFECTO;
 
-  // ── Documentos a su cargo ──
   const pendDocumentos: Pendiente[] = (documentos ?? [])
     .filter((d) => !d.actividades?.concluida)
     .map((d) => {
@@ -111,7 +101,6 @@ export default async function MisPendientesPage() {
     })
     .sort((a, b) => b.urgencia - a.urgencia);
 
-  // ── Oficios: los que usted elaboró sin respuesta; la jefatura ve además los que están en riesgo ──
   const pendOficios: Pendiente[] = (oficios ?? [])
     .map((o) => {
       const color = o.fecha_vencimiento ? calcularSemaforo(o.fecha_emision, o.fecha_vencimiento, hoy, feriados, umbralOficio) : null;
@@ -132,7 +121,6 @@ export default async function MisPendientesPage() {
     }))
     .sort((a, b) => b.urgencia - a.urgencia);
 
-  // ── Actividades del cronograma a su cargo que están por vencer o vencidas ──
   const pendCronograma: Pendiente[] = (hitos ?? [])
     .filter((h) => h.cargo_responsable === cargo && !h.actividades?.concluida)
     .map((h) => ({ h, color: calcularSemaforo(h.fecha_inicio_esperada, h.fecha_fin_esperada, hoy, feriados, umbralHito) }))
@@ -149,7 +137,6 @@ export default async function MisPendientesPage() {
     }))
     .sort((a, b) => b.urgencia - a.urgencia);
 
-  // ── Seguimiento de recomendaciones ──
   const pendSeguimiento: Pendiente[] = (nombramientos ?? []).flatMap((n): Pendiente[] => {
     const cais = n.documentos_seguimiento_informes
       .map((i) => (i.informes_auditoria ? etiquetaCai(i.informes_auditoria.cai, i.informes_auditoria.anio_cai) : null))

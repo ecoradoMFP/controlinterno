@@ -35,10 +35,6 @@ type DatosExpediente = Pick<
   | "concluida"
 >;
 
-/**
- * Datos del Registro Auxiliar de Nombramientos y cierre del expediente. La auditoría concluye
- * con la entrega del expediente al archivo (confirmado por la DAI, 2026-10-01).
- */
 export function ExpedientePanel({
   actividad,
   rutaCompleta,
@@ -51,9 +47,7 @@ export function ExpedientePanel({
   actividad: DatosExpediente;
   rutaCompleta: string | null;
   informeId: string | null;
-  /** Primera entrega del Informe de Auditoría al Jefe, sacada de la bitácora. */
   fechaProyectoJefatura: string | null;
-  /** Primera entrega del Informe de Auditoría al Director, sacada de la bitácora. */
   fechaProyectoDireccion: string | null;
   puedeGestionar: boolean;
   puedeCorregirCierre: boolean;
@@ -61,7 +55,6 @@ export function ExpedientePanel({
   const enCierre = actividad.etapa_actual === "expediente_cierre";
   const puedeInforme = actividad.etapa_actual === "comunicacion_resultados" || enCierre;
 
-  // Concluida la auditoría, todo queda de consulta; solo Dirección (control total) puede corregir.
   const puedeEditarNombramiento = actividad.concluida ? puedeCorregirCierre : puedeGestionar;
 
   return (
@@ -209,7 +202,6 @@ export type DatosCierre = Pick<
   "fecha_notificacion_informe" | "fecha_notificacion_cgc" | "fecha_entrega_archivo" | "observaciones" | "concluida"
 >;
 
-/** Notificación del informe, a la CGC y entrega al archivo: con la entrega la auditoría concluye. */
 export function FormCierreExpediente({
   actividadId,
   datos,
@@ -245,7 +237,6 @@ export function FormCierreExpediente({
           disabled={!puedeGestionar || cierreBloqueado(datos.fecha_entrega_archivo)}
         />
       </div>
-      {/* Los campos deshabilitados no se envían: se reenvían ocultos para no borrarlos. */}
       {cierreBloqueado(datos.fecha_notificacion_informe) ? (
         <input type="hidden" name="fecha_notificacion_informe" value={datos.fecha_notificacion_informe ?? ""} />
       ) : null}
@@ -293,7 +284,6 @@ function Dato({ label, valor, ayuda }: { label: string; valor: string | null; ay
   );
 }
 
-/** "2026-03-26" → "26/03/2026" */
 function fecha(iso: string | null) {
   return iso ? iso.split("-").reverse().join("/") : null;
 }

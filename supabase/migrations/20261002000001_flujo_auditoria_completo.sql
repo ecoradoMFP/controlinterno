@@ -1,27 +1,7 @@
--- Completa el flujo de auditorías (CAI) según la validación de 2026-10-01
--- (`analisis-matrices-scidai.md`, secciones 6-8):
---
--- 1. El número de nombramiento deja de exigir el formato `NAI-000-AAAA`. La DAI confirmó que los
---    formatos no siempre son los mismos (ej. `DAI-DAF-SR-CAI-01-2026`); la validación de formato
---    queda para después, en un solo punto de la app (`src/lib/validations/formatos.ts`).
--- 2. Fechas del Registro Auxiliar de Nombramientos y cierre del expediente: la auditoría concluye
---    con la entrega del expediente al archivo.
--- 3. Flujo de revisión guiado por la matriz `documentos_catalogo_revision`, en una sola
---    transacción (`avanzar_documento`), en vez de que el usuario elija a mano cargos y fase.
--- 4. Vínculo auditoría → informe del inventario de recomendaciones.
--- 5. Rutas del expediente digital (futuro NAS/servidor de la DTI): se guarda la ruta RELATIVA a
---    la carpeta raíz de expedientes; la raíz se configura fuera de la base
---    (`SCIDAI_RUTA_BASE_EXPEDIENTES`), así mudar los archivos de servidor no obliga a reescribir
---    ninguna fila.
-
--- ── 1. Número de nombramiento abierto ──
 alter table actividades drop constraint actividades_no_nombramiento_check;
 alter table actividades add constraint actividades_no_nombramiento_no_vacio
   check (length(btrim(no_nombramiento)) > 0);
 
--- ── 5. Rutas relativas del expediente digital ──
--- Relativa a la raíz de expedientes: sin unidad (C:), sin UNC (\\servidor), sin raíz (/), sin
--- segmentos `..` que se salgan de la carpeta. Se guarda con `/` como separador.
 create or replace function ruta_expediente_valida(p_ruta text)
 returns boolean
 language sql immutable
@@ -47,9 +27,6 @@ alter table informes_auditoria add column ruta_archivo text
 alter table documentos_seguimiento add column ruta_archivo text
   constraint documentos_seguimiento_ruta_archivo_valida check (ruta_expediente_valida(ruta_archivo));
 
--- ── 2. Fechas del nombramiento y cierre del expediente ──
--- `fecha_notificacion` (ya existente) sigue siendo la fecha LÍMITE del nombramiento (plazo);
--- `fecha_notificacion_informe` es la notificación REAL del informe a la dependencia.
 alter table actividades
   add column fecha_emision_nombramiento date,
   add column fecha_notificacion_equipo date,
@@ -74,9 +51,6 @@ alter table actividades add constraint actividades_notificaciones_despues_de_emi
 
 create index actividades_concluida_idx on actividades(concluida);
 
--- Las fechas de cierre solo se registran con el expediente ya en Expediente/Cierre, y una vez
--- capturadas son hechos consumados: mismo criterio que `proteger_hechos_consumados_oficio`
--- (solo control_total las corrige, y dejando constancia en `observaciones`).
 create or replace function proteger_cierre_expediente()
 returns trigger
 language plpgsql
@@ -96,7 +70,6 @@ begin
      or (old.fecha_notificacion_cgc is not null and new.fecha_notificacion_cgc is distinct from old.fecha_notificacion_cgc)
      or (old.fecha_entrega_archivo is not null and new.fecha_entrega_archivo is distinct from old.fecha_entrega_archivo)
   then
-    -- auth.uid() null = conexión sin usuario (migraciones, seed, scripts server-only).
     if auth.uid() is not null then
       if coalesce(authz.permiso_actual() <> 'control_total', true) then
         raise exception 'Fecha de cierre ya registrada: solo control_total puede corregirla.';
@@ -117,10 +90,6 @@ create trigger actividades_proteger_cierre_expediente
   before update on actividades
   for each row execute function proteger_cierre_expediente();
 
--- ── 3. Flujo de revisión guiado ──
--- La fase y el responsable de un documento solo cambian por `avanzar_documento` (o por
--- control_total, o por conexiones sin usuario). La bitácora `movimientos` y el estado del
--- documento se escriben en la misma transacción, así ya no puede quedar uno sin el otro.
 create or replace function proteger_fase_documento()
 returns trigger
 language plpgsql
@@ -146,19 +115,6 @@ create trigger documentos_actividad_proteger_fase
   before update on documentos_actividad
   for each row execute function proteger_fase_documento();
 
--- Acciones:
---   'entregar'    elaboración/corrección → revisión. La primera entrega va al primer revisor de
---                 la matriz; después de una corrección vuelve al cargo que la devolvió
---                 (así lo mide la matriz "Control Auxiliar deficiencia CC"). La registra quien
---                 tiene el documento (normalmente el Auditor), captura_delegada o control_total.
---   'aprobar'     el revisor actual aprueba: pasa al siguiente cargo de la matriz, o finaliza el
---                 documento si era el último. Solo el propio cargo (o control_total); nunca
---                 captura_delegada (sección 12.5, reforzado también por RLS de movimientos).
---   'devolver'    el revisor actual devuelve para corrección, siempre al Auditor (regla acordada
---                 2026-09-18). Observación obligatoria.
---   'visto_bueno' Subdirector/Director dejan constancia aunque su cargo no esté en la matriz del
---                 documento; no cambia fase ni responsable.
--- SECURITY INVOKER: RLS de `documentos_actividad` y `movimientos` sigue decidiendo quién opera.
 create or replace function avanzar_documento(
   p_documento_id uuid,
   p_accion text,
@@ -298,18 +254,8 @@ $$;
 revoke execute on function avanzar_documento(uuid, text, text, fase_documento_enum, cargo_enum) from public, anon;
 grant execute on function avanzar_documento(uuid, text, text, fase_documento_enum, cargo_enum) to authenticated;
 
--- ── 4. Auditoría → inventario de recomendaciones ──
 alter table informes_auditoria add column actividad_id uuid unique references actividades(id);
 
--- ── 6. Documentos de cada etapa: automáticos y obligatorios ──
--- La matriz "REVISIONES POR DOCUMENTO" (control de documentos en la realización de auditorías
--- CAI) lista los 18 pasos de las 3 etapas. Al abrirse una etapa se crean sus documentos
--- (responsable inicial: el primer cargo de la matriz), y la etapa no se cierra hasta que todos
--- estén finalizados — antes solo se validaban los que alguien había iniciado a mano.
---
--- Algunos pasos son actividades que no generan un documento como tal: `genera_documento =
--- false` los distingue en pantalla (no se les pide ruta de archivo), pero siguen pasando por la
--- revisión que marca la matriz. Cuáles son lo confirma la DAI; por defecto todos generan.
 alter table documentos_catalogo add column genera_documento boolean not null default true;
 
 create or replace function crear_documentos_etapa(p_actividad_id uuid, p_etapa etapa_actividad_enum)
@@ -389,7 +335,6 @@ create trigger actividades_exigir_documentos_etapa
   before update of etapa_actual on actividades
   for each row execute function exigir_documentos_etapa();
 
--- Auditorías ya abiertas: se completan los documentos de su etapa actual que nadie había iniciado.
 select crear_documentos_etapa(a.id, a.etapa_actual)
 from actividades a
 where a.etapa_actual <> 'expediente_cierre';

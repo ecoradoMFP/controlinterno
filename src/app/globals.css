@@ -48,7 +48,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Colores del portal de MINFIN: marino #001f52, celeste #0099cc, celeste claro #e5f9ff, naranja #ff6500. */
 :root {
   --background: #f3f5f8;
   --foreground: #0d1d38;
@@ -68,7 +67,6 @@
   --border: #e0e6ed;
   --input: #d3dbe5;
   --ring: #0099cc;
-  /* Categorías (etapas, series): validadas para daltonismo, siempre con etiqueta. */
   --chart-1: #1d4f91;
   --chart-2: #0099cc;
   --chart-3: #6a5bb5;
@@ -83,7 +81,6 @@
   --sidebar-accent-foreground: #001f52;
   --sidebar-border: #e0e6ed;
   --sidebar-ring: #0099cc;
-  /* Mapa de calor: un solo tono, de poco (claro) a mucho (oscuro). */
   --heat-0: transparent;
   --heat-1: #d6e6f7;
   --heat-2: #93b9e3;
@@ -95,7 +92,6 @@
   --heat-text-3: #ffffff;
   --heat-text-4: #ffffff;
   --heat-text-5: #ffffff;
-  /* Semáforo: solo para estado, nunca como color de serie. Fondo y texto para las etiquetas. */
   --status-verde: #227a55;
   --status-amarillo: #f0c419;
   --status-naranja: #e2580b;
@@ -167,7 +163,6 @@
   --status-rojo-fg: #f7a3ad;
 }
 
-/* Bloque blanco sobre el fondo gris, como las tarjetas del Tablero. */
 @utility tarjeta {
   border-radius: var(--radius-2xl);
   border: 1px solid var(--border);
@@ -184,7 +179,6 @@
   }
   html {
     @apply font-sans;
-    /* Letra base más grande: buena parte del personal la necesitaba con zoom. */
     font-size: 118.75%;
   }
   h1, h2, h3 {
@@ -192,14 +186,12 @@
   }
 }
 
-/* Códigos de expediente y oficio (NAI-001-2026). */
 .codigo-expediente {
   font-family: var(--font-mono);
   letter-spacing: -0.01em;
   font-weight: 600;
 }
 
-/* Al imprimir solo sale el documento, sin menú ni encabezado. */
 @media print {
   header,
   footer,
@@ -210,7 +202,6 @@
     max-width: none !important;
     padding: 0 !important;
   }
-  /* Que el semáforo y las barras del Gantt salgan con su color al imprimir o guardar en PDF. */
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

@@ -28,17 +28,10 @@ const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacio
 const SELECT_CLASES =
   "h-10 w-auto max-w-64 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-/**
- * Bandeja de auditorías, pensada para leerse sin esfuerzo: pocas tarjetas que filtran (pendientes a
- * su cargo, requieren atención, en curso, concluidas), tres filtros y, por auditoría, solo su CAI,
- * dependencia, etapa y semáforo. El detalle completo está dentro de cada auditoría.
- */
 export default async function ActividadesPage({ searchParams }: { searchParams: Promise<Filtros> }) {
   const filtros = await searchParams;
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  // Sin filtro explícito por departamento/cargo: RLS (authz.puede_ver_actividad) ya devuelve
-  // exactamente el alcance correcto para quien esté autenticado (sección 8).
   const [
     { data: actividades, error },
     { data: documentos },
@@ -67,7 +60,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     umbral.get("hito") ?? UMBRAL_POR_DEFECTO,
   );
 
-  // "Te toca": documentos de la etapa en curso que tiene tu cargo (mismo criterio que el detalle).
   const cargo = puedeEscribir(usuario) ? (usuario?.cargo ?? null) : null;
   const filas = (actividades ?? []).map((a) => {
     const docsEtapa = (documentos ?? []).filter((d) => d.actividad_id === a.id && d.documentos_catalogo?.etapa === a.etapa_actual);
@@ -110,7 +102,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     }
     return true;
   };
-  // Un filtro que ya no deja resultados con los demás se descarta (nunca una combinación vacía).
   for (const campo of ["etapa", "departamento"] as const) {
     if (aplicados[campo] && !filas.some((f) => coincide(f, campo) && campoDe(f, campo) === aplicados[campo])) {
       aplicados[campo] = undefined;
@@ -121,7 +112,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
   const base = filas.filter((f) => coincide(f, "vista"));
   const visibles = filas
     .filter((f) => coincide(f))
-    // Lo más grave primero; a igual color, la que antes vence su plazo de notificación.
     .sort(
       (a, b) =>
         Number(a.concluida) - Number(b.concluida) ||
@@ -157,7 +147,6 @@ export default async function ActividadesPage({ searchParams }: { searchParams: 
     valor: number,
     tone: "neutral" | "naranja" | "verde",
   ) => (
-    // Volver a hacer clic en la tarjeta activa regresa a "En curso".
     <Link
       key={clave}
       href={urlCon({ vista: vista === clave ? "" : clave })}

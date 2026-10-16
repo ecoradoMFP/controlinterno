@@ -42,11 +42,6 @@ export type DocumentoConDetalle = DocumentoActividad & {
   ruta_completa: string | null;
 };
 
-/**
- * A quién va el documento con la próxima entrega. Espeja la función SQL `avanzar_documento`
- * (que es la que decide de verdad): siempre al primer revisor de la matriz, también después de
- * una corrección — la revisión reinicia (Auditor → Subjefe → Jefe, según corresponda).
- */
 function destinoEntrega(_documento: DocumentoConDetalle, cadena: CargoEnum[]): CargoEnum | null {
   return cadena[1] ?? null;
 }
@@ -72,7 +67,6 @@ export function DocumentosPanel({
   etapaActual: EtapaActividadEnum;
   puedeEditar: boolean;
 }) {
-  // La etapa en curso a la vista; las demás plegadas, para no mezclar lo que ya se cerró.
   const grupos = ORDEN_ETAPAS.map((etapa) => ({
     etapa,
     docs: documentos.filter((d) => d.documentos_catalogo?.etapa === etapa),
@@ -131,11 +125,6 @@ export function DocumentosPanel({
             <div className="flex min-w-64 flex-col gap-1.5">
               <label className="text-xs text-muted-foreground">Documento del catálogo pendiente de iniciar</label>
               {catalogoDisponible.length === 1 ? (
-                // Con una sola opción, el Select de Base UI puede abrir y cerrar el popup en
-                // el mismo gesto (click o Enter) sin confirmar la selección, dejando el input
-                // oculto vacío y bloqueando el submit silenciosamente — mismo bug que el
-                // selector de auditor principal en actividad-form.tsx. Con una sola opción no
-                // hay nada que elegir, así que se fija igual que ese caso.
                 <>
                   <Input value={catalogoDisponible[0].nombre} disabled />
                   <input type="hidden" name="documento_catalogo_id" value={catalogoDisponible[0].id} />
@@ -180,7 +169,6 @@ function DocumentoCard({
 }) {
   const esControlTotal = usuario?.permiso_sistema === "control_total";
   const puedeVistoBueno = usuario?.cargo === "subdirector" || usuario?.cargo === "director";
-  // Espeja la validación de `marcar_no_aplica`: decisión de jefatura o control_total.
   const puedeNoAplica = esJefaturaAuditoria(usuario);
 
   const finalizado = d.fase_actual === "finalizado";
@@ -322,7 +310,6 @@ function DocumentoCard({
   );
 }
 
-/** Dirección: registro tardío (con la fecha real) o corrección de un movimiento anterior. */
 function RegistroManual({ actividadId, documento: d }: { actividadId: string; documento: DocumentoConDetalle }) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3">
@@ -378,7 +365,6 @@ function RegistroManual({ actividadId, documento: d }: { actividadId: string; do
   );
 }
 
-/** Auditor → Subjefe → Jefe ..., con el cargo que tiene el documento resaltado. */
 function CadenaRevision({ cadena, documento }: { cadena: CargoEnum[]; documento: DocumentoConDetalle }) {
   const finalizado = documento.fase_actual === "finalizado";
   return (
@@ -403,7 +389,6 @@ function CadenaRevision({ cadena, documento }: { cadena: CargoEnum[]; documento:
   );
 }
 
-/** Movimientos que todavía se pueden corregir: los que ninguna corrección reemplazó ya. */
 function movimientosCorregibles(movimientos: DocumentoConDetalle["movimientos"]) {
   const corregidos = new Set(movimientos.map((m) => m.corrige_movimiento_id).filter(Boolean));
   return movimientos

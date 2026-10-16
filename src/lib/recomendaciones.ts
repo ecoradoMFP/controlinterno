@@ -1,11 +1,9 @@
 import type { EstadoRecomendacionEnum } from "@/types/domain";
 
-/** Fecha de hoy (YYYY-MM-DD) en hora de Guatemala, no la del servidor (UTC). */
 export function hoyGuatemala(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guatemala" }).format(new Date());
 }
 
-/** "hace 3 meses" / "hace 12 días" a partir de una fecha YYYY-MM-DD. */
 export function haceCuanto(fecha: string, hoy: string = hoyGuatemala()): string {
   const dias = Math.round((Date.parse(hoy) - Date.parse(fecha)) / 86_400_000);
   if (dias < 0) return "fecha futura";
@@ -14,7 +12,6 @@ export function haceCuanto(fecha: string, hoy: string = hoyGuatemala()): string 
   return `hace ${meses} meses`;
 }
 
-/** "00006", 2026 -> "CAI 00006-2026" (el número se reinicia cada año); ya prefijado se deja igual. */
 export function etiquetaCai(cai: string | null, anio?: number | null): string | null {
   if (!cai) return null;
   const base = /^cai/i.test(cai) ? cai : `CAI ${cai}`;
@@ -29,17 +26,6 @@ type SeguimientoParaBucket = {
   documentos_seguimiento: { no_documento: string | null; fecha_documento: string | null } | null;
 };
 
-/**
- * En qué panel debe verse una recomendación y, si aplica, el año que la ubica ahí.
- *
- * Se basa en el último seguimiento con documento (informe/oficio) EMITIDO, no en el estado_actual
- * crudo ni en el último seguimiento sin importar si se emitió: mientras ese documento siga en
- * elaboración la recomendación se queda en "activa" (el cambio de panel ocurre hasta la tercera
- * etapa del ciclo — emitir el documento —, no al solo registrar el resultado). Si el último
- * emitido resultó cumplida, el panel es permanente ("atendida", histórico por año). Si no, es
- * "en_seguimiento" solo mientras ese año siga siendo el actual; al iniciar un año calendario
- * nuevo vuelve a "activa" sin intervención manual.
- */
 export function ubicarRecomendacion(
   seguimientos: SeguimientoParaBucket[],
   hoy: string = hoyGuatemala(),
@@ -54,11 +40,6 @@ export function ubicarRecomendacion(
   return { bucket: anio === Number(hoy.slice(0, 4)) ? "en_seguimiento" : "activa", anio };
 }
 
-/**
- * Paso del ciclo de un CAI: qué falta para completar su seguimiento. Un nombramiento en curso
- * manda (evaluar -> emitir -> SAG-UDAI); sin él, si hay recomendaciones activas toca registrar el
- * nombramiento, y si no, el CAI está al día.
- */
 export type PasoCai = "capturar" | "nombramiento" | "evaluar" | "emitir" | "sag" | "al_dia";
 
 export const PASO_CAI_FALTA: Record<PasoCai, string> = {
@@ -73,7 +54,6 @@ export const PASO_CAI_FALTA: Record<PasoCai, string> = {
 export function pasoDelCai(args: {
   tieneRecomendaciones: boolean;
   hayActivas: boolean;
-  /** Paso del nombramiento en curso (el más antiguo sin completar) que cubre este CAI, si hay. */
   pasoDocumento: "evaluar" | "emitir" | "sag" | null;
 }): PasoCai {
   if (!args.tieneRecomendaciones) return "capturar";
@@ -81,7 +61,6 @@ export function pasoDelCai(args: {
   return args.hayActivas ? "nombramiento" : "al_dia";
 }
 
-/** Etapa de una recomendación dentro de su ciclo (lo que ve el usuario junto al estado). */
 export type EtapaRecomendacion = "por_evaluar" | "evaluada" | "en_seguimiento" | "atendida";
 
 export const ETAPA_LABELS: Record<EtapaRecomendacion, string> = {

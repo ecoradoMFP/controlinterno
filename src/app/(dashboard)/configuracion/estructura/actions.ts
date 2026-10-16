@@ -11,7 +11,6 @@ function fail(message: string): never {
   redirect(`${RUTA}?error=${encodeURIComponent(message)}`);
 }
 
-// Defensa en profundidad: además de RLS (control_total), la acción verifica el permiso.
 async function requiereControlTotal() {
   const usuario = await getUsuarioActual();
   if (!usuario || usuario.permiso_sistema !== "control_total") {

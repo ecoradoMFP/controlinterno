@@ -29,11 +29,6 @@ export type DatosCronogramaExcel = {
 const dma = (iso: string) => iso.split("-").reverse().join("/");
 const AZUL = "FF1F3864";
 
-/**
- * Cronograma de actividades en Excel con el formato de la DAI (como la hoja "Resumen Cronograma"):
- * encabezado de la auditoría, actividades con Del/Al/días hábiles, total, asuetos del período,
- * estado según SCIDAI y espacio para firmas de quien elabora y quien revisa.
- */
 export async function generarCronogramaXlsx(d: DatosCronogramaExcel) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "SCIDAI";

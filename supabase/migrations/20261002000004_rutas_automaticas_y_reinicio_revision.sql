@@ -1,15 +1,3 @@
--- 1. Rutas del expediente digital automáticas, por correlativo.
---    Escribirlas a mano genera inconsistencias; las asigna la base al crear cada registro:
---      Auditoría  → Auditorias/<año>/<sigla depto>/<tipo de auditoría>/<NNN>
---                   (NNN = correlativo por año + departamento + tipo)
---      Documento  → <ruta de la auditoría>/<NN> <nombre del paso>   (NN = orden 1-18 del catálogo)
---      Oficio     → Oficios/<año>/<sigla del número>/<no. de oficio>
---    Nadie con sesión de usuario puede cambiarlas después.
--- 2. Devolución para corrección: al volver a entregarse, la revisión reinicia desde el primer
---    revisor (Auditor → Subjefe → Jefe, según la matriz del documento), sin saltar al cargo que
---    devolvió.
-
--- ── 1. Rutas ──
 alter table departamentos add column sigla text unique;
 update departamentos set sigla = case
   when nombre ilike '%financier%' then 'DAF'
@@ -21,7 +9,7 @@ create table correlativos_ruta (
   clave text primary key,
   ultimo integer not null default 0
 );
-alter table correlativos_ruta enable row level security;  -- sin policies ni grants: solo las funciones de abajo
+alter table correlativos_ruta enable row level security;
 
 create or replace function ruta_segmento(p text)
 returns text
@@ -40,8 +28,6 @@ as $$
 declare
   v_sigla text;
   v_anio text := to_char(coalesce(new.fecha_emision_nombramiento, new.fecha_inicio_plazo), 'YYYY');
-  -- Primera letra en mayúscula y el resto en minúscula: "Financiera", "FINANCIERA " y "financiera"
-  -- caen en la misma carpeta y el mismo correlativo.
   v_tipo text := coalesce(nullif(ruta_segmento(new.tipo_auditoria), ''), 'Sin tipo');
   v_n integer;
 begin
@@ -91,8 +77,6 @@ begin
 end;
 $$;
 
--- Las rutas son del sistema: con sesión de usuario no se modifican (scripts y migraciones, sin
--- auth.uid(), sí pueden, p. ej. si se mueve el expediente a otro servidor y hay que reescribirlas).
 create or replace function proteger_ruta_automatica()
 returns trigger
 language plpgsql
@@ -100,7 +84,6 @@ security definer
 set search_path = public
 as $$
 begin
-  -- to_jsonb: el mismo trigger sirve a tablas con columnas distintas (new.<campo> inexistente falla).
   if auth.uid() is not null then
     if tg_table_name = 'actividades'
        and to_jsonb(new)->>'ruta_expediente' is distinct from to_jsonb(old)->>'ruta_expediente' then
@@ -132,7 +115,6 @@ create trigger documentos_actividad_proteger_ruta before update on documentos_ac
 create trigger oficios_proteger_ruta before update on oficios
   for each row execute function proteger_ruta_automatica();
 
--- ── 2. Corrección: la revisión reinicia ──
 create or replace function avanzar_documento(
   p_documento_id uuid,
   p_accion text,
@@ -202,8 +184,6 @@ begin
       raise exception 'La entrega la registra % (quien tiene el documento).', v_doc.cargo_actual_responsable;
     end if;
 
-    -- Toda entrega (primera o posterior a una corrección) reinicia la revisión desde el primer
-    -- revisor de la cadena de la matriz: Auditor → Subjefe → Jefe, según corresponda al documento.
     v_destino := v_cadena[2];
     v_tipo := 'entrega';
     v_nueva_fase := 'revision';

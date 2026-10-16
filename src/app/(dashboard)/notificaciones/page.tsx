@@ -8,7 +8,6 @@ import { marcarNotificacionLeida, marcarTodasLeidas } from "./actions";
 export default async function NotificacionesPage() {
   const supabase = await createClient();
 
-  // Sin filtro explícito: RLS (notificaciones_select) ya devuelve solo las del usuario actual.
   const { data: notificaciones } = await supabase
     .from("notificaciones")
     .select("id, actividad_id, color, mensaje, leido, created_at, actividades(no_nombramiento)")

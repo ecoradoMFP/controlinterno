@@ -6,7 +6,6 @@ import { getUsuarioActual, puedeCorregirHechoConsumado, puedeEscribir } from "@/
 import { errorAccion as fail, type ResultadoAccion } from "@/lib/actions/resultado";
 import type { Database } from "@/types/database";
 
-// Estas acciones se usan con `FormAccion`: no redirigen (ver lib/actions/resultado.ts).
 function ok(oficioId: string) {
   revalidatePath(`/oficios/${oficioId}`);
 }
@@ -22,12 +21,6 @@ const ETIQUETA: Record<CampoFecha, string> = {
   fecha_respuesta: "respuesta",
 };
 
-/**
- * Registra (o, si ya estaba, corrige) una fecha del seguimiento del oficio. Una fecha ya registrada
- * solo la corrige control total y con motivo: el trigger `oficios_proteger_hechos_consumados`
- * exige que cambien las observaciones, así que el motivo se AGREGA a las que ya había, con la
- * fecha anterior y la nueva, sin borrar nada.
- */
 async function registrarFecha(formData: FormData, campo: CampoFecha, extra: CambiosOficio): Promise<ResultadoAccion> {
   const oficioId = String(formData.get("oficio_id"));
   const nueva = String(formData.get(campo) ?? "");
@@ -45,7 +38,6 @@ async function registrarFecha(formData: FormData, campo: CampoFecha, extra: Camb
 
   const cambios: CambiosOficio = { ...extra, [campo]: nueva };
   if (anterior) {
-    // Defensa en profundidad (sección 12.3): misma regla que el trigger.
     if (!puedeCorregirHechoConsumado(usuario)) {
       return fail(`La ${etiqueta} ya fue registrada; solo Dirección puede corregirla.`);
     }
@@ -74,8 +66,6 @@ export async function registrarRespuesta(formData: FormData): Promise<ResultadoA
   const extra: CambiosOficio = {
     no_respuesta: String(formData.get("no_respuesta") ?? "").trim() || null,
   };
-  // Al registrarla por primera vez se pueden anotar observaciones; en una corrección, el motivo
-  // se agrega solo (ver `registrarFecha`).
   if (formData.has("observaciones")) extra.observaciones = String(formData.get("observaciones")).trim() || null;
   return registrarFecha(formData, "fecha_respuesta", extra);
 }

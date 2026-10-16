@@ -40,7 +40,6 @@ export function EquipoPanel({
   candidatos: Usuario[];
   correcciones: CorreccionFechaEquipo[];
   puedeEditar: boolean;
-  /** Jefatura: puede corregir una fecha ya registrada, con motivo. */
   puedeCorregir: boolean;
 }) {
   return (
@@ -75,9 +74,6 @@ export function EquipoPanel({
           <div className="flex min-w-56 flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Usuario</label>
             {candidatos.length === 1 ? (
-              // Con un solo candidato, el Select de Base UI puede abrir y cerrar el popup en
-              // el mismo gesto sin confirmar la selección, bloqueando el submit silenciosamente
-              // (mismo bug que actividad-form.tsx). Con una sola opción no hay nada que elegir.
               <>
                 <Input value={`${candidatos[0].nombre} — ${candidatos[0].puesto ?? candidatos[0].cargo}`} disabled />
                 <input type="hidden" name="usuario_nit" value={candidatos[0].nit} />
@@ -113,9 +109,6 @@ export function EquipoPanel({
   );
 }
 
-// Flujograma institucional real: antes de cualquier trabajo, el equipo firma de recibido el
-// nombramiento y su Declaración de Independencia — se exige para poder cerrar Planificación
-// (ver el trigger `validar_avance_etapa`).
 export function ConfirmacionEquipo({
   actividadId,
   miembro,
@@ -175,8 +168,6 @@ function ConfirmacionCampo({
       </span>
     );
     if (!puedeCorregir) return registrada;
-    // Una fecha ya registrada solo la corrige la jefatura y siempre con motivo; la corrección
-    // queda en el historial del integrante (ver `corregir_fecha_equipo`).
     return (
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center gap-1.5">

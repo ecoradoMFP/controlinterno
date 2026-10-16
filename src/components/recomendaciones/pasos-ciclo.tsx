@@ -7,9 +7,6 @@ export type PasoCiclo = {
   estado: "hecho" | "actual" | "pendiente";
 };
 
-// Indicador de en qué punto va un nombramiento de seguimiento: nombramiento -> evaluar ->
-// emitir -> SAG-UDAI. Está para que quien llega a la pantalla vea de un vistazo qué falta y cuál
-// es EL paso que sigue, sin tener que deducirlo de formularios sueltos.
 export function PasosCiclo({ pasos, etiqueta = "Avance del seguimiento" }: { pasos: PasoCiclo[]; etiqueta?: string }) {
   const columnas = pasos.length === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4";
   return (

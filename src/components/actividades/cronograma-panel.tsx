@@ -39,14 +39,8 @@ export type CorreccionPlazo = {
 
 const ETAPAS: EtapaDocumentoEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados"];
 
-/** "2026-03-26" → "26/03/2026" */
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
 
-/**
- * Cronograma de actividades de la auditoría. Las 8 actividades con plazo en el SAG-UDAI-WEB (que
- * se reporta a la CGC) se capturan de una vez con solo sus fechas; el semáforo mide cada una
- * contra su plazo. (En la base, cada actividad es una fila de `hitos_cronograma`.)
- */
 export function CronogramaPanel({
   actividadId,
   hitos,
@@ -65,7 +59,6 @@ export function CronogramaPanel({
   umbral: UmbralSemaforo;
   hoy: string;
   puedeEditar: boolean;
-  /** Jefatura: corrige plazos ya registrados, con motivo. */
   puedeCorregir: boolean;
   correcciones: CorreccionPlazo[];
 }) {

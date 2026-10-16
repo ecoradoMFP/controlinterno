@@ -23,13 +23,11 @@ export default async function NuevoNombramientoSeguimientoPage({
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
   const gestionables = await departamentosParaNombrarSeguimiento(usuario, supabase);
-  // Emitir nombramientos es función de jefatura (authz.puede_nombrar_seguimiento).
   if (gestionables.length === 0) redirect("/recomendaciones");
 
   const [{ data: departamentos }, { data: usuarios }, { data: informes }] = await Promise.all([
     supabase.from("departamentos").select("id, nombre").in("id", gestionables).order("nombre"),
     supabase.from("usuarios").select("nit, nombre, cargo, puesto, departamento_id").eq("activo", true).order("nombre"),
-    // Solo informes con recomendaciones abiertas: son los que tiene sentido seguir.
     supabase
       .from("informes_auditoria")
       .select(
@@ -37,8 +35,6 @@ export default async function NuevoNombramientoSeguimientoPage({
       ),
   ]);
 
-  // Un nombramiento es por informe: solo se ofrecen los que aún tienen recomendaciones abiertas
-  // (las cumplidas ya cerraron su ciclo), más el preseleccionado por si llegó desde su detalle.
   const informesAbiertos = (informes ?? [])
     .filter(
       (i) =>
@@ -53,9 +49,6 @@ export default async function NuevoNombramientoSeguimientoPage({
     informesAbiertos.find((i) => i.id === informePreseleccionado)?.departamento_id ??
     (usuario?.departamento_id && gestionables.includes(usuario.departamento_id) ? usuario.departamento_id : gestionables[0]);
 
-  // En el seguimiento de CAI solo se nombra a personal del departamento que nombra (jefaturas,
-  // 2026-10-12). Con el CAI fijo, ese es su departamento; si no, los departamentos que el usuario
-  // puede gestionar, agrupados (la acción y la base rechazan una mezcla).
   const departamentosCandidatos = informeFijo ? [informeFijo.departamento_id] : gestionables;
   const grupos = departamentosCandidatos.map((depId) => ({
     depId,

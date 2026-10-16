@@ -8,11 +8,6 @@ type MovimientoConContexto = Movimiento & {
 
 const FORMATO: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short", timeZone: "America/Guatemala" };
 
-/**
- * Marcas de una corrección de Dirección: el movimiento que fue corregido (sigue visible, pero ya
- * no cuenta) y el registro tardío (se escribió después de cuando ocurrió). Compartido por la
- * bitácora y la hoja de ruta.
- */
 export function MarcasMovimiento({ movimiento, corregidoPor }: { movimiento: Movimiento; corregidoPor?: Movimiento }) {
   const tardio = new Date(movimiento.registrado_en).getTime() - new Date(movimiento.timestamp).getTime() > 3_600_000;
   return (

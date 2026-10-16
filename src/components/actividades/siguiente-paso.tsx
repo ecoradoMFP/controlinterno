@@ -37,11 +37,6 @@ export type PendienteHito = {
 
 export type PendienteEquipo = ActividadEquipo & { usuarios: { nombre: string } | null };
 
-/**
- * Lo único que hay que mirar al entrar a una auditoría: qué falta para terminar la etapa en la que
- * va y quién lo tiene. Cuando ya no falta nada, ofrece cerrar la etapa (o, en Expediente / Cierre,
- * registrar el cierre). Mismas reglas que el trigger `validar_avance_etapa`, que es el que decide.
- */
 export function SiguientePaso({
   actividadId,
   etapa,
@@ -68,7 +63,6 @@ export function SiguientePaso({
   hitos: PendienteHito[];
   equipoPendiente: PendienteEquipo[];
   sinEquipo: boolean;
-  /** Todavía no se registran los plazos SAG-UDAI (cronograma de actividades). */
   sinCronograma: boolean;
   puedeEditar: boolean;
   puedeCerrarEtapa: boolean;
@@ -78,7 +72,6 @@ export function SiguientePaso({
   cierre: DatosCierre;
   puedeCorregirCierre: boolean;
 }) {
-  // Las actividades del cronograma no bloquean: al cerrar la etapa se concluyen con esa fecha.
   const pendientes = documentos.length + equipoPendiente.length + (sinEquipo ? 1 : 0) + (sinCronograma ? 1 : 0);
   const etapaLabel = ETAPA_ACTIVIDAD_LABELS[etapa];
 
@@ -88,8 +81,6 @@ export function SiguientePaso({
   else if (etapaSiguiente) titulo = `Cerrar ${etapaLabel} y pasar a ${ETAPA_ACTIVIDAD_LABELS[etapaSiguiente]}`;
   else titulo = "Registrar el cierre del expediente";
 
-  // Solo se enumera lo que le toca a quien mira (y los hitos en riesgo); lo demás se resume por
-  // cargo, porque el detalle completo ya está en las pestañas de abajo.
   const meToca = (cargo: CargoEnum) => puedeEditar && !!cargoUsuario && cargo === cargoUsuario;
   const misDocs = documentos.filter((d) => meToca(d.responsable));
   const otrosDocs = documentos.filter((d) => !meToca(d.responsable));
@@ -302,7 +293,6 @@ function resumenPendientes(docs: number, hitos: number, equipo: number, sinCrono
   return partes.length > 1 ? `${partes.slice(0, -1).join(", ")} y ${partes.at(-1)}` : partes[0];
 }
 
-/** "8 con Auditor y 1 con Subjefe" */
 function porCargo(docs: PendienteDocumento[]) {
   const cuenta = new Map<CargoEnum, number>();
   for (const d of docs) cuenta.set(d.responsable, (cuenta.get(d.responsable) ?? 0) + 1);

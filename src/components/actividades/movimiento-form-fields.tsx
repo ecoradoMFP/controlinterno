@@ -11,10 +11,6 @@ import {
 } from "@/components/ui/select";
 import { CARGOS, CARGO_LABELS, TIPO_EVENTO_LABELS, type CargoEnum } from "@/types/domain";
 
-// Corrección de proceso (sesión 2026-09-18): el flujo de revisión siempre es lineal
-// (Auditor → Subjefe → Jefe → Subdirector → Director) y una corrección siempre regresa
-// directo a Auditor, nunca a un cargo intermedio. Fijar "A cargo" automáticamente en ese
-// caso evita un clic/typeo innecesario en el caso más frecuente del flujo.
 export function MovimientoFormFields({ cargoActual }: { cargoActual: CargoEnum }) {
   const [tipoEvento, setTipoEvento] = useState("");
   const esCorreccion = tipoEvento === "devolucion_correccion";

@@ -1,5 +1,3 @@
--- Prompt maestro, sección 4.6: cronograma sistematizado de cada actividad (fuente de fechas
--- para el motor de semáforo, sección 5).
 create table hitos_cronograma (
   id uuid primary key default gen_random_uuid(),
   actividad_id uuid not null references actividades(id) on delete cascade,
@@ -25,4 +23,3 @@ alter table hitos_cronograma enable row level security;
 
 revoke all on hitos_cronograma from anon, authenticated;
 grant select, insert, update on hitos_cronograma to authenticated;
--- Sin delete: un hito ya capturado no se borra, se corrige (mismo principio de la sección 6.5).

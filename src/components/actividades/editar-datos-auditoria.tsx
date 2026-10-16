@@ -24,13 +24,8 @@ const ETIQUETAS: Record<string, string> = {
   fecha_notificacion: "Límite de notificación",
 };
 
-/** "2026-03-26" → "26/03/2026"; otros valores, tal cual. */
 const legible = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split("-").reverse().join("/") : String(v ?? "—"));
 
-/**
- * Corrección de los datos generales de la auditoría (jefatura, con motivo) y su bitácora. El CAI,
- * el departamento y el tipo no se corrigen: de ellos dependen el identificador y la carpeta.
- */
 export function EditarDatosAuditoria({
   actividad,
   auditores,

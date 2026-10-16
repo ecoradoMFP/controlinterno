@@ -32,7 +32,6 @@ export default async function InformeDetallePage({
     .eq("id", id)
     .maybeSingle();
 
-  // RLS ya decide qué informe es visible (mismo criterio que actividades): sin fila, es un 404.
   if (!informe) notFound();
 
   const [{ data: equipo }, { data: deficiencias }, { data: candidatos }, { data: historialRecs }, { data: historialDefs }] = await Promise.all([
@@ -59,9 +58,7 @@ export default async function InformeDetallePage({
     (deficiencias ?? []).flatMap((d) => d.recomendaciones.map((r) => [r.id, d.numero] as const)),
   );
 
-  // Una sola bitácora, la más reciente primero: correcciones de deficiencias y de recomendaciones.
   const historial = [
-    // Una deficiencia = una recomendación: la recomendación se identifica por el número de su deficiencia.
     ...(historialRecs ?? []).map(({ recomendacion_id, ...c }) => ({
       ...c,
       entidad: "recomendacion" as const,
@@ -90,7 +87,6 @@ export default async function InformeDetallePage({
       ? supabase.from("usuarios").select("nombre").eq("nit", informe.bloqueado_por_nit).maybeSingle().then((r) => r.data?.nombre ?? null)
       : Promise.resolve(null),
   ]);
-  // Un CAI bloqueado no admite cambios de captura; el seguimiento sigue su curso.
   const puedeEditar = puedeOperar && !bloqueado;
   const puedeDesbloquear = bloqueado && gestionables.includes(informe.departamento_id);
 
@@ -139,7 +135,6 @@ export default async function InformeDetallePage({
           />
           <Info label="Supervisor" value={informe.supervisor?.nombre} />
           <Info label="Coordinador" value={informe.coordinador?.nombre} />
-          {/* En la matriz de DAF el riesgo es una oración completa, no una etiqueta corta. */}
           <Info label="Riesgo" value={informe.riesgo} className="col-span-full" />
         </CardContent>
       </Card>

@@ -25,7 +25,6 @@ export function OficioForm({
   error,
   fieldErrors,
 }: {
-  /** `etiqueta`: el identificador visible de la auditoría (su CAI). */
   actividades: { id: string; etiqueta: string }[];
   unidades: UnidadMinisterio[];
   responsable: Usuario;
@@ -56,9 +55,6 @@ export function OficioForm({
         {actividades.length === 0 ? (
           <Input id="actividad_id_display" value="Sin auditorías disponibles" disabled />
         ) : (
-          // La primera opción (valor null) deja el oficio sin auditoría: así se puede deshacer una
-          // selección hecha por error. Con ella la lista nunca queda con una sola opción, que es
-          // cuando el Select de Base UI no confirmaba el valor elegido.
           <Select
             name="actividad_id"
             items={[{ value: null, label: SIN_AUDITORIA }, ...actividades.map((a) => ({ value: a.id, label: a.etiqueta }))]}

@@ -1,4 +1,3 @@
--- Prompt maestro, sección 4.4: actividades (auditorías) y su equipo asignado.
 create table actividades (
   id uuid primary key default gen_random_uuid(),
   no_nombramiento text not null unique check (no_nombramiento ~ '^NAI-\d{3}-\d{4}$'),
@@ -34,7 +33,5 @@ alter table actividades_equipo enable row level security;
 revoke all on actividades from anon, authenticated;
 revoke all on actividades_equipo from anon, authenticated;
 
--- Sin grant de delete en actividades: una auditoría abierta no se borra (sección 6.5); un
--- error de captura se corrige con un movimiento nuevo, nunca eliminando el expediente.
 grant select, insert, update on actividades to authenticated;
 grant select, insert, update, delete on actividades_equipo to authenticated;

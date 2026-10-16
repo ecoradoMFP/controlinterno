@@ -1,4 +1,3 @@
--- Prompt maestro, sección 4: tipos enumerados usados por el modelo de datos.
 create extension if not exists pgcrypto;
 
 create type cargo_enum as enum ('auditor', 'subjefe', 'jefe', 'subdirector', 'director');

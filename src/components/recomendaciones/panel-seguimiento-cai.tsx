@@ -10,14 +10,8 @@ import { RotuloRecomendacion } from "@/components/recomendaciones/rotulo-recomen
 
 type FilaCedula = NonNullable<Awaited<ReturnType<typeof cargarCedulaDocumento>>>["filas"][number];
 
-// Mismo orden de columnas que la cédula impresa: Cumplida / No cumplida / En proceso / Pendiente.
 const OPCIONES_ESTADO: EstadoRecomendacionEnum[] = ["cumplida", "no_cumplida", "en_proceso", "pendiente"];
 
-/**
- * Seguimiento agrupado por CAI: un panel por cada CAI que cubre el nombramiento, con el estado,
- * las acciones y el comentario de todas sus recomendaciones pendientes, que se guardan juntas con
- * un solo botón. Cada recomendación conserva su propio ciclo e historial.
- */
 export function PanelSeguimientoCai({
   documentoId,
   filas,
@@ -27,7 +21,6 @@ export function PanelSeguimientoCai({
   documentoId: string;
   filas: FilaCedula[];
   puedeRegistrar: boolean;
-  /** Ruta a la que regresa tras guardar (por defecto, la cédula del nombramiento). */
   volverA?: string;
 }) {
   const grupos = new Map<string, FilaCedula[]>();

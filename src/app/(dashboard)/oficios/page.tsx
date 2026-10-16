@@ -15,13 +15,8 @@ import type { Oficio } from "@/types/domain";
 
 const RUTA = "/oficios";
 
-/** "2026-03-26" → "26/03/2026" */
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
 
-/**
- * Estado de un oficio con el motor de semáforo real (sección 5): un oficio sin respuesta que aún
- * tiene margen se ve distinto de uno que ya está en rojo, igual que en /reportes.
- */
 function estadoOficio(
   o: Pick<Oficio, "fecha_emision" | "fecha_respuesta" | "fecha_vencimiento">,
   hoy: string,
@@ -37,16 +32,10 @@ function estadoOficio(
   return { tono: color, label: COLOR_SEMAFORO_LABELS[color], atencion: color === "naranja" || color === "rojo" };
 }
 
-/**
- * Bandeja de oficios: por defecto los que esperan respuesta. Las tarjetas filtran (sin respuesta,
- * requieren atención, respondidos, todos) y cada fila dice a quién va, de qué auditoría es y si va
- * a tiempo. El seguimiento se hace dentro de cada oficio.
- */
 export default async function OficiosPage({ searchParams }: { searchParams: Promise<{ vista?: string; q?: string }> }) {
   const { vista: vistaParam, q: qParam } = await searchParams;
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  // Sin filtro explícito: RLS (authz.puede_ver_oficio) ya devuelve el alcance correcto.
   const [{ data: oficios, error }, { data: parametros }, { data: feriadosRows }] = await Promise.all([
     supabase
       .from("oficios")
@@ -73,7 +62,6 @@ export default async function OficiosPage({ searchParams }: { searchParams: Prom
     .filter((o) =>
       vista === "pendientes" ? !o.fecha_respuesta : vista === "atencion" ? o.estado.atencion : vista === "respondidos" ? !!o.fecha_respuesta : true,
     )
-    // Los que vencen antes, primero; los respondidos al final.
     .sort(
       (a, b) =>
         Number(!!a.fecha_respuesta) - Number(!!b.fecha_respuesta) ||

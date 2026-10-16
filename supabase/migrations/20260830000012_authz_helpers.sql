@@ -1,11 +1,3 @@
--- Sección 8/12.3: funciones auxiliares para las políticas RLS. Viven en un esquema aparte
--- (`authz`) que no se agrega a la config de PostgREST (supabase/config.toml expone solo
--- `public`), así que no quedan disponibles como endpoints RPC — son de uso interno de RLS.
---
--- Son `security definer` deliberadamente: necesitan leer `usuarios`/`departamentos`/
--- `subdirecciones`/`actividades` para resolver el alcance del usuario actual sin caer en
--- recursión de RLS sobre esas mismas tablas. `search_path` queda fijo para evitar que una
--- función con el mismo nombre en otro esquema del search_path intercepte la llamada.
 create schema if not exists authz;
 
 revoke all on schema authz from anon, authenticated;
@@ -57,7 +49,6 @@ create or replace function authz.puede_escribir()
 returns boolean
 language sql stable security definer set search_path = public
 as $$
-  -- Sección 4.9: consulta nunca permite escritura, sin importar el cargo.
   select coalesce(authz.permiso_actual() in ('captura_propia', 'captura_delegada', 'control_total'), false);
 $$;
 
@@ -68,9 +59,6 @@ as $$
   select s.id from subdirecciones s where s.subdirector_nit = authz.nit_actual();
 $$;
 
--- Alcance departamental amplio: usado para datos de directorio (usuarios) donde un Auditor
--- puede ver a sus colegas de departamento. NO se usa para decidir qué actividades puede ver
--- un Auditor (eso es más estrecho: solo las suyas, ver authz.puede_ver_actividad).
 create or replace function authz.departamentos_visibles()
 returns setof uuid
 language sql stable security definer set search_path = public
@@ -96,8 +84,6 @@ as $$
   );
 $$;
 
--- Sección 8: Auditor ve solo sus propias actividades asignadas (equipo); Subjefe/Jefe ve
--- las de su departamento; Subdirector las de su subdirección; Director todas.
 create or replace function authz.puede_ver_actividad(p_actividad_id uuid)
 returns boolean
 language sql stable security definer set search_path = public
@@ -147,8 +133,6 @@ as $$
   );
 $$;
 
--- oficios.actividad_id es nullable (sección 4.10): sin actividad, el alcance se resuelve por
--- el departamento de quien lo elabora.
 create or replace function authz.puede_ver_oficio(p_oficio_id uuid)
 returns boolean
 language sql stable security definer set search_path = public

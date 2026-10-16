@@ -21,8 +21,6 @@ export default async function NuevoInformePage({
 
   const supabase = await createClient();
 
-  // Mismo criterio que /actividades/nueva: Jefe/Subjefe solo pueden crear informes en su
-  // propio departamento, así que la UI se acota al alcance real de creación.
   const departamentoFijo =
     usuario.cargo === "jefe" || usuario.cargo === "subjefe"
       ? await supabase

@@ -1,14 +1,4 @@
-// Importa una matriz de carga de SCIDAI (la que genera scripts/generar-matriz-carga.mjs, UNA hoja
-// por etapas) a la base LOCAL de Supabase. Es estricto: un CAI solo se carga si está COMPLETO (todo
-// lo obligatorio, sin contradicciones); los demás se reportan con la fila y columna exactas de lo
-// que falta.
-//
-// Uso:
-//   node scripts/importar-matriz-scidai.mjs "Matriz.xlsx" --simular     # solo revisa y reporta
-//   node scripts/importar-matriz-scidai.mjs "Matriz.xlsx"               # carga los CAI completos
-//
-// Personas: se buscan por nombre en el directorio (tolera tildes, mayúsculas y errores de una letra).
-// Quien no aparezca se crea como EXFUNCIONARIO inactivo (ya no forma parte de la DAI), sin acceso.
+// Uso (solo local): node scripts/importar-matriz-scidai.mjs "Matriz.xlsx" [--simular]
 
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -44,7 +34,6 @@ const ok = (r, que) => {
   return r.data;
 };
 
-// ───────── lectura ─────────
 const sinTildes = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const norm = (t) => sinTildes(t).toLowerCase().replace(/\s+/g, " ").trim();
 const tit = (n) => String(n).trim().replace(/\s+/g, " ");
@@ -71,7 +60,6 @@ const wb = new ExcelJS.Workbook();
 await wb.xlsx.readFile(archivo);
 const ws = wb.getWorksheet(NOMBRE_HOJA);
 if (!ws) throw new Error(`La matriz no tiene la hoja "${NOMBRE_HOJA}" (¿se usó otra versión del formato?).`);
-// El formato es posicional: se verifica que los encabezados coincidan con la definición.
 COLUMNAS.forEach((c, i) => {
   const h = String(ws.getCell(FILA_ENCABEZADO, i + 1).value ?? "").replace(/\s*\*$/, "").trim();
   if (h !== c.h) throw new Error(`Columna ${i + 1}: se esperaba "${c.h}" y la matriz dice "${h}" (¿se usó otra versión del formato?).`);
@@ -88,8 +76,7 @@ ws.eachRow((fila, nFila) => {
   if (alguno) filas.push(o);
 });
 
-// ───────── armado y validación ─────────
-const errores = new Map(); // clave CAI -> [mensajes]
+const errores = new Map();
 const avisos = new Map();
 const err = (clave, fila, columna, msg) => {
   if (!errores.has(clave)) errores.set(clave, []);
@@ -103,7 +90,6 @@ const etiqueta = (c) => `${c.bloque.seg ? `Seguimiento ${c.bloque.seg}` : c.bloq
 const col = (k) => COLUMNAS.find((c) => c.k === k);
 const vacio = (v) => v === null || v === undefined;
 
-// Filas contiguas con el mismo (año, CAI) forman un CAI.
 const grupos = [];
 for (const f of filas) {
   if (f.cai !== null && /^\d+$/.test(f.cai)) f.cai = f.cai.padStart(5, "0");
@@ -122,20 +108,17 @@ for (const g of grupos) {
   const cai = { _clave: clave, cai: f0.cai, anio_cai: f0.anio_cai, defs: new Map(), segs: [], filas: g.filas };
   cais.set(clave, cai);
 
-  // Tipos inválidos en cualquier celda del CAI
   for (const f of g.filas) {
     for (const c of COLUMNAS) {
       const v = f[c.k];
       if (v && typeof v === "object" && v.invalido !== undefined) err(clave, f._fila, etiqueta(c), `valor no válido "${v.invalido}"`);
     }
   }
-  // Identificación en cada fila
   for (const k of ["anio_cai", "cai"]) {
     if (g.filas.every((f) => vacio(f[k]))) err(clave, g.filas[0]._fila, etiqueta(col(k)), "obligatorio y vacío (en todas las filas de este CAI)");
     else for (const f of g.filas) if (vacio(f[k])) err(clave, f._fila, etiqueta(col(k)), "obligatorio y vacío");
   }
   for (const f of g.filas) if (vacio(f.no_deficiencia)) err(clave, f._fila, etiqueta(col("no_deficiencia")), "obligatorio y vacío");
-  // Datos del CAI y de cada documento: una vez; si se repiten deben coincidir
   const unico = (k) => {
     const valores = [...new Set(g.filas.map((f) => f[k]).filter((v) => !vacio(v) && typeof v !== "object").map(String))];
     if (valores.length > 1) err(clave, g.filas.find((f) => !vacio(f[k]) && String(f[k]) === valores[1])._fila, etiqueta(col(k)), `tiene valores distintos en las filas del mismo CAI (${valores.join(" / ")})`);
@@ -149,7 +132,6 @@ for (const g of grupos) {
   if (cai.departamento && !DEPARTAMENTOS.includes(cai.departamento)) err(clave, g.filas[0]._fila, etiqueta(col("departamento")), `"${cai.departamento}" no es un departamento de la lista`);
   if (cai.periodo_inicio && cai.periodo_fin && cai.periodo_fin < cai.periodo_inicio) err(clave, g.filas[0]._fila, "El CAI · Período auditado", "el fin es anterior al inicio");
 
-  // Deficiencias (una por fila)
   for (const f of g.filas) {
     const n = f.no_deficiencia;
     for (const c of COLUMNAS.filter((x) => x.bloque.id === "def" && x.req === "obl")) if (vacio(f[c.k])) err(clave, f._fila, etiqueta(c), "obligatorio y vacío");
@@ -163,7 +145,6 @@ for (const g of grupos) {
     cai.defs.set(n, { ...f, segs: [] });
   }
 
-  // Seguimientos 1..N
   let previoUsado = true;
   for (let n = 1; n <= NUM_SEGUIMIENTOS; n++) {
     const cols = COLUMNAS.filter((c) => c.bloque.seg === n);
@@ -203,7 +184,6 @@ for (const g of grupos) {
   }
   if (cai.defs.size === 0) err(clave, null, "Deficiencias", "el CAI no tiene ninguna deficiencia");
 }
-// ───────── personas ─────────
 const usuarios = ok(await sb.from("usuarios").select("nit, nombre, activo, cargo"), "usuarios");
 const tokens = (n) => norm(n).split(" ").filter((t) => t && !["de", "del", "la", "los", "y"].includes(t));
 function lev1(a, b) {
@@ -230,7 +210,7 @@ function buscarPersona(nombre) {
   return mejor;
 }
 const nombresDeCelda = (v) => (v ? v.split(/\n|;/).map(tit).filter(Boolean) : []);
-const personas = new Map(); // nombre tal cual -> {nit, creado}
+const personas = new Map();
 const aCrear = [];
 let correlativoEx = usuarios.filter((u) => u.nit.startsWith("EX-")).length;
 function persona(nombre) {
@@ -259,7 +239,6 @@ for (const [clave, cai] of cais) {
   }
 }
 
-// ───────── reporte ─────────
 const completos = [...cais.keys()].filter((k) => !errores.has(k));
 const incompletos = [...errores.keys()];
 console.log(`\nMatriz: ${archivo}`);
@@ -275,7 +254,6 @@ if (SIMULAR) {
   process.exit(0);
 }
 
-// ───────── carga ─────────
 const director = usuarios.find((u) => u.cargo === "director")?.nit;
 if (!director) throw new Error("No hay un usuario con cargo director para registrar la carga.");
 const departamentos = ok(await sb.from("departamentos").select("id, nombre"), "departamentos");

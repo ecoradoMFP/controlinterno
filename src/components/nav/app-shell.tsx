@@ -57,9 +57,6 @@ function iniciales(nombre: string) {
 }
 
 function Brand({ variant = "inline" }: { variant?: "inline" | "stacked" }) {
-  // Dimensiones reales del PNG (no las del webp chico de antes): al pedirle a next/image el
-  // ancho real, "stacked" puede renderizarlo grande (todo el ancho del sidebar) sin que se vea
-  // borroso por upscaling.
   if (variant === "stacked") {
     return (
       <Link href="/actividades" className="flex flex-col items-center gap-2 px-6 py-6">
@@ -125,8 +122,6 @@ function SidebarNav({
   pathname: string;
   onNavigate?: () => void;
 }) {
-  // Ampliaciones de nombramiento: Director y Subdirector, y Jefe o Subjefe para su departamento
-  // (por su cargo real, como `departamentosCargoTemporal`).
   const cargoReal = usuario.cargo_temporal ? usuario.cargo_temporal.cargo_original : usuario.cargo;
   const verCargosTemporales = ["director", "subdirector", "jefe", "subjefe"].includes(cargoReal ?? "") && usuario.permiso_sistema !== "consulta";
   const verConfiguracion = usuario.permiso_sistema === "control_total";
@@ -169,9 +164,6 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Cierra el drawer cuando cambia la ruta (incluye navegación por atrás/adelante del
-  // navegador, no solo los clicks de NavRow) sin useEffect: ajustar estado en el propio
-  // render, comparando contra la ruta anterior, es el patrón que React recomienda para esto.
   const [drawerPathname, setDrawerPathname] = useState(pathname);
   if (pathname !== drawerPathname) {
     setDrawerPathname(pathname);
@@ -180,8 +172,6 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar de escritorio: fija, siempre visible desde lg. En mobile se reemplaza por el
-       * drawer de abajo — mismo contenido, nunca dos fuentes de verdad para la navegación. */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
         <div className="border-b border-sidebar-border">
           <Brand variant="stacked" />
@@ -189,8 +179,6 @@ export function AppShell({
         <SidebarNav usuario={usuario} pathname={pathname} />
       </aside>
 
-      {/* Drawer mobile: mismo SidebarNav, dentro de un Dialog para foco/escape/scroll-lock
-       * gratis en vez de reimplementar esa lógica a mano. */}
       <DialogPrimitive.Root open={mobileOpen} onOpenChange={setMobileOpen}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/30 duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:hidden" />
@@ -223,9 +211,6 @@ export function AppShell({
           <div className="lg:hidden">
             <Brand />
           </div>
-          {/* En desktop el sidebar ya lleva el logo — acá va el nombre institucional completo
-           * del sistema, con la tipografía de encabezados y el navy de siempre (no un color
-           * nuevo). Se oculta en mobile: no entra junto al logo compacto + campana + avatar. */}
           <p className="hidden min-w-0 flex-1 truncate font-heading text-lg font-semibold text-primary lg:block">
             Sistema de Control Interno Dirección de Auditoría Interna (SCIDAI)
           </p>
@@ -256,7 +241,6 @@ export function AppShell({
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {/* Base UI exige que el GroupLabel viva dentro de un Menu.Group. */}
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="font-normal">
                     <p className="text-sm font-medium text-foreground">{usuario.nombre}</p>
@@ -269,9 +253,6 @@ export function AppShell({
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                {/* El botón usa el atributo `form` (en vez de anidar un <form> dentro del
-                 * Item) porque MenuItem le pone role="menuitem" al nodo raíz, y un <form> con
-                 * ese rol no se activa por teclado de forma nativa. */}
                 <DropdownMenuItem
                   variant="destructive"
                   render={<button type="submit" form="logout-form" className="flex w-full items-center gap-1.5" />}

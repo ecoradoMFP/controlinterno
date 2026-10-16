@@ -1,11 +1,7 @@
 import { z } from "zod";
 
-// Sección 10: formato de oficio observado en los registros reales de Auditorías Especiales,
-// validado tal cual (no se inventa un formato nuevo).
 const NO_OFICIO_REGEX = /^DAI-[A-Z]{2,6}-\d{3}-\d{4}$/;
 
-// Por ahora todos los oficios se entregan en físico; la lista queda abierta para agregar otros
-// medios (p. ej. correo institucional) cuando la DAI los adopte.
 export const MEDIOS_ENVIO = ["Físico"] as const;
 
 export const oficioFormSchema = z.object({

@@ -48,9 +48,6 @@ export default async function ActividadDetallePage({
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  // `usuarios` hint explícito: sin él, PostgREST no puede elegir entre el FK directo
-  // (auditor_principal_nit) y el camino many-to-many vía actividades_equipo, y falla con
-  // PGRST201 ("more than one relationship was found").
   const { data: actividad } = await supabase
     .from("actividades")
     .select(
@@ -59,8 +56,6 @@ export default async function ActividadDetallePage({
     .eq("id", id)
     .maybeSingle();
 
-  // RLS ya decide qué actividad es visible (sección 8): si no vino nada, o no existe, o está
-  // fuera del alcance del usuario actual — cualquiera de los dos casos es un 404 legítimo.
   if (!actividad) notFound();
 
   const [
@@ -126,21 +121,14 @@ export default async function ActividadDetallePage({
       .order("created_at"),
   ]);
 
-  // Orden del catálogo (1-18): los documentos de una etapa se crean juntos al abrirla.
   const documentosSeguros = [...(documentos ?? [])].sort(
     (a, b) => (a.documentos_catalogo?.orden ?? 0) - (b.documentos_catalogo?.orden ?? 0),
   );
   const idsUsados = new Set(documentosSeguros.map((d) => d.documento_catalogo_id));
-  // No se puede iniciar un documento de una etapa que la actividad todavía no alcanzó (mismo
-  // orden fijo que refuerza la base de datos vía RLS) — el dropdown de "iniciar documento"
-  // solo ofrece los que sí corresponden a la etapa actual.
   const catalogoDisponible = (catalogoTodos ?? []).filter(
     (c) => !idsUsados.has(c.id) && c.etapa === actividad.etapa_actual,
   );
 
-  // Matriz de revisión del departamento (`documentos_catalogo_revision`, importada completa):
-  // define el flujo guiado de cada documento. La que decide de verdad es la función SQL
-  // `avanzar_documento`; aquí solo se usa para rotular los botones.
   const ordenRevisionPorDocumento = new Map<string, CargoEnum[]>();
   for (const fila of matrizRevision ?? []) {
     const lista = ordenRevisionPorDocumento.get(fila.documento_catalogo_id) ?? [];
@@ -162,8 +150,6 @@ export default async function ActividadDetallePage({
 
   const puedeEditar = puedeEscribir(usuario) && !actividad.concluida;
 
-  // Fechas del Registro Auxiliar de Nombramientos que salen de la bitácora del Informe de
-  // Auditoría (último documento del catálogo): primera entrega a Jefe y a Director.
   const informe = documentosSeguros.find((d) => d.documentos_catalogo?.orden === 18);
   const primeraEntregaA = (cargo: CargoEnum) => {
     const fechas = ((informe?.movimientos ?? []) as Movimiento[])
@@ -172,17 +158,11 @@ export default async function ActividadDetallePage({
       .sort();
     return fechas[0] ? new Date(fechas[0]).toLocaleDateString("es-GT") : null;
   };
-  // No es lo mismo que `puedeEditar`: cerrar etapa exige además el alcance de cargo de la
-  // política RLS `actividades_update` (jefe/subjefe/subdirector/director, nunca Auditor) — ver
-  // `puedeCerrarEtapaActividad`.
   const puedeCerrarEtapa = await puedeCerrarEtapaActividad(usuario, id, supabase);
   const feriadosSet = new Set((feriadosRows ?? []).map((f) => f.fecha));
   const umbralHito: UmbralSemaforo = parametrosHito ?? UMBRAL_POR_DEFECTO;
   const hoy = hoyGuatemala();
 
-  // Pendientes de la etapa en curso: mismas condiciones que valida el trigger
-  // `validar_avance_etapa` en la base de datos (la validación real vive allá); aquí solo arman
-  // la tarjeta "Siguiente paso".
   const etapa = actividad.etapa_actual;
   const etapaSiguiente = SIGUIENTE_ETAPA[etapa];
   const docsPendientes: PendienteDocumento[] = documentosSeguros
@@ -210,7 +190,6 @@ export default async function ActividadDetallePage({
     : [];
   const sinEquipo = enPlanificacion && (equipo ?? []).length === 0;
 
-  // Barra de etapas: documentos terminados de cada una.
   const indiceEtapa = ORDEN_ETAPAS.indexOf(etapa);
   const pasos: PasoCiclo[] = ORDEN_ETAPAS.map((e, i) => {
     const docs = documentosSeguros.filter((d) => d.documentos_catalogo?.etapa === e);
@@ -284,7 +263,6 @@ export default async function ActividadDetallePage({
         puedeCorregirCierre={puedeCorregirHechoConsumado(usuario)}
       />
 
-      {/* `key`: al llegar desde un enlace "Abrir" con otra pestaña, se vuelve a montar en esa. */}
       <Tabs key={tab} defaultValue={tab}>
         <TabsList className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
           <TabsTrigger value="documentos">Documentos</TabsTrigger>

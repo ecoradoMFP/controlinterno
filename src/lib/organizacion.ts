@@ -1,15 +1,8 @@
-// Resuelve "quién ocupa qué cargo en qué departamento/subdirección" a partir de las tablas de
-// referencia. Antes vivía duplicado en el job de alertas y en /reportes; ahora es una sola
-// fuente para que ambos coincidan si mañana cambia un jefe o un subdirector.
-
 import type { CargoEnum } from "@/types/domain";
 
 export interface MapaOrganizacional {
-  /** nits de jefe/subjefe por departamento_id. */
   jefaturaPorDepartamento: Map<string, string[]>;
-  /** nit del subdirector por departamento_id (vía la subdirección que lo agrupa). */
   subdirectorPorDepartamento: Map<string, string>;
-  /** nits de todos los directores activos (Dirección ve/responde por todo, sección 8). */
   directores: string[];
 }
 
@@ -41,12 +34,6 @@ export function construirMapaOrganizacional(
   return { jefaturaPorDepartamento, subdirectorPorDepartamento, directores };
 }
 
-/**
- * Quién responde por un documento/oficio actualmente en manos de `cargo`, dentro del
- * departamento `departamentoId`. `auditor` es responsabilidad de personas concretas asignadas a
- * la actividad (el equipo), así que ese caso no lo resuelve este mapa — lo decide el llamador con
- * la lista de equipo de la actividad puntual.
- */
 export function responsablesPorCargo(
   mapa: MapaOrganizacional,
   cargo: CargoEnum,

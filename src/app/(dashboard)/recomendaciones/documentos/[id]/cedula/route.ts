@@ -3,8 +3,6 @@ import { getUsuarioActual } from "@/lib/auth";
 import { cargarCedulaDocumento } from "@/lib/recomendaciones-datos";
 import { generarCedulaDocx } from "@/lib/recomendaciones-cedula-docx";
 
-// Exporta la cédula de seguimiento a Word para editarla/firmarla fuera del sistema. Usa el mismo
-// cargador que la pantalla: lo que RLS no deja ver, tampoco se exporta.
 export async function GET(_request: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);

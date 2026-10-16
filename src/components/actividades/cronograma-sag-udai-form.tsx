@@ -8,10 +8,6 @@ import { ACTIVIDADES_SAG_UDAI } from "@/lib/cronograma";
 import { diasHabilesEntre } from "@/lib/semaforo";
 import { ETAPA_ACTIVIDAD_LABELS } from "@/types/domain";
 
-/**
- * Las 8 actividades con plazo SAG-UDAI, ya escritas: solo se llenan "Del" y "Al". Los días
- * hábiles se calculan al momento (sin fines de semana ni asuetos), igual que en el Excel.
- */
 export function CronogramaSagUdaiForm({ actividadId, asuetos }: { actividadId: string; asuetos: string[] }) {
   const feriados = new Set(asuetos);
   const [fechas, setFechas] = useState<Record<string, { del: string; al: string }>>({});

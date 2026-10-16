@@ -17,7 +17,6 @@ export default async function EstructuraPage({ searchParams }: { searchParams: P
   const { data } = await supabase.from("unidades_ministerio").select("*").order("orden");
   const unidades = data ?? [];
   const hijas = (padreId: string | null) => unidades.filter((u) => u.padre_id === padreId);
-  // Árbol aplanado con sangría: despacho -> (direcciones y viceministerios) -> direcciones.
   const filas: { unidad: (typeof unidades)[number]; nivel: number }[] = [];
   const recorrer = (padreId: string | null, nivel: number) => {
     for (const u of hijas(padreId)) {

@@ -9,17 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Oficio } from "@/types/domain";
 
-/** "2026-03-26" → "26/03/2026" */
 const fecha = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : null);
 
 type Paso = "envio" | "recepcion" | "respuesta" | "completo";
 
-/**
- * Seguimiento de un oficio en el orden en que ocurre: emitido → enviado → recibido → respondido.
- * Arriba, en qué paso va; luego, UN solo formulario (el del paso que sigue); abajo, lo ya
- * registrado como consulta. Una fecha ya registrada solo la corrige control total (mismo límite
- * que el trigger `oficios_proteger_hechos_consumados`), y esa corrección va plegada.
- */
 export function SeguimientoOficio({
   oficio,
   puedeEditar,
@@ -193,7 +186,6 @@ function FormRespuesta({ oficio, correccion }: { oficio: Oficio; correccion?: bo
   );
 }
 
-/** Toda corrección de una fecha ya registrada queda en las observaciones del oficio, con su motivo. */
 function MotivoCorreccion({ id }: { id: string }) {
   return (
     <div className="flex w-full flex-col gap-1.5">

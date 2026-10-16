@@ -1,7 +1,3 @@
--- La auditoría se identifica por su CAI (jefaturas, 2026-10-12): número + año, igual que en el
--- seguimiento a recomendaciones (`informes_auditoria.cai/anio_cai`), porque el número se reinicia
--- cada año. Se pide al registrar una auditoría nueva; las ya registradas lo pueden tener vacío
--- (por eso se exige con trigger al insertar y no con un CHECK, que también frenaría sus UPDATE).
 alter table actividades
   add column cai text check (cai is null or length(btrim(cai)) between 1 and 20),
   add column anio_cai smallint check (anio_cai is null or anio_cai between 2000 and 2100);
@@ -29,7 +25,6 @@ create trigger actividades_exigir_cai
   before insert on actividades
   for each row execute function actividades_exigir_cai();
 
--- Una vez registrado, el CAI no cambia con la sesión de un usuario (es el identificador).
 create or replace function actividades_proteger_cai()
 returns trigger
 language plpgsql

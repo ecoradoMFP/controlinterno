@@ -14,7 +14,6 @@ import {
   type EstadoRecomendacionEnum,
 } from "@/types/domain";
 
-// Nombramiento/documento con sus auditores nombrados.
 const DOCUMENTO_CAMPOS = "*, documentos_seguimiento_auditores(usuarios(nombre))";
 
 export default async function RecomendacionDetallePage({
@@ -38,7 +37,6 @@ export default async function RecomendacionDetallePage({
     .eq("id", id)
     .maybeSingle();
 
-  // RLS decide la visibilidad (mismo criterio que el informe): sin fila, es un 404.
   const deficiencia = recomendacion?.deficiencias;
   const informe = deficiencia?.informes_auditoria;
   if (!recomendacion || !deficiencia || !informe) notFound();
@@ -48,8 +46,6 @@ export default async function RecomendacionDetallePage({
   const seguimientos = historial.filter((s) => s.documentos_seguimiento);
   const cumplida = recomendacion.estado_actual === "cumplida";
 
-  // Nombramientos de seguimiento que cubren este informe, todavía sin emitir (la cédula se cierra
-  // al emitirse) y que no evaluaron esta recomendación: el "siguiente paso" del ciclo.
   const usados = new Set(seguimientos.map((s) => s.documento_id));
   const { data: cobertura } = cumplida
     ? { data: [] }
@@ -241,8 +237,6 @@ function Paso({
           "bg-muted-foreground/40",
         )}
       />
-      {/* El estado de cada paso va como texto: el único indicador de color es el del estado
-       * actual, en el encabezado. */}
       <p className="font-medium">
         {titulo} <span className="font-normal text-muted-foreground">· Resultado: {ESTADO_RECOMENDACION_LABELS[estado]}</span>
       </p>

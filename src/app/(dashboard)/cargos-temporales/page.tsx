@@ -10,17 +10,11 @@ import { registrarCargoTemporal, revocarCargoTemporal } from "./actions";
 
 const SELECT_CLASES = "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm";
 
-/**
- * Ampliaciones de nombramiento: alguien cubre por un período el puesto de Subjefe o Jefe de un
- * departamento. Mientras está vigente, el sistema le da los permisos de ese
- * cargo (`authz.usuario_actual`); al terminar, vuelve solo a su cargo de siempre.
- */
 export default async function CargosTemporalesPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const usuario = await getUsuarioActual();
   const permitidos = departamentosCargoTemporal(usuario);
   if (!usuario || !permitidos) redirect("/actividades");
-  // La jefatura de un departamento solo registra en el suyo; nadie se registra a sí mismo.
   const enAlcance = (departamentoId: string | null) => permitidos === "todos" || (!!departamentoId && permitidos.includes(departamentoId));
 
   const supabase = await createClient();

@@ -16,8 +16,6 @@ function fail(message: string, fieldErrors?: Record<string, string>): never {
 }
 
 export async function crearActividad(formData: FormData) {
-  // Sección 12.3: defensa en profundidad — se valida permiso_sistema aquí además de RLS,
-  // porque esta Server Function es alcanzable por POST directo, no solo desde el formulario.
   const usuario = await getUsuarioActual();
   if (!puedeEscribir(usuario)) {
     fail("No tiene permiso para crear auditorías.");
@@ -55,13 +53,7 @@ export async function crearActividad(formData: FormData) {
 
   const supabase = await createClient();
 
-  // El id se genera aquí (no se deja el default `gen_random_uuid()` de la columna) para no
-  // encadenar `.select().single()` tras el insert: `actividades_select` decide visibilidad
-  // consultando `actividades` de nuevo por id, y esa fila recién insertada, dentro del mismo
-  // statement, no le es visible todavía a esa subconsulta — Postgres entonces trata el RETURNING
-  // como si la policy de SELECT hubiera fallado y aborta el INSERT con "violates row-level
-  // security policy", aunque el INSERT en sí (WITH CHECK) era válido. Sin RETURNING no hay
-  // problema, así que ya sabemos el id de antemano y no necesitamos leerlo de vuelta.
+  // Sin .select() después del insert: la policy de SELECT aún no ve la fila nueva.
   const id = crypto.randomUUID();
 
   const { error } = await supabase.from("actividades").insert({
@@ -77,14 +69,9 @@ export async function crearActividad(formData: FormData) {
     fail("Ya existe una auditoría con ese número de nombramiento.", { no_nombramiento: "Número ya registrado" });
   }
   if (error) {
-    // Los mensajes crudos de Postgres (constraint names, etc.) no se muestran tal cual a un
-    // usuario final; RLS/CHECK ya hicieron su trabajo, aquí solo se informa que falló.
     fail("No se pudo crear la auditoría. Verifique los datos e intente de nuevo.");
   }
 
-  // El auditor principal ya es miembro del equipo por definición: se agrega de una vez para
-  // que no haya que darlo de alta a mano, y sus confirmaciones (nombramiento/independencia)
-  // queden disponibles en el panel de equipo desde el inicio.
   await supabase.from("actividades_equipo").insert({
     actividad_id: id,
     usuario_nit: rest.auditor_principal_nit,

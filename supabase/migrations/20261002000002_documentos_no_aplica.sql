@@ -1,12 +1,3 @@
--- "No aplica" para documentos del catálogo, y pasos que no generan documento.
---
--- 1. Un documento de la etapa puede marcarse "No aplica" con justificación obligatoria. Lo decide
---    la jefatura (Subjefe, Jefe, Subdirector o Director) o control_total. Cuenta como resuelto
---    para cerrar la etapa (queda en fase `finalizado` con `no_aplica = true`) y deja constancia en
---    la bitácora. Se puede revertir con motivo mientras la etapa siga abierta.
--- 2. Conocimiento y Comprensión del Área (2) y Gestión de Áreas (7) quedan como actividades sin
---    documento (decisión provisional de 2026-10-02, pendiente de confirmar con las jefaturas).
-
 alter table documentos_actividad
   add column no_aplica boolean not null default false,
   add column no_aplica_justificacion text,
@@ -20,8 +11,6 @@ alter table documentos_actividad
 
 update documentos_catalogo set genera_documento = false where orden in (2, 7);
 
--- El trigger que protege la fase también protege la marca "No aplica": solo cambia por
--- `marcar_no_aplica` (o control_total, o conexiones sin usuario).
 create or replace function proteger_fase_documento()
 returns trigger
 language plpgsql
@@ -45,7 +34,6 @@ $$;
 
 revoke execute on function proteger_fase_documento() from public, anon, authenticated;
 
--- SECURITY INVOKER: RLS de `documentos_actividad` y `movimientos` sigue decidiendo quién opera.
 create or replace function marcar_no_aplica(
   p_documento_id uuid,
   p_justificacion text,

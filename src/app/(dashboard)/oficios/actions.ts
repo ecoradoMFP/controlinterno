@@ -13,7 +13,6 @@ function fail(message: string, fieldErrors?: Record<string, string>): never {
 }
 
 export async function crearOficio(formData: FormData) {
-  // Sección 12.3: defensa en profundidad además de RLS, alcanzable por POST directo.
   const usuario = await getUsuarioActual();
   if (!puedeEscribir(usuario)) {
     fail("No tiene permiso para crear oficios.");
@@ -47,10 +46,6 @@ export async function crearOficio(formData: FormData) {
 
   const supabase = await createClient();
 
-  // Mismo patrón que crearActividad: id generado aquí y sin `.select()` tras el insert, para
-  // no disparar el chequeo de la policy de SELECT (`oficios_select` → `authz.puede_ver_oficio`,
-  // que también se auto-consulta por id) contra una fila que, dentro del mismo statement,
-  // todavía no le es visible a esa subconsulta.
   const id = crypto.randomUUID();
 
   const { error } = await supabase.from("oficios").insert({

@@ -21,9 +21,6 @@ import {
   type FaseDocumentoEnum,
 } from "@/types/domain";
 
-// Estas acciones se usan con `FormAccion`: no redirigen (salvo la que lleva al informe), así la
-// página se actualiza en su lugar sin saltar arriba ni cambiar de pestaña. Ver lib/actions/resultado.ts.
-
 export async function agregarMiembroEquipo(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
   const usuarioNit = String(formData.get("usuario_nit") ?? "").trim();
@@ -53,10 +50,6 @@ export async function agregarDocumentoActividad(formData: FormData): Promise<Res
 
   const supabase = await createClient();
 
-  // No se puede iniciar un documento de una etapa que la actividad todavía no alcanzó (ej.
-  // un documento de Ejecución mientras la actividad sigue en Planificación) — reforzado
-  // también en la base de datos (política RLS de documentos_actividad), esto solo da un
-  // mensaje más claro que el genérico de RLS.
   const [{ data: actividad }, { data: documentoCatalogo }] = await Promise.all([
     supabase.from("actividades").select("etapa_actual, departamento_id").eq("id", actividadId).maybeSingle(),
     supabase.from("documentos_catalogo").select("etapa, nombre").eq("id", documentoCatalogoId).maybeSingle(),
@@ -66,7 +59,6 @@ export async function agregarDocumentoActividad(formData: FormData): Promise<Res
     );
   }
 
-  // El responsable inicial es quien elabora según la matriz de revisión (primer cargo).
   const { data: primerCargo } = await supabase
     .from("documentos_catalogo_revision")
     .select("cargo")
@@ -125,7 +117,6 @@ export async function agregarHito(formData: FormData): Promise<ResultadoAccion> 
   revalidatePath(`/actividades/${actividadId}`);
 }
 
-/** Las 8 actividades con plazo SAG-UDAI, de una vez (ver `ACTIVIDADES_SAG_UDAI`). */
 export async function registrarCronogramaSagUdai(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
 
@@ -192,14 +183,10 @@ export async function registrarMovimiento(formData: FormData): Promise<Resultado
   const nuevaFase = String(formData.get("nueva_fase") ?? "");
   const observacion = String(formData.get("observacion") ?? "").trim() || null;
   const corrigeMovimientoId = String(formData.get("corrige_movimiento_id") ?? "") || null;
-  // datetime-local llega sin zona: es hora de Guatemala (UTC-6, sin horario de verano).
   const fechaEvento = String(formData.get("fecha_evento") ?? "");
   const timestamp = fechaEvento ? new Date(`${fechaEvento}:00-06:00`) : null;
 
   const usuario = await getUsuarioActual();
-  // Registro manual (cargos, tipo y fase elegidos a mano): solo Dirección con control_total,
-  // para registros tardíos o correcciones. El trabajo diario usa `avanzarDocumento`, que sigue
-  // la matriz de revisión; el trigger `proteger_fase_documento` refuerza esto en la base.
   if (!usuario || !puedeCorregirHechoConsumado(usuario)) {
     return fail("El registro manual de movimientos es exclusivo de control total.");
   }
@@ -210,10 +197,6 @@ export async function registrarMovimiento(formData: FormData): Promise<Resultado
 
   const supabase = await createClient();
 
-  // El registro y el avance de fase del documento son dos escrituras separadas por diseño:
-  // `movimientos` es la bitácora inmutable (sección 4.8), `documentos_actividad.fase_actual`
-  // es el estado mutable que resume "dónde va" ahora mismo. Si el avance de fase falla, no
-  // dejamos un movimiento huérfano registrado sin reflejo en el estado actual.
   const { error: movError } = await supabase.from("movimientos").insert({
     documento_actividad_id: documentoActividadId,
     de_cargo: deCargo as never,
@@ -253,24 +236,16 @@ export async function cerrarEtapa(formData: FormData): Promise<ResultadoAccion> 
 
   const supabase = await createClient();
 
-  // Defensa en profundidad (sección 12.3): `puedeEscribir` solo mira `permiso_sistema`, no el
-  // alcance de cargo que exige la política RLS de `actividades` (jefe/subjefe/subdirector/
-  // director, nunca Auditor).
   if (!(await puedeCerrarEtapaActividad(usuario, actividadId, supabase))) {
     return fail("Su cargo no tiene permiso para cerrar la etapa de esta auditoría.");
   }
 
-  // Un solo paso en la base (`cerrar_etapa_actividad`): concluye con la fecha de hoy las
-  // actividades del cronograma de la etapa que sigan abiertas, avanza la etapa (los triggers
-  // validan documentos, equipo y cronograma) y deja el historial. Si algo falla, no queda nada a
-  // medias, y el mensaje de la base ya dice qué falta.
   const { error } = await supabase.rpc("cerrar_etapa_actividad", { p_actividad_id: actividadId });
   if (error) return fail(error.message);
 
   revalidatePath(`/actividades/${actividadId}`);
 }
 
-/** Jefatura: corrige un plazo del cronograma con motivo (queda en su bitácora). */
 export async function corregirPlazoCronograma(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
   const usuario = await getUsuarioActual();
@@ -290,7 +265,6 @@ export async function corregirPlazoCronograma(formData: FormData): Promise<Resul
   revalidatePath(`/actividades/${actividadId}`);
 }
 
-/** Jefatura: corrige los datos generales de la auditoría con motivo (queda en su bitácora). */
 export async function editarDatosAuditoria(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
   const usuario = await getUsuarioActual();
@@ -340,11 +314,6 @@ export async function actualizarConfirmacionEquipo(formData: FormData): Promise<
   revalidatePath(`/actividades/${actividadId}`);
 }
 
-/**
- * Corrige una fecha del equipo ya registrada (recibido del nombramiento o Declaración de
- * Independencia): decisión de jefatura con motivo obligatorio. La función SQL
- * `corregir_fecha_equipo` valida de nuevo y deja la corrección en la bitácora del equipo.
- */
 export async function corregirFechaEquipo(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
   const usuarioNit = String(formData.get("usuario_nit") ?? "");
@@ -374,12 +343,6 @@ export async function corregirFechaEquipo(formData: FormData): Promise<Resultado
 
 const ACCIONES_DOCUMENTO = ["entregar", "aprobar", "devolver", "visto_bueno"] as const;
 
-/**
- * Flujo de revisión guiado por la matriz: la función SQL `avanzar_documento` decide a qué
- * cargo pasa el documento y en qué fase queda, y escribe bitácora y estado en una sola
- * transacción. Se envían la fase y el responsable que el usuario estaba viendo para detectar
- * que alguien más registró un paso entretanto.
- */
 export async function avanzarDocumento(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
   const documentoId = String(formData.get("documento_actividad_id"));
@@ -406,8 +369,6 @@ export async function avanzarDocumento(formData: FormData): Promise<ResultadoAcc
     p_responsable_esperado: accion === "visto_bueno" ? undefined : responsableEsperado || undefined,
   });
 
-  // Los mensajes de `avanzar_documento` están escritos para el usuario final (P0001 = RAISE);
-  // cualquier otro error (RLS, red) se resume sin exponer detalles internos.
   if (error) {
     return fail(error.code === "P0001" ? error.message : "No se pudo registrar el paso.");
   }
@@ -447,12 +408,6 @@ export async function actualizarNombramiento(formData: FormData): Promise<Result
   revalidatePath(`/actividades/${actividadId}`);
 }
 
-/**
- * Cierre del expediente: notificación del informe, notificación a la CGC y entrega al archivo.
- * Con la entrega al archivo la auditoría queda concluida (`actividades.concluida`). Las fechas
- * ya registradas solo las corrige control_total dejando constancia en observaciones (trigger
- * `proteger_cierre_expediente`).
- */
 export async function registrarCierreExpediente(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
 
@@ -480,11 +435,6 @@ export async function registrarCierreExpediente(formData: FormData): Promise<Res
   revalidatePath("/actividades");
 }
 
-/**
- * Pasa la auditoría al inventario de recomendaciones: crea el informe con los datos que ya
- * tiene la auditoría (nombramiento, dependencia, período, equipo) y lo deja vinculado, para que
- * solo falte capturar deficiencias y recomendaciones. Si ya existe, lleva a él.
- */
 export async function crearInformeRecomendaciones(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
 
@@ -511,13 +461,11 @@ export async function crearInformeRecomendaciones(formData: FormData): Promise<R
     return fail("El informe se registra a partir de Comunicación de Resultados.");
   }
 
-  // Mismo motivo que en `crearActividad`: id generado aquí para no depender de RETURNING.
   const informeId = crypto.randomUUID();
   const { error } = await supabase.from("informes_auditoria").insert({
     id: informeId,
     actividad_id: actividadId,
     no_nombramiento: actividad.no_nombramiento,
-    // El CAI de la auditoría pasa tal cual al seguimiento de sus recomendaciones.
     cai: actividad.cai,
     anio_cai: actividad.anio_cai,
     fecha_nombramiento: actividad.fecha_emision_nombramiento,
@@ -545,11 +493,6 @@ export async function crearInformeRecomendaciones(formData: FormData): Promise<R
   redirect(`/recomendaciones/informes/${informeId}`);
 }
 
-/**
- * "No aplica" con justificación: decisión de la jefatura (función SQL `marcar_no_aplica`, que
- * valida cargo, etapa y justificación y deja constancia en la bitácora). Cuenta como resuelto
- * para cerrar la etapa; se puede revertir con motivo mientras la etapa siga abierta.
- */
 export async function marcarNoAplica(formData: FormData): Promise<ResultadoAccion> {
   const actividadId = String(formData.get("actividad_id"));
   const documentoId = String(formData.get("documento_actividad_id"));

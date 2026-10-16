@@ -7,8 +7,6 @@ import { cn } from "@/lib/utils"
 import { valorGuardado } from "@/lib/form-persistence"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-// Igual que el Root de base-ui, pero si el formulario falló y la página regresó con `?error=`,
-// recupera el valor que el usuario había elegido (ver lib/form-persistence.ts).
 function Select<Value, Multiple extends boolean | undefined = false>(props: SelectPrimitive.Root.Props<Value, Multiple>) {
   const { name, defaultValue, value, onValueChange } = props
   const restaurable = !!name && value === undefined && !props.multiple

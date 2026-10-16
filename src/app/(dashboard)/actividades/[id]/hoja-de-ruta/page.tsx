@@ -30,8 +30,6 @@ export default async function HojaDeRutaPage({
 
   const supabase = await createClient();
 
-  // Mismo patrón que la vista de detalle: RLS ya decide qué actividad es visible, así que
-  // "no vino nada" es un 404 legítimo, no un caso a manejar aparte.
   const { data: actividad } = await supabase
     .from("actividades")
     .select(
@@ -51,8 +49,6 @@ export default async function HojaDeRutaPage({
   let documentosAMostrar = documentos ?? [];
   if (documentoId) {
     documentosAMostrar = documentosAMostrar.filter((d) => d.id === documentoId);
-    // Un id de documento que no aparece entre los de esta actividad (ya filtrada por RLS) es
-    // exactamente el mismo caso que una actividad inexistente/fuera de alcance: 404.
     if (documentosAMostrar.length === 0) notFound();
   }
 

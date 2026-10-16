@@ -4,11 +4,6 @@ import { useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { diasHabilesEntre } from "@/lib/semaforo";
 
-/**
- * Inicio, fin y días hábiles de un hito. Los días hábiles se calculan solos al elegir las dos
- * fechas (sin fines de semana ni asuetos), pero quedan editables para una excepción real: en
- * cuanto el usuario escribe su propio número, ya no se recalcula encima.
- */
 export function FechasHitoFields({ asuetos }: { asuetos: string[] }) {
   const inicio = useRef<HTMLInputElement>(null);
   const fin = useRef<HTMLInputElement>(null);
@@ -43,7 +38,6 @@ export function FechasHitoFields({ asuetos }: { asuetos: string[] }) {
           placeholder="Se calcula solo"
           title="Se calcula con las fechas, sin fines de semana ni asuetos. Puede cambiarlo si hay una excepción."
           onChange={(e) => {
-            // Si lo borra, vuelve a calcularse con las fechas.
             editadoAMano.current = e.target.value !== "";
             if (!editadoAMano.current) recalcular();
           }}

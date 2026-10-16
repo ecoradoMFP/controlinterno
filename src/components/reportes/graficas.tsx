@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/** Barras horizontales de una sola medida. `resaltar` pinta solo la mayor en color. */
 export function BarrasHorizontales({
   filas,
   resaltar = false,
@@ -35,7 +34,6 @@ export function BarrasHorizontales({
   );
 }
 
-/** Días planeados contra días reales por etapa. */
 export function PlanContraReal({ filas }: { filas: { etapa: string; plan: number; real: number; n: number }[] }) {
   if (filas.length === 0) {
     return <p className="text-sm text-muted-foreground">Todavía no hay etapas concluidas para comparar.</p>;

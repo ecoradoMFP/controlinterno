@@ -11,12 +11,6 @@ const ESTADO_PLURAL = { pendiente: "pendientes", en_proceso: "en proceso", no_cu
 type Contexto = "activa" | "en_seguimiento" | "atendida" | "auto";
 export type FlujoPorCai = Map<string, { paso: PasoCai; documentoId: string | null }>;
 
-/**
- * Los 3 paneles (bandeja principal, en seguimiento, histórico de atendidas) agrupan por CAI, que
- * es el identificador principal de cada auditoría: cada CAI es un desplegable con su resumen y,
- * dentro, las recomendaciones. Respeta el orden en que llegan las filas (el primer CAI es el de
- * la primera fila). Lo único que cambia entre paneles es la columna derecha, según `contexto`.
- */
 export function ListaRecomendaciones({
   filas,
   contexto,
@@ -98,8 +92,6 @@ function GrupoCai({
             {porEstado.map(([e, n]) => `${n} ${n === 1 ? ESTADO_RECOMENDACION_LABELS[e].toLowerCase() : ESTADO_PLURAL[e]}`).join(" · ")}
           </span>
         </div>
-        {/* Los pasos del CAI (nombramiento, informe, SAG-UDAI) van como acción del grupo, no como
-         * encabezado: lo que se sigue son las recomendaciones. */}
         {paso && paso !== "al_dia" ? (
           <div className="col-start-2 flex flex-col items-start gap-1 md:col-start-auto md:items-end md:text-right">
             <Button size="sm" nativeButton={false} render={<Link href={`/recomendaciones/cai/${informe.id}#siguiente-paso`} />}>
@@ -121,7 +113,6 @@ export function FilasRecomendacion({
 }: {
   filas: FilaRecomendacion[];
   contexto: Contexto;
-  /** En el desglose plano cada fila lleva su CAI y dependencia (en los grupos por CAI ya están en el encabezado). */
   mostrarCai?: boolean;
 }) {
   const hoy = hoyGuatemala();
@@ -136,8 +127,6 @@ export function FilasRecomendacion({
             href={`/recomendaciones/${f.id}`}
             className="grid gap-2 p-4 hover:bg-muted/40 md:grid-cols-[9rem_1fr_14rem] md:gap-4"
           >
-            {/* Único chip: el estado actual. La fecha de implementación queda solo como dato
-             * histórico (por decisión de la jefatura, no se alerta si ya pasó). */}
             <div>
               <SemaforoChip tono={ESTADO_RECOMENDACION_TONO[f.estado_actual]} label={ESTADO_RECOMENDACION_LABELS[f.estado_actual]} />
             </div>
@@ -175,10 +164,6 @@ export function FilasRecomendacion({
                 <span>Sin seguimiento todavía</span>
               )}
 
-              {/* Puede quedar en "activa" ya con estado_actual "cumplida": el resultado se
-               * registró, pero el documento que lo formaliza todavía está en elaboración — el
-               * cambio de panel espera a que se emita (ver ubicarRecomendacion). Sin este aviso
-               * parece que el sistema no reconoció el cambio. */}
               {contexto === "activa" && f.estado_actual === "cumplida" ? (
                 <span className="font-medium text-foreground">Pasará al histórico al emitirse el documento</span>
               ) : contexto === "activa" && f.fecha_implementacion ? (

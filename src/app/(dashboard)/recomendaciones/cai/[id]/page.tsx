@@ -29,10 +29,6 @@ const TITULO_PASO: Record<PasoCai, string> = {
   al_dia: "Este CAI está al día",
 };
 
-/**
- * Centro de cada CAI: ve en qué paso va su seguimiento y hace ese paso aquí mismo (nombramiento,
- * seguimiento, emisión del informe y carga al SAG-UDAI), sin saltar entre pantallas.
- */
 export default async function CaiPage({
   params,
   searchParams,
@@ -49,7 +45,6 @@ export default async function CaiPage({
     .select("id, cai, anio_cai, no_nombramiento, dependencia_auditada, tipo_auditoria, departamento_id, bloqueado_en, departamentos(nombre)")
     .eq("id", id)
     .maybeSingle();
-  // RLS decide la visibilidad: sin fila, es un 404.
   if (!informe) notFound();
 
   const [todas, documentosTodos, gestionables, puedeDar] = await Promise.all([
@@ -65,7 +60,6 @@ export default async function CaiPage({
   const cedula = flujo?.documentoId ? await cargarCedulaDocumento(supabase, flujo.documentoId) : null;
   const documento = cedula?.documento ?? null;
 
-  // Informes de seguimiento de este CAI ya completos (emitidos y cargados al SAG-UDAI).
   const anteriores = documentosTodos
     .filter((d) => d.paso === "completo" && d.informes.some((i) => i.id === id))
     .sort((a, b) => (b.fecha_documento ?? "").localeCompare(a.fecha_documento ?? ""));
@@ -78,8 +72,6 @@ export default async function CaiPage({
   const puedeRegistrar = puedeEscribir(usuario) && puedeDar && paso === "evaluar";
   const filasPanel = cedula?.filas.filter((f) => f.informe.id === id) ?? [];
   const volverA = `/recomendaciones/cai/${id}`;
-  // La cédula se puede descargar en cualquier etapa: la del nombramiento en curso (aunque aún no se
-  // emita ni se cargue al SAG-UDAI) o, si no hay uno, la del último informe de seguimiento.
   const cedulaId = documento?.id ?? anteriores[0]?.id ?? null;
 
   const alDia = paso === "al_dia";

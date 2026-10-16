@@ -5,11 +5,6 @@ import { Check, Copy, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MOSTRAR_RUTAS_EXPEDIENTE } from "@/lib/expediente-digital";
 
-/**
- * Muestra la ruta de un archivo o carpeta del expediente digital con un botón para copiarla.
- * El navegador no puede abrir rutas de red (\\servidor\...) desde una página web, así que lo
- * útil hoy es copiarla y pegarla en el Explorador de archivos.
- */
 export function RutaExpediente({ ruta, etiqueta }: { ruta: string | null; etiqueta?: string }) {
   const [copiada, setCopiada] = useState(false);
 
@@ -24,7 +19,6 @@ export function RutaExpediente({ ruta, etiqueta }: { ruta: string | null; etique
       setCopiada(true);
       setTimeout(() => setCopiada(false), 1500);
     } catch {
-      // Sin permiso de portapapeles (contexto no seguro): la ruta sigue visible para copiarla a mano.
     }
   }
 

@@ -8,18 +8,6 @@ export type { ResultadoAccion };
 
 const PendienteContext = createContext(false);
 
-/**
- * Formulario que llama a una Server Action SIN navegar: la acción hace `revalidatePath` y la página
- * se actualiza en su lugar, sin saltar arriba ni cerrar lo que estaba abierto (a diferencia del
- * `redirect(...)` de siempre, que es una navegación completa).
- *
- * - Si sale bien, el formulario se vuelve a montar vacío (o con los nuevos valores por defecto) y, si
- *   estaba dentro de un `<details>` (correcciones, "+ Agregar"), este se pliega, salvo con
- *   `mantenerAbierto` (formularios para agregar varios seguidos).
- * - Si falla, el error se muestra aquí mismo y lo escrito se conserva: se envía con `onSubmit` y no
- *   con `action`, porque React vacía los formularios con `action` al terminar, aunque haya error.
- *   Por eso también queda fuera de FormPersistence (`data-sin-persistencia`).
- */
 export function FormAccion({
   action,
   className,
@@ -45,8 +33,6 @@ export function FormAccion({
         e.preventDefault();
         if (pendiente) return;
         const form = e.currentTarget;
-        // Con el `submitter`, el name/value del botón pulsado viaja igual que en un envío normal
-        // (p. ej. accion=aprobar|devolver).
         const datos = new FormData(form, (e.nativeEvent as SubmitEvent).submitter);
         startTransition(async () => {
           const resultado = await action(datos);
@@ -70,7 +56,6 @@ export function FormAccion({
   );
 }
 
-/** Botón de envío de un `FormAccion`: se deshabilita y avisa mientras la acción se procesa. */
 export function BotonAccion({ children, ...props }: React.ComponentProps<typeof Button>) {
   const pendiente = useContext(PendienteContext);
   return (

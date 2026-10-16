@@ -1,9 +1,3 @@
--- Fechas de recibido del nombramiento y de la Declaración de Independencia: la primera captura
--- sigue igual (cualquiera que opere la auditoría), pero una fecha ya registrada solo la corrige
--- la jefatura (Subjefe, Jefe, Subdirector, Director o control_total), con motivo obligatorio.
--- Nunca se sobrescribe en silencio: cada corrección queda en una bitácora inalterable con la
--- fecha anterior, la nueva, el motivo y quién la hizo.
-
 create table actividades_equipo_correcciones (
   id uuid primary key default gen_random_uuid(),
   actividad_id uuid not null references actividades(id) on delete cascade,
@@ -23,11 +17,8 @@ alter table actividades_equipo_correcciones enable row level security;
 create policy actividades_equipo_correcciones_select on actividades_equipo_correcciones for select to authenticated
 using (authz.puede_ver_actividad(actividad_id));
 
--- Sin políticas de insert/update/delete: solo escribe `corregir_fecha_equipo` (SECURITY DEFINER).
 revoke insert, update, delete on actividades_equipo_correcciones from anon, authenticated;
 
--- Una fecha ya registrada solo cambia dentro de `corregir_fecha_equipo` (o por control_total o
--- conexiones sin usuario: scripts y service role).
 create or replace function proteger_fechas_equipo()
 returns trigger
 language plpgsql

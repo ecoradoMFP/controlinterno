@@ -7,11 +7,6 @@ const ms = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
 const dma = (iso: string) => iso.split("-").reverse().join("/");
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
-/**
- * Diagrama de Gantt del cronograma: por actividad, el plazo planificado (gris) y lo real encima
- * (color del semáforo; las concluidas, verde si fue a tiempo y amarillo si tarde; lo que pasa del
- * plazo, rojo), con una línea en el día de hoy. La tabla de abajo es la vista en texto.
- */
 export function GanttCronograma({
   hitos,
   hoy,
@@ -23,7 +18,6 @@ export function GanttCronograma({
   hoy: string;
   feriados: ReadonlySet<string>;
   umbral: UmbralSemaforo;
-  /** Para imprimir: sin ancho mínimo ni desplazamiento, filas más bajas y sin la nota del cursor. */
   compacto?: boolean;
 }) {
   if (hitos.length === 0) return null;
@@ -34,7 +28,6 @@ export function GanttCronograma({
   const pct = (iso: string, finDelDia = false) => ((ms(iso) + (finDelDia ? DIA : 0) - desde) / (hasta - desde)) * 100;
   const tramo = (a: string, b: string) => ({ left: `${pct(a)}%`, width: `${Math.max(pct(b, true) - pct(a), 0.6)}%` });
 
-  // Marcas de mes en el eje.
   const meses: { iso: string; etiqueta: string }[] = [];
   const d = new Date(desde);
   d.setUTCDate(1);
@@ -75,7 +68,6 @@ export function GanttCronograma({
 
       <div className={compacto ? "" : "overflow-x-auto"}>
         <div className={compacto ? "" : "min-w-[780px]"}>
-          {/* Eje de meses */}
           <div className={`grid ${columnas} text-xs text-muted-foreground`}>
             <div />
             <div className="relative h-6 border-b">
@@ -149,7 +141,6 @@ export function GanttCronograma({
                 </li>
               );
             })}
-            {/* Hoy */}
             <li aria-hidden className={`pointer-events-none absolute inset-y-0 right-0 ${compacto ? "left-[240px]" : "left-[300px]"}`}>
               <span className="absolute inset-y-0 border-l-2 border-dashed border-primary" style={{ left: `${hoyPct}%` }} />
             </li>

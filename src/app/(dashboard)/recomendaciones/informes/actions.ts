@@ -13,7 +13,6 @@ function fail(message: string, fieldErrors?: Record<string, string>): never {
 }
 
 export async function crearInforme(formData: FormData) {
-  // Sección 12.3: defensa en profundidad además de RLS (`informes_auditoria_insert`).
   const usuario = await getUsuarioActual();
   if (!puedeEscribir(usuario)) {
     fail("No tiene permiso para crear informes de auditoría.");
@@ -37,7 +36,6 @@ export async function crearInforme(formData: FormData) {
     riesgo: campo("riesgo"),
   });
 
-
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
@@ -51,13 +49,8 @@ export async function crearInforme(formData: FormData) {
 
   const supabase = await createClient();
 
-  // Mismo patrón que crearActividad: se genera el id aquí y no se encadena `.select()` tras el
-  // insert, porque `informes_auditoria_select` decide visibilidad re-consultando la tabla y la
-  // fila recién insertada no le es visible todavía dentro del mismo statement (RETURNING
-  // fallaría con "violates row-level security policy" aunque el INSERT en sí sea válido).
   const id = crypto.randomUUID();
 
-  // Los campos opcionales llegan como "" desde el formulario: se guardan como null.
   const { error } = await supabase.from("informes_auditoria").insert({
     id,
     departamento_id,
@@ -66,9 +59,7 @@ export async function crearInforme(formData: FormData) {
     creado_por_nit: usuario!.nit,
   });
 
-
   if (error) {
-    // 23505: el mismo número de CAI ya existe en ese año (el número se reinicia cada año).
     fail(
       error.code === "23505"
         ? `Ya existe el CAI ${parsed.data.cai} del año ${parsed.data.anio_cai}.`

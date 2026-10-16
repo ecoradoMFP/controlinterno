@@ -9,11 +9,6 @@ function fail(message: string): never {
   redirect(`/configuracion?error=${encodeURIComponent(message)}`);
 }
 
-/**
- * Sección 12.3: defensa en profundidad — además de RLS (`parametros_semaforo_update` /
- * `calendario_feriados_*`, ambas restringidas a `control_total`), esta página y sus Server
- * Actions verifican explícitamente el permiso antes de tocar la base.
- */
 async function requiereControlTotal() {
   const usuario = await getUsuarioActual();
   if (!usuario || usuario.permiso_sistema !== "control_total") {

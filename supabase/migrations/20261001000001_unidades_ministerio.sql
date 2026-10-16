@@ -1,13 +1,6 @@
--- Estructura organizacional del Ministerio de Finanzas Públicas (organigrama oficial): catálogo
--- de dependencias que se pueden auditar. Los formularios la usan en el selector "Dependencia
--- auditada" y Dirección (control_total) la mantiene desde Configuración si la estructura cambia.
--- Los informes/actividades guardan el NOMBRE de la dependencia como texto (foto histórica): si una
--- dirección se renombra más adelante, lo ya emitido conserva el nombre vigente cuando se auditó.
 create table unidades_ministerio (
   id uuid primary key default gen_random_uuid(),
   nombre text not null,
-  -- null = raíz (Despacho Ministerial). Los viceministerios cuelgan del despacho y sus direcciones
-  -- del viceministerio; las direcciones de apoyo cuelgan directamente del despacho.
   padre_id uuid references unidades_ministerio(id) on delete restrict,
   orden integer not null default 0,
   activo boolean not null default true,
@@ -26,7 +19,6 @@ with check (authz.permiso_actual() = 'control_total');
 create policy unidades_ministerio_update on unidades_ministerio for update to authenticated
 using (authz.permiso_actual() = 'control_total')
 with check (authz.permiso_actual() = 'control_total');
--- Sin delete: una unidad que ya no existe se desactiva (activo = false) para no perder el rastro.
 
 insert into unidades_ministerio (nombre, padre_id, orden)
 values ('Despacho Ministerial', null, 0);
@@ -35,7 +27,6 @@ with despacho as (select id from unidades_ministerio where nombre = 'Despacho Mi
 insert into unidades_ministerio (nombre, padre_id, orden)
 select v.nombre, d.id, v.orden
 from despacho d, (values
-  -- Direcciones de apoyo / asesoría del Despacho
   ('Dirección de Planificación y Desarrollo Institucional', 1),
   ('Dirección de Asesoría Jurídica', 2),
   ('Dirección de Comunicación Social', 3),
@@ -43,7 +34,6 @@ from despacho d, (values
   ('Secretaría General', 5),
   ('Dirección de Fiscalidad Ambiental para el Cambio Climático y la Sostenibilidad', 6),
   ('Dirección de Auditoría Interna', 7),
-  -- Viceministerios
   ('Viceministerio de Administración Financiera', 10),
   ('Viceministerio de Ingresos y Evaluación Fiscal', 11),
   ('Viceministerio de Transparencia Fiscal y Adquisiciones del Estado', 12),

@@ -1,17 +1,3 @@
--- Respuestas de las jefaturas (cuestionario de 2026-10-12) para el flujo de Auditorías (CAI):
---
--- 1. Ampliación temporal de nombramiento (1.2): alguien cubre por un período el puesto de
---    Subjefe o Jefe de un departamento. Se registra con vigencia y
---    queda en bitácora; durante la vigencia el sistema le da los permisos de ese cargo.
--- 2. Pasos 2 y 7 de Planificación (1.3/1.4): se manejan como documentos (temporalmente), y el
---    paso 7 se llama "Gestión de Áreas (Muestreo y Asignación de Áreas, Métodos a utilizar)".
--- 3. Corrección de movimientos por Dirección (1.5, indispensable): registro tardío con la fecha
---    real del hecho y corrección de un movimiento puntual, sin borrar nada de la bitácora.
--- 4. Seguimiento de CAI (2.5): el auditor y el coordinador nombrados deben ser del departamento
---    que nombra.
--- 5. Trigger de carga al SAG-UDAI: robusto ante sesiones de scripts.
-
--- ── 1. Cargos temporales ──
 create table cargos_temporales (
   id uuid primary key default gen_random_uuid(),
   usuario_nit text not null references usuarios(nit),
@@ -36,7 +22,6 @@ create table cargos_temporales (
 create index cargos_temporales_usuario_idx on cargos_temporales (usuario_nit, fecha_inicio, fecha_fin);
 create index cargos_temporales_departamento_idx on cargos_temporales (departamento_id);
 
--- Hoy en Guatemala (no la fecha del servidor, que está en UTC).
 create or replace function authz.hoy_guatemala()
 returns date
 language sql stable
@@ -45,9 +30,6 @@ as $$
   select (now() at time zone 'America/Guatemala')::date;
 $$;
 
--- El cargo y departamento EFECTIVOS: los del usuario, salvo que tenga un cargo temporal vigente
--- hoy. Todas las funciones authz (y con ellas RLS) pasan por aquí, así la ampliación da los
--- permisos del cargo solo mientras dura.
 create or replace function authz.usuario_actual()
 returns usuarios
 language sql stable security definer set search_path = public
@@ -69,8 +51,6 @@ as $$
   where u.auth_user_id = auth.uid();
 $$;
 
--- Lo registra la Dirección (Director o Subdirector). Se usa el cargo REAL: un cargo temporal
--- nunca es de Dirección (solo subjefe/jefe), así que efectivo y real coinciden aquí.
 create or replace function authz.puede_registrar_cargo_temporal()
 returns boolean
 language sql stable security definer set search_path = public
@@ -87,7 +67,6 @@ set search_path = public
 as $$
 begin
   if tg_op = 'UPDATE' then
-    -- Solo se puede revocar (terminar antes), una vez y con motivo; lo demás es bitácora.
     if (to_jsonb(new) - array['revocado_en', 'revocado_por_nit', 'motivo_revocacion'])
        is distinct from (to_jsonb(old) - array['revocado_en', 'revocado_por_nit', 'motivo_revocacion']) then
       raise exception 'Un cargo temporal registrado no se modifica: si hay un error, revócalo con motivo y registra otro.';
@@ -153,8 +132,6 @@ create policy cargos_temporales_update on cargos_temporales for update to authen
 using (authz.puede_registrar_cargo_temporal())
 with check (authz.puede_registrar_cargo_temporal() and revocado_por_nit = authz.nit_actual());
 
--- La app lee el cargo efectivo con esto (getUsuarioActual), para mostrar y ofrecer lo mismo que
--- RLS permite.
 create or replace function mi_cargo_temporal()
 returns table (cargo cargo_enum, departamento_id uuid, fecha_fin date, documento_respaldo text)
 language sql stable security definer set search_path = public
@@ -171,13 +148,11 @@ $$;
 revoke execute on function mi_cargo_temporal() from public, anon;
 grant execute on function mi_cargo_temporal() to authenticated;
 
--- ── 2. Pasos 2 y 7 como documentos ──
 update documentos_catalogo
    set nombre = 'Gestión de Áreas (Muestreo y Asignación de Áreas, Métodos a utilizar)'
  where etapa = 'planificacion' and orden = 7;
 update documentos_catalogo set genera_documento = true where etapa = 'planificacion' and orden in (2, 7);
 
--- Los documentos ya iniciados de esos pasos no tenían ruta (no generaban archivo).
 update documentos_actividad da
    set ruta_archivo = a.ruta_expediente || '/' || lpad(dc.orden::text, 2, '0') || ' ' || ruta_segmento(dc.nombre)
   from actividades a, documentos_catalogo dc
@@ -185,10 +160,6 @@ update documentos_actividad da
    and dc.etapa = 'planificacion' and dc.orden in (2, 7)
    and a.ruta_expediente is not null;
 
--- ── 3. Corrección de movimientos por Dirección ──
--- `timestamp` sigue siendo CUÁNDO OCURRIÓ (lo usan la hoja de ruta y los tableros);
--- `registrado_en` es cuándo se escribió. Solo un registro de Dirección puede llevar una fecha
--- pasada (registro tardío) o corregir un movimiento anterior, que queda visible pero marcado.
 alter table movimientos
   add column registrado_en timestamptz,
   add column corrige_movimiento_id uuid references movimientos(id);
@@ -214,7 +185,6 @@ as $$
 declare
   v_doc_corregido uuid;
 begin
-  -- Conexiones sin usuario (migraciones, scripts de carga) registran historia con sus fechas.
   if auth.uid() is null then
     return new;
   end if;
@@ -222,7 +192,6 @@ begin
   new.registrado_en := now();
 
   if not new.es_correccion_direccion then
-    -- El trabajo diario no elige la fecha: es la del momento en que se registra.
     new."timestamp" := now();
     return new;
   end if;
@@ -247,7 +216,6 @@ create trigger movimientos_validar_fecha
   before insert on movimientos
   for each row execute function validar_fecha_movimiento();
 
--- ── 4. Auditor y coordinador del nombramiento de seguimiento: del mismo departamento ──
 create or replace function validar_departamento_nombrado_seguimiento()
 returns trigger
 language plpgsql
@@ -290,9 +258,6 @@ create trigger documentos_seguimiento_coordinador_mismo_departamento
   before insert or update of coordinador_nit on documentos_seguimiento
   for each row execute function validar_departamento_nombrado_seguimiento();
 
--- ── 5. Carga al SAG-UDAI desde scripts ──
--- Postgres no garantiza el corto circuito del AND: con la sesión de un script (service_role) se
--- llegaba a evaluar authz.es_director() y fallaba por permisos del esquema authz. Se anida el if.
 create or replace function documentos_seguimiento_proteger_sag_udai()
 returns trigger
 language plpgsql

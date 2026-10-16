@@ -47,7 +47,6 @@ const ETAPAS_TITULO: Record<string, string> = {
   atendida: "Atendidas",
 };
 
-/** Mismos criterios que la bandeja: lo que se exporta es lo que se ve con esos filtros. */
 function aplicaFiltros(f: FilaRecomendacion, filtros: FiltrosReporte) {
   const etapa = filtros.etapa || "accion";
   if (etapa === "accion") {
@@ -134,7 +133,6 @@ function textoSeguimiento(s: FilaReporte["seguimientos"][number]) {
 
 const ahora = () => new Date().toLocaleDateString("es-GT", { timeZone: "America/Guatemala" });
 
-/** Excel: una fila por recomendación, con la inicial y cada seguimiento en la misma celda. */
 export async function generarReporteXlsx(filas: FilaReporte[], filtros: FiltrosReporte, meta: { usuario: string; departamento: string }) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "SCIDAI";
@@ -176,7 +174,6 @@ export async function generarReporteXlsx(filas: FilaReporte[], filtros: FiltrosR
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
-/** Word horizontal con el mismo orden de columnas que el reporte de SAG-UDAI. */
 export async function generarReporteDocx(filas: FilaReporte[], filtros: FiltrosReporte, meta: { usuario: string; departamento: string }) {
   const borde = { style: "single" as const, size: 4, color: "999999" };
   const bordes = { top: borde, bottom: borde, left: borde, right: borde };

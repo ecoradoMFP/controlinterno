@@ -24,13 +24,11 @@ import { ESTADO_RECOMENDACION_LABELS, type EstadoRecomendacionEnum } from "@/typ
 type Cedula = NonNullable<Awaited<ReturnType<typeof cargarCedulaDocumento>>>;
 
 const FUENTE = "Arial";
-const TAM = 16; // medias puntos: 8 pt, como la cédula en papel
+const TAM = 16;
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const COLUMNAS_ESTADO: EstadoRecomendacionEnum[] = ["cumplida", "no_cumplida", "en_proceso", "pendiente"];
-// Ancho útil en twips (carta horizontal, márgenes de 1.5 cm): No., texto, 4 estados, responsable, seguimiento.
 const ANCHOS = [500, 4200, 1000, 1000, 1000, 1000, 1900, 3540];
 
-// "2024-05-20" -> "20 de mayo de 2024" (sin pasar por Date: evita corrimientos de zona horaria).
 function fechaLarga(iso: string | null | undefined) {
   if (!iso) return null;
   const [anio, mes, dia] = iso.split("-").map(Number);
@@ -51,7 +49,6 @@ const bordes = { top: borde, bottom: borde, left: borde, right: borde };
 const run = (text: string, opts: { bold?: boolean; size?: number } = {}) =>
   new TextRun({ text, font: FUENTE, size: opts.size ?? TAM, bold: opts.bold });
 
-// Un párrafo por línea del texto: respeta los saltos que escribió el auditor.
 function parrafos(texto: string | null | undefined, opts: { bold?: boolean } = {}) {
   if (!texto?.trim()) return [];
   return texto
@@ -146,9 +143,6 @@ export async function generarCedulaDocx({ documento, informes, filas }: Cedula):
       ...parrafos(deficiencia.descripcion),
       titulo("RECOMENDACIÓN"),
       ...parrafos(recomendacion.texto),
-      // Histórico: los seguimientos anteriores ya emitidos se van acumulando debajo de la
-      // recomendación (número de su informe y el comentario de auditoría de entonces); la columna
-      // de seguimiento queda solo con el vigente.
       ...anteriores.flatMap((a) => [
         new Paragraph({
           spacing: { before: 120, after: 40 },

@@ -17,7 +17,6 @@ function conteoVacio(): ConteoEstados {
   return { pendiente: 0, en_proceso: 0, no_cumplida: 0, cumplida: 0 };
 }
 
-// Todo lo que no está cumplido sigue abierto (no_cumplida admite nuevas rondas de seguimiento).
 function abiertas(c: ConteoEstados) {
   return c.pendiente + c.en_proceso + c.no_cumplida;
 }
@@ -32,9 +31,6 @@ export default async function RecomendacionesPage({
 
   const supabase = await createClient();
 
-  // Sin filtro manual de departamento en ninguna consulta: RLS (informes_auditoria_select,
-  // recomendaciones_select) ya devuelve solo lo que está dentro del alcance del usuario actual
-  // — mismo criterio que /documentos y /reportes.
   const [{ data: informes }, { data: recomendaciones }] = await Promise.all([
     supabase
       .from("informes_auditoria")
@@ -52,7 +48,6 @@ export default async function RecomendacionesPage({
     actual[r.estado_actual] += 1;
     conteoPorInforme.set(informeId, actual);
   }
-
 
   const filas = (informes ?? [])
     .map((i) => ({ informe: i, conteo: conteoPorInforme.get(i.id) ?? conteoVacio() }))

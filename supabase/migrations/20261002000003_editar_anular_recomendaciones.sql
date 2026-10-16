@@ -1,16 +1,6 @@
--- Corregir errores de captura de una recomendación (editarla o eliminarla) SIN perder trazabilidad.
---  * "Eliminar" es una anulación lógica: la fila queda con anulada_en y deja de verse (RLS), pero
---    nunca se borra, y no existe grant de delete.
---  * Todo cambio de contenido exige un motivo y queda en recomendaciones_historial (append-only) con
---    el valor anterior, el nuevo, quién y cuándo. Lo escribe un trigger: no depende de la app.
---  * Solo se puede corregir mientras la recomendación no tenga seguimientos evaluados: después ya
---    hay informes que se apoyan en su texto y no debe cambiar.
-
 alter table recomendaciones add column anulada_en timestamptz;
--- Canal para que la app entregue el motivo en el mismo UPDATE; el trigger lo consume y lo limpia.
 alter table recomendaciones add column motivo_ultimo_cambio text;
 
--- Una recomendación anulada libera su número dentro de la deficiencia.
 alter table recomendaciones drop constraint recomendaciones_deficiencia_id_numero_key;
 create unique index recomendaciones_deficiencia_numero_vigente_idx
   on recomendaciones (deficiencia_id, numero) where anulada_en is null;
@@ -29,11 +19,10 @@ create table recomendaciones_historial (
 create index recomendaciones_historial_informe_idx on recomendaciones_historial (informe_id, created_at desc);
 
 alter table recomendaciones_historial enable row level security;
-grant select on recomendaciones_historial to authenticated;  -- sin insert/update/delete: solo el trigger escribe
+grant select on recomendaciones_historial to authenticated;
 create policy recomendaciones_historial_select on recomendaciones_historial for select to authenticated
 using (authz.puede_ver_informe(informe_id));
 
--- Las recomendaciones anuladas no se ven; editar/anular exige poder operar el informe.
 drop policy recomendaciones_select on recomendaciones;
 create policy recomendaciones_select on recomendaciones for select to authenticated
 using (anulada_en is null and exists (select 1 from deficiencias d where d.id = deficiencia_id and authz.puede_ver_informe(d.informe_id)));
@@ -43,7 +32,6 @@ create policy recomendaciones_update on recomendaciones for update to authentica
 using (anulada_en is null and exists (select 1 from deficiencias d where d.id = deficiencia_id and authz.puede_operar_informe(d.informe_id)))
 with check (exists (select 1 from deficiencias d where d.id = deficiencia_id and authz.puede_operar_informe(d.informe_id)));
 
--- Solo estas columnas son editables por la app (estado_actual lo mantiene su trigger).
 revoke update on recomendaciones from authenticated;
 grant update (texto, responsables, fecha_implementacion, motivo_ultimo_cambio) on recomendaciones to authenticated;
 
@@ -58,8 +46,6 @@ declare
   v_anula boolean;
   v_informe uuid;
 begin
-  -- Solo usuarios de la aplicación; las cargas con service role (importadores) no pasan por aquí.
-  -- Se mira el rol del JWT: dentro de security definer current_user es el dueño de la función.
   if coalesce(auth.jwt() ->> 'role', '') <> 'authenticated' then
     return new;
   end if;
@@ -115,10 +101,6 @@ create trigger recomendaciones_registrar_cambio
 before update on recomendaciones
 for each row execute function recomendaciones_registrar_cambio();
 
--- Anular no puede ser un UPDATE directo: la fila anulada deja de cumplir la policy de select y
--- Postgres rechaza el UPDATE ("new row violates row-level security policy"). Esta función valida
--- el permiso por dentro y hace el UPDATE como dueño; el trigger anterior sigue aplicando las
--- reglas (motivo obligatorio, sin seguimientos) y escribiendo el historial.
 create or replace function anular_recomendacion(p_id uuid, p_motivo text)
 returns void
 language plpgsql

@@ -17,11 +17,6 @@ import { CARGO_LABELS, ETAPA_ACTIVIDAD_LABELS, FASE_DOCUMENTO_LABELS, type Etapa
 const ETAPAS: EtapaActividadEnum[] = ["planificacion", "ejecucion", "comunicacion_resultados", "expediente_cierre"];
 const dma = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "—");
 
-/**
- * Ficha de la auditoría en una hoja, para imprimir o guardar en PDF: datos, estado y semáforo con
- * su motivo, avance por etapa, cronograma (Gantt), documentos en curso y oficios. Lo que RLS no
- * deja ver al usuario, tampoco sale en la ficha.
- */
 export default async function FichaAuditoriaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -76,9 +71,8 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         <PrintButton />
       </div>
 
-      {/* Encabezado institucional */}
       <div className="flex items-center justify-between gap-4 border-b-2 border-primary pb-3">
-        {/* eslint-disable-next-line @next/next/no-img-element -- en impresión, una imagen simple es lo más fiable */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/minfin-logo-azul.png" alt="Ministerio de Finanzas Públicas" className="h-12 w-auto" />
         <div className="text-right">
           <p className="text-sm font-semibold tracking-wide text-primary uppercase">Dirección de Auditoría Interna</p>
@@ -87,7 +81,6 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      {/* Identificación y estado */}
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="codigo-expediente text-2xl font-semibold">{identificadorAuditoria(a)}</p>
@@ -125,7 +118,6 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         </div>
       </section>
 
-      {/* Avance por etapa */}
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Avance por etapa</h2>
         <ol className="grid grid-cols-4 gap-2">
@@ -149,7 +141,6 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         </ol>
       </section>
 
-      {/* Cronograma */}
       {hitosOrdenados.length > 0 ? (
         <div>
           <GanttCronograma hitos={hitosOrdenados} hoy={hoy} feriados={feriados} umbral={umbral.get("hito") ?? UMBRAL_POR_DEFECTO} compacto />
@@ -158,7 +149,6 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         <p className="tarjeta p-4 text-sm text-muted-foreground">Todavía no se ha registrado el cronograma de actividades.</p>
       )}
 
-      {/* Documentos en curso: en la impresión, desde la segunda hoja */}
       <section className="flex flex-col gap-2 print:break-before-page">
         <h2 className="font-medium">
           Documentos en curso ({enCurso.length} de {docs.length})
@@ -191,7 +181,6 @@ export default async function FichaAuditoriaPage({ params }: { params: Promise<{
         )}
       </section>
 
-      {/* Oficios */}
       <section className="flex break-inside-avoid flex-col gap-2">
         <h2 className="font-medium">Oficios ({(oficios ?? []).length})</h2>
         {(oficios ?? []).length === 0 ? (

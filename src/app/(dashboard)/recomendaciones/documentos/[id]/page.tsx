@@ -20,10 +20,6 @@ import {
 
 const COLUMNAS_ESTADO: EstadoRecomendacionEnum[] = ["cumplida", "no_cumplida", "en_proceso", "pendiente"];
 
-/**
- * Nombramiento de seguimiento y el informe/oficio que resulta: auditores nombrados, CAI que
- * cubre, la cédula con el resultado de cada recomendación evaluada y las que faltan por evaluar.
- */
 export default async function DocumentoSeguimientoPage({
   params,
   searchParams,
@@ -40,8 +36,6 @@ export default async function DocumentoSeguimientoPage({
   if (!cedula) notFound();
   const { documento, filas, emitido } = cedula;
 
-  // Mientras el nombramiento sigue en curso (evaluar, emitir, SAG-UDAI) todo se hace en la
-  // página del CAI; esta cédula queda como consulta del seguimiento ya completo.
   const unSoloCai = cedula.informes.length === 1 ? cedula.informes[0] : null;
   if (unSoloCai && !(emitido && documento.fecha_carga_sag_udai)) redirect(`/recomendaciones/cai/${unSoloCai.id}`);
 
@@ -54,12 +48,8 @@ export default async function DocumentoSeguimientoPage({
   const esAuditorNombrado = documento.documentos_seguimiento_auditores.some((a) => a.usuario_nit === usuario?.nit);
   const gestionables = await departamentosParaNombrarSeguimiento(usuario, supabase);
   const puedeGestionar = puedeEscribir(usuario) && (esAuditorNombrado || gestionables.includes(documento.departamento_id));
-  // Registrar el seguimiento del CAI: auditor nombrado o quien puede operar el informe (misma
-  // regla que authz.puede_dar_seguimiento); la acción del servidor lo vuelve a verificar.
   const puedeRegistrar = puedeGestionar && !emitido;
 
-  // Qué pasará con las recomendaciones al emitir: las cumplidas cierran su ciclo (histórico) y el
-  // resto queda "en seguimiento" el resto del año. Se lo decimos antes de que emita.
   const evaluadas = filas.filter((f) => f.evaluacion);
   const alHistorico = evaluadas.filter((f) => f.evaluacion?.estado === "cumplida").length;
   const enSeguimiento = evaluadas.length - alHistorico;

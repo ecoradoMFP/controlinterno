@@ -3,20 +3,12 @@ import { type EtapaRecomendacion, hoyGuatemala, pasoDelCai, ubicarRecomendacion,
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
-// Usado tanto por la bandeja principal como por los paneles de "en seguimiento" e "histórico":
-// una sola consulta, un solo cálculo de a qué panel pertenece cada recomendación.
 const CAMPOS = `id, numero, texto, fecha_implementacion, estado_actual,
    deficiencias(numero, titulo, informes_auditoria(id, no_nombramiento, cai, anio_cai, dependencia_auditada, anio_ejecucion, fecha_informe_final, departamento_id, departamentos(nombre))),
    seguimientos_recomendacion(numero_seguimiento, estado, documentos_seguimiento(no_documento, fecha_documento, no_nombramiento, fecha_nombramiento))`;
 
 export type FilaRecomendacion = Awaited<ReturnType<typeof cargarRecomendaciones>>[number];
 
-/**
- * Todas las recomendaciones visibles para el usuario actual (RLS decide el alcance) con los
- * campos derivados que usan los 3 paneles: a qué panel pertenece (bucket/anio, ver
- * ubicarRecomendacion) y su último documento de seguimiento (emitido o no, para
- * mostrarlo en la fila aunque todavía no mueva de panel).
- */
 export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
   const hoy = hoyGuatemala();
   const { data } = await supabase.from("recomendaciones").select(CAMPOS);
@@ -28,8 +20,6 @@ export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
       .filter((s) => s.documentos_seguimiento)
       .sort((a, b) => b.numero_seguimiento - a.numero_seguimiento)[0];
     const { bucket, anio: anioBucket } = ubicarRecomendacion(r.seguimientos_recomendacion, hoy);
-    // Una "activa" con un seguimiento ya registrado en un documento sin emitir está evaluada: solo
-    // falta emitir el informe que la formaliza.
     const evaluadaSinEmitir = r.seguimientos_recomendacion.some(
       (s) => s.numero_seguimiento > 0 && s.documentos_seguimiento && !s.documentos_seguimiento.no_documento,
     );
@@ -53,12 +43,6 @@ export async function cargarRecomendaciones(supabase: SupabaseServerClient) {
 
 export type PasoDocumento = "evaluar" | "emitir" | "sag" | "completo";
 
-/**
- * Nombramientos de seguimiento visibles para el usuario actual, cada uno con el paso del ciclo en
- * que va (mismo criterio que la pantalla del documento): evaluar recomendaciones -> emitir el
- * informe -> cargarlo al SAG-UDAI -> completo. Sirve para la lista de nombramientos y para el
- * aviso de "por completar" en la bandeja.
- */
 export async function cargarDocumentosSeguimiento(supabase: SupabaseServerClient) {
   const [{ data: documentos }, { data: evaluaciones }] = await Promise.all([
     supabase
@@ -84,7 +68,6 @@ export async function cargarDocumentosSeguimiento(supabase: SupabaseServerClient
     const recomendaciones = informes.flatMap((i) => i.deficiencias.flatMap((def) => def.recomendaciones));
     const evaluadas = evaluadasPorDocumento.get(d.id) ?? new Set<string>();
     const emitido = !!d.no_documento;
-    // Emitido: la cédula está cerrada, ya no "faltan" recomendaciones.
     const porEvaluar = emitido ? 0 : recomendaciones.filter((r) => r.estado_actual !== "cumplida" && !evaluadas.has(r.id)).length;
     const paso: PasoDocumento = !emitido
       ? porEvaluar > 0 || evaluadas.size === 0
@@ -104,13 +87,6 @@ export async function cargarDocumentosSeguimiento(supabase: SupabaseServerClient
   });
 }
 
-/**
- * Cédula de un nombramiento/informe de seguimiento: una fila por recomendación de los informes
- * que cubre, con su evaluación en ESTE documento (si ya la tiene) y los seguimientos anteriores
- * ya emitidos. Mientras el documento no se emita (la emisión cierra la cédula) incluye también las
- * recomendaciones abiertas que faltan por evaluar. La comparten la pantalla y la exportación a
- * Word para que nunca difieran. RLS decide qué recomendaciones ve el usuario.
- */
 export async function cargarCedulaDocumento(supabase: SupabaseServerClient, id: string) {
   const { data: documento } = await supabase
     .from("documentos_seguimiento")
@@ -165,10 +141,6 @@ export async function cargarCedulaDocumento(supabase: SupabaseServerClient, id: 
   return { documento, informes, filas, emitido };
 }
 
-/**
- * Qué falta en cada CAI (por id de informe), para mostrarlo en la bandeja: toma el nombramiento
- * de seguimiento más antiguo sin completar que lo cubre; sin él, mira si hay recomendaciones activas.
- */
 export async function cargarFlujoPorCai(supabase: SupabaseServerClient, filas: FilaRecomendacion[]) {
   const documentos = await cargarDocumentosSeguimiento(supabase);
   const flujo = new Map<string, { paso: PasoCai; documentoId: string | null }>();
@@ -190,10 +162,6 @@ export async function cargarFlujoPorCai(supabase: SupabaseServerClient, filas: F
 
 export type CaiResumen = Awaited<ReturnType<typeof cargarCais>>[number];
 
-/**
- * Un resumen por CAI visible para el usuario (RLS decide cuáles), incluidos los que aún no tienen
- * recomendaciones: sus recomendaciones, qué falta (paso) y los conteos para la vista "Por CAI".
- */
 export async function cargarCais(supabase: SupabaseServerClient) {
   const [{ data: informes }, filas, documentos] = await Promise.all([
     supabase

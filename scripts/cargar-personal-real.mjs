@@ -1,15 +1,4 @@
-// Carga el personal real de la DAI en la instancia LOCAL de Supabase (Docker) — nunca el remoto.
-//
-// Fuentes (ambas ignoradas por git porque contienen datos personales):
-//   - PERSONAL DAI.xlsx        -> la lista de nombres (columna B, desde la fila 2).
-//   - personal-roles.local.json -> cargo/departamento/puesto de quienes ya se conocen, por nombre
-//                                  tal como aparece en el Excel. Quien no esté ahí queda como
-//                                  auditor SIN departamento hasta que se sepa (ver --actualizar).
-//
-// NIT ficticios (DAI-001...), correos de prueba @scidai.test y una clave aleatoria por corrida.
-// Uso, después de `npx supabase db reset`:
-//   node scripts/cargar-personal-real.mjs
-// Escribe credenciales-prueba.local.txt (ignorado por git) con los accesos creados.
+// Uso (solo local, después de `npx supabase db reset`): node scripts/cargar-personal-real.mjs
 
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -38,7 +27,6 @@ if (!SUPABASE_URL.includes("127.0.0.1") && !SUPABASE_URL.includes("localhost")) 
 }
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 
-// Clave aleatoria por corrida (no hay una clave fija en el repo): queda solo en credenciales-prueba.local.txt.
 const CLAVE = randomBytes(12).toString("base64url");
 const PARTICULAS = new Set(["de", "del", "la", "las", "los", "y"]);
 
@@ -67,7 +55,6 @@ function correoDe(nombre, usados) {
   return correo;
 }
 
-// ── Lista de personal ──
 const wb = new ExcelJS.Workbook();
 await wb.xlsx.readFile(path.join(ROOT, "PERSONAL DAI.xlsx"));
 const hoja = wb.worksheets[0];
@@ -91,7 +78,6 @@ const depId = (n) => {
   return d.id;
 };
 
-// ── Usuarios ──
 const usadosCorreo = new Set();
 const creados = [];
 for (const [i, nombreExcel] of nombres.entries()) {
@@ -119,7 +105,6 @@ for (const [i, nombreExcel] of nombres.entries()) {
   creados.push({ ...usuario, subdireccion: rol?.subdireccion });
 }
 
-// Cada subdirector queda registrado en su subdirección (de ahí sale su alcance).
 for (const u of creados.filter((c) => c.cargo === "subdirector")) {
   const sd = subdirecciones.find((s) => s.nombre === u.subdireccion);
   if (!sd) throw new Error(`Subdirección no encontrada para ${u.nombre}: ${u.subdireccion}`);
@@ -127,7 +112,6 @@ for (const u of creados.filter((c) => c.cargo === "subdirector")) {
   if (error) throw new Error(`No se pudo asignar subdirector: ${error.message}`);
 }
 
-// ── Credenciales (ignoradas por git) ──
 const lineas = [
   "Cuentas de prueba — SOLO existen en la instancia local de Supabase (Docker).",
   "Personal real de la DAI con NIT y correos ficticios. No existen en el remoto ni en producción.",

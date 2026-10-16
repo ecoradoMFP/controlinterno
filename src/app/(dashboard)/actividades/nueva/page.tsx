@@ -21,8 +21,6 @@ export default async function NuevaActividadPage({
 
   const supabase = await createClient();
 
-  // RLS ya limita `departamentos` a lectura abierta (es catálogo), así que aquí se acota la
-  // UI al alcance real de creación: Jefe/Subjefe solo su propio departamento.
   const departamentoFijo =
     usuario.cargo === "jefe" || usuario.cargo === "subjefe"
       ? await supabase

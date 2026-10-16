@@ -4,14 +4,12 @@ import { Suspense } from "react";
 import { FormPersistence } from "@/components/form-persistence";
 import "./globals.css";
 
-// Public Sans: tipografía diseñada para sitios de gobierno, clara en pantallas de oficina.
 const publicSans = Public_Sans({
   variable: "--font-public-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
 
-// Para los códigos de expediente y oficio.
 const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],

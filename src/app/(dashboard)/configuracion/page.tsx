@@ -24,8 +24,6 @@ export default async function ConfiguracionPage({
   const { error } = await searchParams;
   const usuario = await getUsuarioActual();
 
-  // Sección 8/12.4: esta página no es solo RLS — la ruta en sí es exclusiva de Dirección
-  // (control_total), aunque un usuario de consulta pudiera adivinar la URL.
   if (!usuario || usuario.permiso_sistema !== "control_total") {
     redirect("/reportes");
   }

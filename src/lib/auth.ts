@@ -3,13 +3,7 @@ import type { CargoEnum, Usuario } from "@/types/domain";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
-/**
- * Perfil de negocio (tabla `usuarios`) del usuario autenticado, o null si la sesión de
- * Supabase Auth no está vinculada a ningún perfil (alta administrativa pendiente, sección
- * 12.4). Nunca lanza: la ausencia de perfil es un estado esperado, no un error.
- */
 export type UsuarioActual = Usuario & {
-  /** Ampliación de nombramiento vigente hoy: mientras dura, `cargo` y `departamento_id` son los de ella. */
   cargo_temporal: {
     cargo: CargoEnum;
     cargo_original: CargoEnum | null;
@@ -36,8 +30,6 @@ export async function getUsuarioActual(): Promise<UsuarioActual | null> {
 
   if (!data) return null;
 
-  // Mismo cargo efectivo que usa RLS (`authz.usuario_actual`), para que la app muestre y ofrezca
-  // exactamente lo que la base va a permitir.
   const { data: temporal } = await supabase.rpc("mi_cargo_temporal");
   const vigente = temporal?.[0];
   if (!vigente) return { ...data, cargo_temporal: null };
@@ -56,45 +48,21 @@ export async function getUsuarioActual(): Promise<UsuarioActual | null> {
   };
 }
 
-/**
- * Defensa en profundidad (sección 12.3): además de RLS, las Server Functions que mutan datos
- * verifican explícitamente `permiso_sistema` antes de tocar la base.
- */
 export function puedeEscribir(usuario: Pick<Usuario, "permiso_sistema"> | null): boolean {
   if (!usuario) return false;
   return usuario.permiso_sistema !== "consulta";
 }
 
-/**
- * Replica en la app la regla del trigger `oficios_proteger_hechos_consumados` (sección
- * 12.1/12.5): una vez capturada fecha_envio/fecha_recepcion/fecha_respuesta, solo
- * `permiso_sistema='control_total'` puede corregirla. Sin este chequeo, `SeguimientoPanel`
- * mostraba el botón "Corregir" a cualquiera con permiso de escritura (captura_propia/
- * captura_delegada) y el intento fallaba silenciosamente contra el trigger.
- */
 export function puedeCorregirHechoConsumado(usuario: Pick<Usuario, "permiso_sistema"> | null): boolean {
   return usuario?.permiso_sistema === "control_total";
 }
 
-/**
- * Decisiones de jefatura en una auditoría (marcar "No aplica", corregir fechas ya registradas
- * del equipo): Subjefe, Jefe, Subdirector o Director con permiso de escritura, o control_total.
- * Espeja las validaciones de `marcar_no_aplica` y `corregir_fecha_equipo`.
- */
 export function esJefaturaAuditoria(usuario: Pick<Usuario, "permiso_sistema" | "cargo"> | null): boolean {
   if (!usuario || !puedeEscribir(usuario)) return false;
   if (usuario.permiso_sistema === "control_total") return true;
   return usuario.cargo != null && (["subjefe", "jefe", "subdirector", "director"] as const).includes(usuario.cargo as never);
 }
 
-/**
- * Replica en la app el alcance de cargo de la política RLS `actividades_update` (jefe/subjefe
- * del mismo departamento, subdirector de la subdirección que lo agrupa, o director) — no solo
- * `permiso_sistema` como hace `puedeEscribir`. Sin esto, `puedeEditar` (basado solo en
- * `puedeEscribir`) mostraba el botón "Cerrar etapa" a un Auditor que jamás puede usarlo, y al
- * intentarlo el único error que veía era el mensaje crudo de Postgres/RLS — encontrado en vivo
- * durante la prueba de integración de 2026-09-03.
- */
 export async function puedeCerrarEtapaActividad(
   usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
   actividadId: string,
@@ -129,28 +97,12 @@ export async function puedeCerrarEtapaActividad(
   return false;
 }
 
-// Lista blanca explícita (no "cargo !== 'auditor'"): el sistema puede tener personal no
-// jerárquico sin cargo (sección 4.3, ej. un asistente de archivo, `cargo === null`). Un
-// exclude-list como `!== "auditor"` deja pasar cualquier valor futuro que no sea literalmente
-// "auditor" — con una lista de qué SÍ está permitido, un cargo nuevo o null nunca califica por
-// accidente. Espeja `authz.tiene_cargo_gestion_capacitaciones` en SQL.
 const CARGOS_GESTION_CAPACITACIONES: readonly CargoEnum[] = ["jefe", "subjefe", "subdirector", "director"];
 
-/**
- * Módulo de capacitaciones: cargar horas de capacitación es función de jefatura, no
- * autogestión. Espeja la función SQL `authz.puede_gestionar_capacitaciones`.
- */
 export function puedeGestionarCapacitaciones(usuario: Pick<Usuario, "permiso_sistema" | "cargo"> | null): boolean {
   return puedeEscribir(usuario) && !!usuario?.cargo && CARGOS_GESTION_CAPACITACIONES.includes(usuario.cargo);
 }
 
-/**
- * Departamentos sobre los que el usuario actual puede registrar capacitaciones ajenas: el
- * suyo (jefe/subjefe), los de su subdirección (subdirector), o todos (director/control_total).
- * Director/Subdirección mismos no tienen `departamento_id` — ver `puedeGestionarCapacitacionDe`
- * para el caso de "propia capacitación", que esta función no cubre. Espeja
- * `authz.departamentos_visibles` + `authz.puede_gestionar_capacitaciones`.
- */
 export async function departamentosGestionables(
   usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
   supabase: SupabaseServerClient,
@@ -181,12 +133,6 @@ export async function departamentosGestionables(
   return [];
 }
 
-/**
- * Puede el usuario actual registrar/corregir capacitaciones de `persona`: espeja exactamente
- * la policy RLS `capacitaciones_insert/update/delete` — su propia capacitación (si no es
- * Auditor, cubre a Director/Subdirección que no tienen `departamento_id`), o alguien dentro de
- * `departamentosGestionables`.
- */
 export async function puedeGestionarCapacitacionDe(
   usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
   persona: Pick<Usuario, "nit" | "departamento_id">,
@@ -199,13 +145,6 @@ export async function puedeGestionarCapacitacionDe(
   return gestionables.includes(persona.departamento_id);
 }
 
-/**
- * Módulo de seguimiento a recomendaciones: espeja `authz.puede_operar_informe` (RLS) — el
- * equipo asignado al informe (supervisor/coordinador/auditores en `informes_auditoria_equipo`)
- * puede capturar deficiencias/recomendaciones/seguimientos, además de jefe/subjefe del
- * departamento del informe, subdirector de esa subdirección, o director. Usado solo para
- * mostrar/ocultar botones — la autorización real la sigue haciendo RLS.
- */
 export async function puedeOperarInforme(
   usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
   informeId: string,
@@ -254,11 +193,6 @@ export async function puedeOperarInforme(
   return roles?.supervisor_nit === usuario.nit || roles?.coordinador_nit === usuario.nit;
 }
 
-/**
- * Espeja `authz.puede_nombrar_seguimiento`: emitir nombramientos de seguimiento a
- * recomendaciones es función de jefatura (director, subdirector de la subdirección, jefe/subjefe
- * del departamento) — la misma lista blanca de cargos que `departamentosGestionables`.
- */
 export async function departamentosParaNombrarSeguimiento(
   usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
   supabase: SupabaseServerClient,
@@ -266,11 +200,6 @@ export async function departamentosParaNombrarSeguimiento(
   return departamentosGestionables(usuario, supabase);
 }
 
-/**
- * Espeja `authz.puede_dar_seguimiento`: registrar el seguimiento de una recomendación lo puede
- * hacer quien opera el informe (equipo/jefatura) o el auditor nombrado para darle seguimiento,
- * aunque no haya sido parte del equipo de la auditoría original.
- */
 export async function puedeDarSeguimiento(
   usuario: Pick<Usuario, "permiso_sistema" | "cargo" | "nit" | "departamento_id"> | null,
   informeId: string,
@@ -288,12 +217,6 @@ export async function puedeDarSeguimiento(
   return (data?.length ?? 0) > 0;
 }
 
-/**
- * Espeja `authz.puede_registrar_cargo_temporal`: las ampliaciones de nombramiento (cargo temporal
- * de Subjefe o Jefe) las registran el Director y el Subdirector para cualquier departamento, y el
- * Jefe y el Subjefe solo para el suyo. Cuenta el cargo REAL, no el de un cargo temporal vigente.
- * Devuelve los departamentos permitidos: `"todos"`, una lista, o `null` si no puede registrar.
- */
 export function departamentosCargoTemporal(usuario: UsuarioActual | null): "todos" | string[] | null {
   if (!usuario || !puedeEscribir(usuario)) return null;
   const cargo = usuario.cargo_temporal ? usuario.cargo_temporal.cargo_original : usuario.cargo;

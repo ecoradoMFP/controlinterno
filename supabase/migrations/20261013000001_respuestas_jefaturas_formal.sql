@@ -1,13 +1,3 @@
--- Respuestas de las jefaturas (cuestionario, 2026-10-13):
---
--- A1. Los cargos temporales también los registran el Jefe y el Subjefe, solo para su propio
---     departamento y nunca para sí mismos (Director y Subdirector, para cualquiera).
--- B1. El nombramiento de seguimiento lleva coordinador siempre, en todos los departamentos.
--- Además, los mensajes del sistema se dirigen al usuario de "usted".
-
--- ── A1. Cargos temporales: también Jefe y Subjefe, en su departamento ──
--- Se decide con el cargo y departamento REALES (no los de un cargo temporal vigente), para que un
--- cargo temporal no sirva para registrar otro.
 drop policy cargos_temporales_insert on cargos_temporales;
 drop policy cargos_temporales_update on cargos_temporales;
 drop function authz.puede_registrar_cargo_temporal();
@@ -40,9 +30,6 @@ create policy cargos_temporales_update on cargos_temporales for update to authen
 using (authz.puede_registrar_cargo_temporal(departamento_id))
 with check (authz.puede_registrar_cargo_temporal(departamento_id) and revocado_por_nit = authz.nit_actual());
 
--- ── B1. Coordinador obligatorio en todo nombramiento de seguimiento ──
--- Con trigger y no con CHECK: los nombramientos ya cargados sin coordinador (Especiales) deben
--- poder seguir emitiéndose y cargándose al SAG-UDAI sin que se les exija hasta que se complete.
 create or replace function documentos_seguimiento_exigir_coordinador()
 returns trigger
 language plpgsql
@@ -63,10 +50,6 @@ create trigger documentos_seguimiento_exigir_coordinador
   before insert or update of coordinador_nit, tipo_documento on documentos_seguimiento
   for each row execute function documentos_seguimiento_exigir_coordinador();
 
--- ── Mensajes de "usted" en marcar_no_aplica (las demás funciones se corrigieron en sus
--- migraciones, que todavía no estaban en línea) ──
-
--- SECURITY INVOKER: RLS de `documentos_actividad` y `movimientos` sigue decidiendo quién opera.
 create or replace function marcar_no_aplica(
   p_documento_id uuid,
   p_justificacion text,

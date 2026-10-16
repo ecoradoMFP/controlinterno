@@ -1,7 +1,3 @@
-// Definición ÚNICA de la matriz de carga de SCIDAI (una sola hoja ancha, por etapas): la usan el
-// generador (plantilla y matrices precargadas) y el importador, para que el formato nunca se
-// desalinee. Una fila = una deficiencia con su recomendación, y a la derecha sus seguimientos.
-
 export const TIPOS_AUDITORIA = ["Cumplimiento y Financiera", "Cumplimiento", "Financiera", "Operativa", "Administrativa", "Especial"];
 export const ESTADOS = ["Cumplida", "No cumplida", "En proceso", "Pendiente"];
 export const TIPOS_DOCUMENTO = ["Nombramiento e informe", "Oficio"];
@@ -12,10 +8,6 @@ export const DEPARTAMENTOS = [
 ];
 export const NUM_SEGUIMIENTOS = 3;
 
-// req: "obl" (sin esto no se carga), "rec" (recomendado: se carga y se avisa), "no" (no se importa).
-// nivel: quién lo escribe — "fila" (cada fila), "cai" (una vez, en la primera fila del CAI),
-//        "doc" (una vez por seguimiento, en la primera fila del CAI), "rec" (cada fila del seguimiento).
-// cond: solo obligatorio cuando el documento es "Nombramiento e informe".
 export const BLOQUES = [
   {
     id: "id", titulo: "IDENTIFICACIÓN — en cada fila", color: "FF1F3864", columnas: [

@@ -1,13 +1,3 @@
--- Dos reglas de la captura de un CAI:
---  1. Corregir una deficiencia (título/descripción) igual que una recomendación: con motivo
---     obligatorio, historial append-only escrito por un trigger y sin permitirlo cuando ya hay
---     seguimientos evaluados sobre sus recomendaciones.
---  2. Bloquear el CAI: cerrada la captura ya no se agregan deficiencias ni recomendaciones, ni se
---     corrigen o eliminan, ni se cambia el equipo ni los datos del informe. Lo bloquea quien puede
---     operar el informe; desbloquearlo es de la jefatura (authz.puede_nombrar_seguimiento).
---     El seguimiento (nombramientos, evaluaciones, informes) NO se bloquea: es lo que sigue.
-
--- ── Bloqueo ──
 alter table informes_auditoria
   add column bloqueado_en timestamptz,
   add column bloqueado_por_nit text references usuarios(nit);
@@ -30,13 +20,10 @@ as $$
 declare
   v_otros_cambian boolean;
 begin
-  -- Solo usuarios de la aplicación (se mira el rol del JWT: dentro de security definer
-  -- current_user es el dueño de la función).
   if coalesce(auth.jwt() ->> 'role', '') <> 'authenticated' then
     return new;
   end if;
 
-  -- anio_ejecucion es una columna generada: en un BEFORE trigger NEW todavía no la trae calculada.
   v_otros_cambian := (to_jsonb(new) - 'bloqueado_en' - 'bloqueado_por_nit' - 'anio_ejecucion')
     is distinct from (to_jsonb(old) - 'bloqueado_en' - 'bloqueado_por_nit' - 'anio_ejecucion');
 
@@ -53,7 +40,6 @@ begin
     return new;
   end if;
 
-  -- Ya estaba bloqueado: solo se permite desbloquearlo, y solo la jefatura.
   if new.bloqueado_en is null then
     if v_otros_cambian then
       raise exception 'Desbloquea el CAI sin cambiar otros datos en el mismo paso';
@@ -84,14 +70,12 @@ declare
   v_informe uuid;
   v_deficiencia uuid;
 begin
-  -- En un DELETE no existe NEW y en un INSERT no existe OLD: se lee solo el que corresponde.
   if tg_table_name = 'recomendaciones' then
     if tg_op = 'UPDATE'
        and new.texto is not distinct from old.texto
        and new.responsables is not distinct from old.responsables
        and new.fecha_implementacion is not distinct from old.fecha_implementacion
        and new.anulada_en is not distinct from old.anulada_en then
-      -- Solo cambió el estado: lo mueve el seguimiento, que no se bloquea.
       return new;
     end if;
     v_deficiencia := case when tg_op = 'DELETE' then old.deficiencia_id else new.deficiencia_id end;
@@ -120,7 +104,6 @@ create trigger informes_auditoria_equipo_bloqueo
 before insert or update or delete on informes_auditoria_equipo
 for each row execute function cai_bloqueo_hijas();
 
--- ── Corrección de deficiencias ──
 alter table deficiencias add column motivo_ultimo_cambio text;
 
 create table deficiencias_historial (
@@ -136,11 +119,10 @@ create table deficiencias_historial (
 create index deficiencias_historial_informe_idx on deficiencias_historial (informe_id, created_at desc);
 
 alter table deficiencias_historial enable row level security;
-grant select on deficiencias_historial to authenticated;  -- sin insert/update/delete: solo el trigger escribe
+grant select on deficiencias_historial to authenticated;
 create policy deficiencias_historial_select on deficiencias_historial for select to authenticated
 using (authz.puede_ver_informe(informe_id));
 
--- Solo estas columnas son editables por la app (número e informe nunca cambian).
 revoke update on deficiencias from authenticated;
 grant update (titulo, descripcion, motivo_ultimo_cambio) on deficiencias to authenticated;
 

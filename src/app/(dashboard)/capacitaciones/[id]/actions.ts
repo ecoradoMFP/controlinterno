@@ -31,7 +31,6 @@ export async function registrarCapacitacion(formData: FormData) {
 
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
 
-  // Sección 12.3: defensa en profundidad además de RLS (`capacitaciones_insert`).
   await verificarAlcance(personalId, usuario, supabase);
 
   const parsed = capacitacionFormSchema.safeParse({

@@ -62,8 +62,6 @@ export const ETAPA_ACTIVIDAD_LABELS: Record<EtapaActividadEnum, string> = {
   expediente_cierre: "Expediente / Cierre",
 };
 
-// El proceso avanza una sola etapa a la vez, en este orden fijo — mismo orden reforzado por
-// el trigger `validar_avance_etapa` en la base de datos (defensa en profundidad).
 export const SIGUIENTE_ETAPA: Record<EtapaActividadEnum, EtapaActividadEnum | null> = {
   planificacion: "ejecucion",
   ejecucion: "comunicacion_resultados",
@@ -105,13 +103,8 @@ export const ESTADO_RECOMENDACION_LABELS: Record<EstadoRecomendacionEnum, string
   cumplida: "Cumplida",
 };
 
-// Orden de captura (el mismo de las columnas N-Q de la matriz de DAF, invertido para que el
-// estado por defecto quede primero).
 export const ESTADOS_RECOMENDACION: EstadoRecomendacionEnum[] = ["pendiente", "en_proceso", "no_cumplida", "cumplida"];
 
-// Reusa la misma familia visual del semáforo (SemaforoChip): cumplida=verde, en_proceso=
-// amarillo, no_cumplida=rojo — no es un semáforo de plazos, pero comunica la misma urgencia.
-// Pendiente queda neutral: todavía no hay acción que evaluar, no es un incumplimiento.
 export const ESTADO_RECOMENDACION_TONO: Record<EstadoRecomendacionEnum, "verde" | "amarillo" | "rojo" | "neutral"> = {
   cumplida: "verde",
   en_proceso: "amarillo",
@@ -119,14 +112,11 @@ export const ESTADO_RECOMENDACION_TONO: Record<EstadoRecomendacionEnum, "verde" 
   pendiente: "neutral",
 };
 
-// Un seguimiento normalmente es un "Informe de Actividad Administrativa" con su propio
-// nombramiento; el oficio es la excepción (plazo corto, cumplida dentro del mismo año).
 export const TIPO_DOCUMENTO_SEGUIMIENTO_LABELS: Record<TipoDocumentoSeguimientoEnum, string> = {
   informe: "Informe de actividad administrativa",
   oficio: "Oficio",
 };
 
-/** Seguimiento 0 = estado de la recomendación al informe final (sin documento de seguimiento). */
 export function etiquetaSeguimiento(numero: number) {
   return numero === 0 ? "Estado al informe final" : `Seguimiento no. ${numero}`;
 }

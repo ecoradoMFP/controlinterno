@@ -1,11 +1,3 @@
--- Reglas de captura del seguimiento a recomendaciones, ahora exigidas también por la base:
---  * El módulo da seguimiento solo a CAI, y todo CAI lleva su nombramiento: ambos son
---    obligatorios, con la fecha de nombramiento y el tipo de auditoría.
---  * Toda recomendación lleva fecha de implementación.
---  * Una deficiencia tiene UNA sola recomendación (las anuladas ya no cuentan).
--- Las restricciones son NOT VALID: rigen para todo insert/update nuevo, pero no reprueban las
--- filas históricas que ya existían (p. ej. datos cargados de las matrices antes de esta regla).
-
 alter table informes_auditoria drop constraint informes_auditoria_identificacion;
 alter table informes_auditoria add constraint informes_auditoria_cai_completo
   check (
@@ -25,7 +17,6 @@ security definer
 set search_path = public
 as $$
 begin
-  -- Bloquea la deficiencia para que dos altas simultáneas no se salten la regla.
   perform 1 from deficiencias where id = new.deficiencia_id for update;
   if new.anulada_en is null and exists (
     select 1 from recomendaciones r

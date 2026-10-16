@@ -11,8 +11,6 @@ function fail(message: string): never {
   redirect(`${RUTA}?error=${encodeURIComponent(message)}`);
 }
 
-// Defensa en profundidad: RLS (`cargos_temporales_insert/update`) y el trigger
-// `cargos_temporales_validar` ya lo exigen; aquí se verifica antes para dar un mensaje claro.
 async function requiereJefatura() {
   const usuario = await getUsuarioActual();
   const departamentos = departamentosCargoTemporal(usuario);

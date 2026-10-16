@@ -1,8 +1,3 @@
--- Corrige 20260831000001: la política `notificaciones_update` solo valida usuario_nit en
--- USING/WITH CHECK, pero RLS no puede restringir columnas — como estaba, un usuario podía
--- reescribir el `mensaje`/`color`/`actividad_id` de su propia notificación, no solo `leido`,
--- contradiciendo el comentario de esa migración ("nunca redactar el contenido de una alerta").
--- Se refuerza con un trigger, mismo patrón que `proteger_hechos_consumados_oficio`.
 create or replace function notificaciones_solo_leido_editable()
 returns trigger
 language plpgsql

@@ -2,8 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getUsuarioActual } from "@/lib/auth";
 import { cargarReporte, generarReporteDocx, generarReporteXlsx, type FiltrosReporte } from "@/lib/recomendaciones-reporte";
 
-// Exporta el estado de las recomendaciones (como el reporte de SAG-UDAI) con los mismos filtros de
-// la bandeja. Usa el cliente del usuario: lo que RLS no deja ver, tampoco se exporta.
 export async function GET(request: Request) {
   const [usuario, supabase] = await Promise.all([getUsuarioActual(), createClient()]);
   if (!usuario) return new Response("No autenticado", { status: 401 });

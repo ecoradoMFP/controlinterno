@@ -20,7 +20,6 @@ export default async function CapacitacionesPage({
 
   const supabase = await createClient();
 
-  // RLS ya limita las consultas al alcance de quien consulta.
   const [{ data: personal }, { data: capacitaciones }] = await Promise.all([
     supabase
       .from("usuarios")
