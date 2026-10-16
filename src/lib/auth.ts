@@ -225,3 +225,20 @@ export function departamentosCargoTemporal(usuario: UsuarioActual | null): "todo
   if ((cargo === "jefe" || cargo === "subjefe") && departamento) return [departamento];
   return null;
 }
+
+export async function puedeRegistrarPermisos(
+  usuario: Pick<Usuario, "permiso_sistema" | "nit"> | null,
+  supabase: SupabaseServerClient,
+): Promise<boolean> {
+  if (!usuario) return false;
+  if (usuario.permiso_sistema === "control_total") return true;
+  if (!puedeEscribir(usuario)) return false;
+  const { data } = await supabase.from("permisos_encargados").select("usuario_nit").eq("usuario_nit", usuario.nit).maybeSingle();
+  return !!data;
+}
+
+const CARGOS_VEN_PERMISOS: readonly CargoEnum[] = ["jefe", "subjefe", "subdirector", "director"];
+
+export function veConsolidadoPermisos(usuario: Pick<Usuario, "cargo"> | null, registra: boolean): boolean {
+  return registra || (!!usuario?.cargo && CARGOS_VEN_PERMISOS.includes(usuario.cargo));
+}

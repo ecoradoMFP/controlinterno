@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AMBITO_SEMAFORO_LABELS } from "@/types/domain";
+import { EncargadosPermisos } from "@/components/permisos/encargados-permisos";
 import { actualizarUmbral, agregarFeriado, eliminarFeriado } from "./actions";
 
 export default async function ConfiguracionPage({
@@ -45,6 +46,8 @@ export default async function ConfiguracionPage({
         <p className="font-medium">Estructura organizacional del Ministerio →</p>
         <p className="text-xs text-muted-foreground">Direcciones y viceministerios que aparecen al elegir la dependencia auditada.</p>
       </Link>
+
+      <EncargadosPermisos />
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">

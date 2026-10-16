@@ -9,6 +9,7 @@ import {
   BarChart3,
   Bell,
   ClipboardList,
+  Clock,
   Inbox,
   GraduationCap,
   ListChecks,
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/actividades", label: "Auditorías (CAI)", icon: ClipboardList },
   { href: "/oficios", label: "Oficios", icon: Mail },
   { href: "/capacitaciones", label: "Capacitaciones", icon: GraduationCap },
+  { href: "/permisos", label: "Permisos y llegadas tarde", icon: Clock },
   { href: "/recomendaciones", label: "Recomendaciones (CAI)", icon: ListChecks },
 ];
 

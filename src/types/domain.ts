@@ -44,6 +44,8 @@ export type FaseDocumentoEnum = Database["public"]["Enums"]["fase_documento_enum
 export type EstadoHitoEnum = Database["public"]["Enums"]["estado_hito_enum"];
 export type TipoEventoMovimientoEnum = Database["public"]["Enums"]["tipo_evento_movimiento_enum"];
 export type AmbitoSemaforoEnum = Database["public"]["Enums"]["ambito_semaforo_enum"];
+export type TipoPermisoPersonalEnum = Database["public"]["Enums"]["tipo_permiso_personal_enum"];
+export type PermisoPersonal = Tables["permisos_personal"]["Row"];
 
 export const CARGOS: CargoEnum[] = ["auditor", "subjefe", "jefe", "subdirector", "director"];
 

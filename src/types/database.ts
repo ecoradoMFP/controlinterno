@@ -517,18 +517,21 @@ export type Database = {
           created_at: string
           id: string
           nombre: string
+          sigla: string | null
           subdireccion_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           nombre: string
+          sigla?: string | null
           subdireccion_id: string
         }
         Update: {
           created_at?: string
           id?: string
           nombre?: string
+          sigla?: string | null
           subdireccion_id?: string
         }
         Relationships: [
@@ -1313,6 +1316,132 @@ export type Database = {
           },
         ]
       }
+      permisos_encargados: {
+        Row: {
+          asignado_por_nit: string
+          created_at: string
+          usuario_nit: string
+        }
+        Insert: {
+          asignado_por_nit: string
+          created_at?: string
+          usuario_nit: string
+        }
+        Update: {
+          asignado_por_nit?: string
+          created_at?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permisos_encargados_asignado_por_nit_fkey"
+            columns: ["asignado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "permisos_encargados_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
+      permisos_personal: {
+        Row: {
+          anio: number | null
+          created_at: string
+          fecha: string
+          hora_fin: string | null
+          hora_inicio: string | null
+          id: string
+          mes: number | null
+          minutos: number | null
+          motivo: string
+          registrado_por_nit: string
+          tipo: Database["public"]["Enums"]["tipo_permiso_personal_enum"]
+          updated_at: string
+          usuario_nit: string
+        }
+        Insert: {
+          anio?: never
+          created_at?: string
+          fecha: string
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          mes?: never
+          minutos?: never
+          motivo: string
+          registrado_por_nit: string
+          tipo: Database["public"]["Enums"]["tipo_permiso_personal_enum"]
+          updated_at?: string
+          usuario_nit: string
+        }
+        Update: {
+          anio?: never
+          created_at?: string
+          fecha?: string
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          mes?: never
+          minutos?: never
+          motivo?: string
+          registrado_por_nit?: string
+          tipo?: Database["public"]["Enums"]["tipo_permiso_personal_enum"]
+          updated_at?: string
+          usuario_nit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permisos_personal_registrado_por_nit_fkey"
+            columns: ["registrado_por_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+          {
+            foreignKeyName: "permisos_personal_usuario_nit_fkey"
+            columns: ["usuario_nit"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["nit"]
+          },
+        ]
+      }
+      permisos_personal_historial: {
+        Row: {
+          datos_anteriores: Json
+          id: number
+          operacion: string
+          permiso_id: string
+          realizado_en: string
+          realizado_por_nit: string | null
+          usuario_nit: string
+        }
+        Insert: {
+          datos_anteriores: Json
+          id?: never
+          operacion: string
+          permiso_id: string
+          realizado_en?: string
+          realizado_por_nit?: string | null
+          usuario_nit: string
+        }
+        Update: {
+          datos_anteriores?: Json
+          id?: never
+          operacion?: string
+          permiso_id?: string
+          realizado_en?: string
+          realizado_por_nit?: string | null
+          usuario_nit?: string
+        }
+        Relationships: []
+      }
       parametros_semaforo: {
         Row: {
           ambito: Database["public"]["Enums"]["ambito_semaforo_enum"]
@@ -1742,6 +1871,12 @@ export type Database = {
         | "aprobacion"
         | "devolucion_correccion"
         | "registro_tardio"
+      tipo_permiso_personal_enum:
+        | "asunto_personal"
+        | "cita_medica"
+        | "entrada_tardia"
+        | "comision_oficial"
+        | "nota_marcaje"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1908,6 +2043,13 @@ export const Constants = {
         "aprobacion",
         "devolucion_correccion",
         "registro_tardio",
+      ],
+      tipo_permiso_personal_enum: [
+        "asunto_personal",
+        "cita_medica",
+        "entrada_tardia",
+        "comision_oficial",
+        "nota_marcaje",
       ],
     },
   },
